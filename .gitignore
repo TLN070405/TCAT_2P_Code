@@ -3,3 +3,4 @@
 *.c
 *.html
 *.DS_Store
+*.so
