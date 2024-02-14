@@ -16,13 +16,11 @@ ext_modules += [
               ["TCAT2Phase/Discretizations/Spacial_Discr_CGP.pyx",
                "TCAT2Phase/Discretizations/Spacial_Discr_RE.pyx",
                "TCAT2Phase/Discretizations/Spacial_Discr.pyx"],
-              include_dirs=['Residual_Functions'],
+              include_dirs=['TCAT2Phase/Discretizations'],
               compiler_directives={'boundscheck': False,'wraparound':False,'cdivision':True}),
-    Extension("TCAT2Phase.TCAT_CGP_RESIDUAL",
-              ["TCAT2Phase/Residual_Functions/TCAT_CGP_RESIDUAL.pyx",
-               "TCAT2Phase/Residual_Functions/RE_RESIDUAL.pyx",
-               "TCAT2Phase/Residual_Functions/Two_Phases_RESIDUAL.pyx"],
-              include_dirs=['RE_2P_TCAT_CGP_Code'],
+    Extension("TCAT2Phase.Residual_Functions._Two_Phases_RESIDUAL",
+               ["TCAT2Phase/Residual_Functions/_Two_Phases_RESIDUAL.pyx"],
+              include_dirs=['TCAT2Phase/Residual_Functions'],
               compiler_directives={'boundscheck': False,'wraparound':False,'cdivision':True})
 ]
 cmdclass.update({'build_ext': build_ext})
@@ -40,6 +38,6 @@ setup(
     include_dirs=numpy.get_include(),
     install_requires=[
         'numpy>=1.22.3',
-        'mpi4py>=3.1.3'
+        'mpi4py>=3.1.3',
     ]
 )
