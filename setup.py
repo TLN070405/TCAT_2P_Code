@@ -20,8 +20,13 @@ ext_modules += [
               compiler_directives={'boundscheck': False,'wraparound':False,'cdivision':True}),
     Extension("TCAT2Phase.Residual_Functions._Two_Phases_RESIDUAL",
                ["TCAT2Phase/Residual_Functions/_Two_Phases_RESIDUAL.pyx"],
-              include_dirs=['TCAT2Phase/Residual_Functions'],
-              compiler_directives={'boundscheck': False,'wraparound':False,'cdivision':True})
+              include_dirs=['TCAT2Phase/Residual_Functions']),
+    Extension("TCAT2Phase.Residual_Functions.RE_RESIDUAL",
+               ["TCAT2Phase/Residual_Functions/_RE_RESIDUAL.pyx"],
+              include_dirs=['TCAT2Phase/Residual_Functions']),
+    Extension("TCAT2Phase.Residual_Functions._TCAT_CGP_RESIDUAL",
+               ["TCAT2Phase/Residual_Functions/_TCAT_CGP_RESIDUAL.pyx"],
+              include_dirs=['TCAT2Phase/Residual_Functions'])
 ]
 cmdclass.update({'build_ext': build_ext})
 

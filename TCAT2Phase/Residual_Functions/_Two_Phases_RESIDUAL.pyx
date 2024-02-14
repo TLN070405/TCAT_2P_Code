@@ -1,3 +1,9 @@
+# cython: profile=True
+# cython: linetrace=True
+# cython: boundscheck=True
+# cython: wraparound=False
+# cython: cdivision = True
+
 import cython
 
 def cython_test():
