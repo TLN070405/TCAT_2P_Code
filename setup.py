@@ -43,6 +43,6 @@ setup(
     include_dirs=numpy.get_include(),
     install_requires=[
         'numpy>=1.22.3',
-        'mpi4py>=3.1.3',
-    ]
+        'mpi4py>=3.1.3'    
+        ]
 )
