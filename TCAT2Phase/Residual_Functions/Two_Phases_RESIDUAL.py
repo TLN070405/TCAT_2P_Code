@@ -1,9 +1,26 @@
 from TCAT2Phase.Residual_Functions import _Two_Phases_RESIDUAL 
+
+
 __all__ =[
-  "test"
+  "two_phase_spp_residual",
+  "two_phase_sp_residual",
+  "two_phase_pp_residual"
 ]
 
-def test():
-    ans = _Two_Phases_RESIDUAL.cython_test()
-    print(ans)
-    return True
+def two_phase_spp_residual():
+    """
+    Residual function for two-phase spp formulation
+    """
+    pass
+
+def two_phase_sp_residual():
+    """
+    Residual function for two-phase sp formulation
+    """
+    pass
+
+def two_phase_pp_residual():
+    """
+    Residual function for two-phase sp formulation
+    """
+    pass
