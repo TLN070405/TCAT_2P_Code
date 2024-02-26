@@ -1,6 +1,6 @@
 import numpy as np
 from TCAT2Phase import state_equations
-
+from TCAT2Phase.numerics.residual import _residual
 class BaseFormulation:
     """
     Base formulation for two-phase models
@@ -12,7 +12,7 @@ class SPP(BaseFormulation):
     SPP  Formulation Class
     """
     def __init__(self):
-        self.n_equations = 3
+        pass
 
 
 class SP(BaseFormulation):
@@ -20,7 +20,7 @@ class SP(BaseFormulation):
     SPP  Formulation Class
     """
     def __init__(self):
-        self.n_equations = 2
+        pass
 
     def get_primary_variables(self,u,nodes):
         """
@@ -60,7 +60,7 @@ class PP(BaseFormulation):
     SPP  Formulation Class
     """
     def __init__(self):
-        self.n_equations = 2
+        pass
 
     def get_primary_variables(self,u,nodes):
         """

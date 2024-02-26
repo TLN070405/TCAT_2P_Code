@@ -37,13 +37,14 @@ class Model:
                      1 for Neumann (not currently supported)
         
         """
-
         self.select_model(model_type,form)
         self.domain = domain
         self.nodes = nodes
         self.res = np.zeros_like(self.nodes)
         self.boundary_type = {}
         self.boundary_value = {}
+        self.initial_condition = {}
+        self.time = None
 
 
     def select_model(self,model_type,form):
@@ -79,12 +80,19 @@ class Model:
         for u in self.model.u_names:
             self.boundary_value[u] = boundary_value[u]
 
-
-    def set_initial_condition(self,initial_condition):
+    def set_initial_conditions(self,initial_conditions):
         """
         Set the initial condition for each solution variable
         """
-        pass
+        for u in self.model.u_names:
+            self.initial_condition[u] = initial_conditions[u]
+
+    def set_simulation_time(self,time):
+        """
+        Collect the simulation output times
+        where time = [t0,t1,t2,...,tn]
+        """
+        self.time = time
     
 
 def initialize_model(model_type,form,domain,nodes):

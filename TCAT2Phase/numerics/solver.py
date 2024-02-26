@@ -1,17 +1,18 @@
-
+"""solver.py"""
 import petsc4py
-import time
-#petsc4py.init(sys.argv)
 from petsc4py import PETSc
-from TCAT2Phase.Residual_Functions import *
 
-def solver(nodes,_time,formulation,numerics):
+__all__ = [
+    "solver"
+]
+
+def solver(model,numerics):
     """
     Collect all information and drive the simulation 
     """
 
-    da=PETSc.DMDA().create(dof=formulation.n_equations,
-                           sizes=(nodes,),
+    da=PETSc.DMDA().create(dof=model.model.num_u,
+                           sizes=(model.nodes,),
                            boundary_type=PETSc.DMDA.BoundaryType.NONE,
                            stencil_type=None,
                            stencil_width=1, 
@@ -32,7 +33,7 @@ def solver(nodes,_time,formulation,numerics):
     ts.setType(ts.Type.BDF)
 
     # pass the residual function to "ts" so it can use it
-    ts.setIFunction(formulation.residual)
+    ts.setIFunction(model.model.residual)
 
     # attach the ts solver to the grid created
     ts.setDM(da)
@@ -42,13 +43,13 @@ def solver(nodes,_time,formulation,numerics):
 
     # maximum steps rejections allowed , this is related to snes functions
     ts.setMaxStepRejections(numerics.max_step_rejections)
-    ts.setMaxSNESFailures(numerics.max_SNES_failures)
+    ts.setMaxSNESFailures(numerics.max_snes_failures)
 
     # set tolerance
     ts.setTolerances(numerics.r_tol,numerics.a_tol)
 
-    # set initial time t0 (here t0=0)
-    ts.setTime(_time[0])
+    # set initial time
+    ts.setTime(model.time[0])
 
     # this option is to match the output time of ts with the output time defined by user.
     ts.setExactFinalTime(ts.ExactFinalTime.MATCHSTEP)
@@ -65,9 +66,9 @@ def solver(nodes,_time,formulation,numerics):
     pc=ksp.getPC()
     pc.setFromOptions()
     
-    formulation.set_initial_conditions(ts,u)
+    model.set_initial_conditions(ts,u)
 
-    for t in _time:
+    for t in model.time:
         ts.setMaxTime(t)
         ts.solve(u)
         U = da.getVecArray(u)

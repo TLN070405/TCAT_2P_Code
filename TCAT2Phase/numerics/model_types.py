@@ -1,5 +1,4 @@
 """model_types.py"""
-import numpy as mp
 
 class BaseModel:
     """
@@ -9,8 +8,6 @@ class BaseModel:
         self.u_names = []
         self.num_u = 0 
 
-
-
 class TwoPhase(BaseModel):
     """
     Standard two phase model formulation
@@ -19,10 +16,11 @@ class TwoPhase(BaseModel):
         if form == 'sp':
             self.u_names = ['e_w','p_w']
             self.num_u = 2
+
         if form == 'pp':
             self.u_names = ['p_w','p_n']
-            self.num_u = 2          
-        
+            self.num_u = 2
+
 
 
 

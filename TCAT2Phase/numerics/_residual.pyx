@@ -9,11 +9,10 @@ import sys
 import petsc4py
 import time
 import cython
-#petsc4py.init(sys.argv)
 from petsc4py import PETSc
-from TCAT2Phase.Discretizations import Spacial_Discr
+from TCAT2Phase.numerics import discretization
 
-def two_phase_residual(ts,t,U,Udot,F,boundary_conditions,formulation,discretization,parameters):
+def two_phase_residual(ts,t,U,Udot,F,model,parameters):
     """
     Residual function for two-phase sp formulation
     """
@@ -27,16 +26,15 @@ def two_phase_residual(ts,t,U,Udot,F,boundary_conditions,formulation,discretizat
     udot = da.getVecArray(Udot)
     f = da.getVecArray(F)
 
-    nodes = discretization.nodes
+    nodes = model.nodes
 
-    Spacial_Discr.two_sphase_residual_internal(f,u,udot,formulation,discretization,parameters)
+    model.two_sphase_residual_internal(f,u,udot,model)
 
-
-    #Residual at Bounday 1   
-    f[0][0] = u[0][0] - boundary_conditions[0,0]
-    f[0][1] = u[0][1] - boundary_conditions[0,1]
+    #Residual at Boundary 1   
+    f[0][0] = u[0][0] - model.boundary_conditions[0,0]
+    f[0][1] = u[0][1] - model.boundary_conditions[0,1]
 
     # Residual at Boundary 2
-    f[nodes-1][0] = u[nodes-1][0] - boundary_conditions[1,0]
-    f[nodes-1][1] = u[nodes-1][1] - boundary_conditions[1,1]
+    f[nodes-1][0] = u[nodes-1][0] - model.boundary_conditions[1,0]
+    f[nodes-1][1] = u[nodes-1][1] - model.boundary_conditions[1,1]
 
