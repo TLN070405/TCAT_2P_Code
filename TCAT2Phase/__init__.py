@@ -1,2 +1,2 @@
-from . import Residual_Functions
-from . import Discretizations
+from TCAT2Phase.domain import *
+from TCAT2Phase.numerics.model import *

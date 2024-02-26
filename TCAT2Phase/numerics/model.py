@@ -1,0 +1,94 @@
+"""discretization.py"""
+import numpy as np
+from TCAT2Phase.numerics import model_types
+
+__all__ = [
+    "initialize_model"
+]
+
+model_options = [
+        'two_phase',
+        'extended_two_phase',
+        'Richards',
+        'cgp-TCAT'
+                ]
+
+form_options = {
+        'two_phase': {'pp':model_types.TwoPhase('pp'),
+                      'sp':model_types.TwoPhase('sp')
+                     }
+               }
+
+
+class Model:
+    """
+    Class for discretizations
+    """
+    def __init__(self,model_type,form,domain,nodes):
+        """
+        domain is instance to domain class
+        nodes = [X,X,X] integer for total number of nodes in each dimension
+
+        boundary_types = [[bc00 bc01]
+                          [bc10 bc11]
+                          [bc20 bc21]]
+
+        where bcXX = 0 for Dirchlet
+                     1 for Neumann (not currently supported)
+        
+        """
+
+        self.select_model(model_type,form)
+        self.domain = domain
+        self.nodes = nodes
+        self.res = np.zeros_like(self.nodes)
+        self.boundary_type = {}
+        self.boundary_value = {}
+
+
+    def select_model(self,model_type,form):
+        """
+        Select the model class
+        """
+        if model_type in model_options:
+            if form in form_options[model_type]:
+                self.model = form_options[model_type][form]
+            else:
+                print(f"Not a valid formulation. Options are {form_options[model_type]}")
+        else:
+            print(f"Not a valid model. Options are {model_options}")
+
+    def get_resolution(self):
+        """
+        Calculate the resolution
+        """
+        for d in range(self.domain.dims):
+            self.res[d] = self.domain.domain_length[d]/(self.nodes[d]-1)
+
+    def set_boundary_type(self,boundary_type):
+        """
+        Set the boundary type for each boundary and solution variable
+        """
+        for u in self.model.u_names:
+            self.boundary_type[u] = boundary_type[u]
+
+    def set_boundary_value(self,boundary_value):
+        """
+        Set the boundary type for each boundary and solution variable
+        """
+        for u in self.model.u_names:
+            self.boundary_value[u] = boundary_value[u]
+
+
+    def set_initial_condition(self,initial_condition):
+        """
+        Set the initial condition for each solution variable
+        """
+        pass
+    
+
+def initialize_model(model_type,form,domain,nodes):
+    """
+    Initialize model class
+    """
+    return Model(model_type,form,domain,nodes)
