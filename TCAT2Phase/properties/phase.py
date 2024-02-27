@@ -1,4 +1,6 @@
 """phase.py"""
+from functools import partial
+
 
 class Phase:
     """
@@ -13,8 +15,9 @@ class Fluid(Phase):
     """
     def __init__(self,phase_name):
         super().__init__(phase_name)
-        self.viscosity = 0
-        self.density = 0
+        self.viscosity = None
+        self.density_function = None
+        self.d_density_function = None
 
     def set_viscosity(self,viscosity):
         """
@@ -22,11 +25,17 @@ class Fluid(Phase):
         """
         self.viscosity = viscosity
 
-    def set_density(self,density):
+    def set_density_function(self,density_function,**parameters):
         """
         Set density
         """
-        self.density = density
+        self.density_function = partial(density_function,**parameters)
+
+    def set_d_density_function(self,d_density_function,**parameters):
+        """
+        Set density
+        """
+        self.d_density_function = partial(d_density_function,**parameters)
 
 class Solid(Phase):
     """
@@ -34,8 +43,8 @@ class Solid(Phase):
     """
     def __init__(self,phase_name):
         super().__init__(phase_name)
-        self.porosity = 0
-        self.permeability = 0
+        self.porosity = None
+        self.permeability = None
 
     def set_porosity(self,porosity):
         """
@@ -46,5 +55,5 @@ class Solid(Phase):
     def set_permeability(self,permeability):
         """
         Set permeability
-        """    
+        """
         self.permeability = permeability

@@ -33,7 +33,7 @@ def solver(model,numerics):
     ts.setType(ts.Type.BDF)
 
     # pass the residual function to "ts" so it can use it
-    ts.setIFunction(model.model.residual)
+    ts.setIFunction(model.model.residual,args=[model])
 
     # attach the ts solver to the grid created
     ts.setDM(da)
@@ -66,7 +66,7 @@ def solver(model,numerics):
     pc=ksp.getPC()
     pc.setFromOptions()
     
-    model.set_initial_conditions(ts,u)
+    model.initial_conditions(ts,u)
 
     for t in model.time:
         ts.setMaxTime(t)

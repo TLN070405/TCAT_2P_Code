@@ -1,6 +1,6 @@
 """discretization.py"""
 import numpy as np
-from TCAT2Phase.numerics import model_types
+from . import model_types
 
 __all__ = [
     "initialize_model"
@@ -86,6 +86,17 @@ class Model:
         """
         for u in self.model.u_names:
             self.initial_condition[u] = initial_conditions[u]
+
+    def initial_conditions(self,ts,U):
+        """
+        Set the initial conditions in the PETSc arrays
+        """
+        da = ts.getDM()
+        u = da.getVecArray(U)
+
+        for n_u,u_name in enumerate(self.model.u_names):
+            for n in range(0,self.nodes):
+                u[n][n_u] = self.initial_condition[u_name]
 
     def set_simulation_time(self,time):
         """

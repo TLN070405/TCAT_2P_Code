@@ -1,8 +1,7 @@
 """state_equations.py"""
 import math
 
-
-def effective_satuaration(ew,Epsilon_wr,Const_Epsilon):
+def effective_saturation(ew,Epsilon_wr,Const_Epsilon):
     """
     Effective saturation
     """
@@ -14,7 +13,7 @@ def vg_capillary_pressure(ew):
     """
     Van-Genuchten capillary pressure
     """
-    se = effective_satuaration(ew,Epsilon_w,Const_Epsilon)
+    se = effective_saturation(ew,Epsilon_w,Const_Epsilon)
     if 0.0  < se < 1.0:
         p_c = (  ( se**(-m_inv)  - 1.0)**n_inv )*alpha_inv
     else:
@@ -32,7 +31,7 @@ def drvt_ew_of_pc(pc):
         drvt_ew = 0.0
     return drvt_ew
 
-def  krw_of_pc(pc):
+def krw_of_pc(pc):
     """
     The w phase relative permeability function
     """
@@ -45,7 +44,7 @@ def  krw_of_pc(pc):
 
 def ew_of_pc(pc):
     """
-    volume fraction from Van-Genuchten model
+    Volume fraction from Van-Genuchten model
     """
     if pc > 0.0:
         se =  (1.0 + (alpha*pc)**n)**(-m)
@@ -54,16 +53,30 @@ def ew_of_pc(pc):
         ew = epsilon - Epsilon_nr
     return ew
 
-def rhow_of_pw(pw):
+def density_exp_pressure(p,rho0,beta):
     """
-    density of wetting phase
+    Density as a exponential function of the pressure
     """
-    rhow = rho_w0 * math.exp(Beta_w * pw)
-    return rhow
+    rho = rho0 * math.exp(beta * p)
+    return rho
 
-def  drvt_rhow_of_pw(pw):
+def d_density_exp_pressure(p,rho0,beta):
     """
-    d(rohw)/d(pw)
+    Derivative of the density with respect to pressure
     """
-    drvt_rho_w = Beta_w * rho_w0 * math.exp(Beta_w * pw)
-    return drvt_rho_w
+    d_rho = beta * rho0 * math.exp(beta * p)
+    return d_rho
+
+def density_linear_pressure(p,rho0,alpha):
+    """
+    Density as a linear function of the pressure
+    """
+    rho = rho0 + alpha * p
+    return rho
+
+def d_density_linear_pressure(p,rho0,alpha):
+    """
+    Derivative of the density with respect to pressure
+    """
+    d_rho = alpha
+    return d_rho

@@ -12,9 +12,9 @@ with open("README.md", 'r') as f:
 cmdclass = {}
 ext_modules = []
 ext_modules += [
-    Extension("TCAT2Phase.numerics.residuals",
+    Extension("TCAT2Phase.numerics._residual",
                ["TCAT2Phase/numerics/_residual.pyx"],
-              include_dirs=['TCAT2Phase/numerics']),
+              include_dirs=['TCAT2Phase/numerics/']),
 ]
 cmdclass.update({'build_ext': build_ext})
 

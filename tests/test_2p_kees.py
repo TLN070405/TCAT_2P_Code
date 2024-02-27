@@ -1,7 +1,6 @@
 import numpy as np
 import TCAT2Phase
 
-
 # Domain
 domain_size = np.array([[0.0,1.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -12,14 +11,15 @@ domain =  TCAT2Phase.properties.domain.initialize_domain(
 # Discretization
 nodes = 101
 boundary_type = [0,0]
-model = TCAT2Phase.initialize_model(
+model = TCAT2Phase.model.initialize_model(
                                 model_type = 'two_phase',
                                 form = 'sp',
                                 domain = domain,
                                 nodes = nodes
                                     )
 
-# Set boundary types
+# Set boundary types: 0 - Dirchlet
+#                     1 - Neumann (but not supported yet)
 boundary_type = {'e_w': [[0, 0]],
                  'p_w': [[0, 0]]}
 
@@ -32,7 +32,7 @@ boundary_value = {'e_w': [[0.12, 0.008]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 
-# Set initial conditions: Only set up for constant values! 
+# Set initial conditions: Only set up for constant values!
 initial_conditions = {'e_w': 0.008,
                       'p_w': -13706.965861446095}
 model.set_initial_conditions(initial_conditions)
@@ -47,22 +47,33 @@ s_phase.set_permeability(1e-10)
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
 w_phase.set_viscosity(1.e-3)
-w_phase.set_density(1e3)
+w_den_args = {'rho0':1.e3,
+            'beta':4.9e-10}
+w_phase.set_density_function(TCAT2Phase.state_equations.density_exp_pressure,**w_den_args)
+w_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_exp_pressure,**w_den_args)
 
 # Set nonwetting-phase properties
 n_phase = TCAT2Phase.properties.phase.Fluid('n')
 n_phase.set_viscosity(1.78e-5)
-n_phase.set_density(1.2)
+n_den_args = {'rho0':1.2,
+              '1.189e-5':4.9e-10}
+n_phase.set_density_function(TCAT2Phase.state_equations.density_linear_pressure,**n_den_args)
+n_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_linear_pressure,**n_den_args)
 
 # Time
 time_interval = np.array([0.,864.,1728.,2592.,3456.,6048.])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
-numerics = TCAT2Phase.numerics.Numerics
+numerics = TCAT2Phase.numerics.Numerics()
 
 # Solve model
 TCAT2Phase.numerics.solver(model,numerics)
+
+
+
+
+# Archive
 
 # # Physical parameters of the problem and van genuchten model parameters
 # phi = 0.4
