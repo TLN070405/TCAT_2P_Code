@@ -9,12 +9,12 @@ def effective_saturation(ew,Epsilon_wr,Const_Epsilon):
     return se
 
 
-def vg_capillary_pressure(ew):
+def vg_capillary_pressure(ew,Epsilon_w,Const_Epsilon,m_inv,n_inv,alpha_inv):
     """
     Van-Genuchten capillary pressure
     """
     se = effective_saturation(ew,Epsilon_w,Const_Epsilon)
-    if 0.0  < se < 1.0:
+    if 0.0 < se < 1.0:
         p_c = (  ( se**(-m_inv)  - 1.0)**n_inv )*alpha_inv
     else:
         p_c = 0.0

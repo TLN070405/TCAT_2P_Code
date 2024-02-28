@@ -1,5 +1,6 @@
 import numpy as np
 from TCAT2Phase import state_equations
+from TCAT2Phase.numerics import utils
 
 
 def two_phase_residual(ts,t,U,Udot,F,model):
@@ -20,14 +21,13 @@ def two_phase_residual(ts,t,U,Udot,F,model):
 
     two_sphase_residual_internal(f,u,udot,model)
 
-    #Residual at Boundary 1 
     for n in range(model.model.num_u):
-        f[0][n] = u[0][n] - model.boundary_conditions[0,n]
-        f[0][n] = u[0][n] - model.boundary_conditions[0,n]
+
+        #Residual at Boundary 1 
+        f[0][n] = u[0][n] - model.boundary_value[n][0][0]
 
         # Residual at Boundary 2
-        f[nodes-1][n] = u[nodes-1][n] - model.boundary_conditions[1,n]
-        f[nodes-1][n] = u[nodes-1][n] - model.boundary_conditions[1,n]
+        f[nodes-1][n] = u[nodes-1][n] - model.boundary_value[n][0][1]
 
 
 def two_sphase_residual_internal(f,u,udot,model):
@@ -40,28 +40,28 @@ def two_sphase_residual_internal(f,u,udot,model):
 
     form = model.model.name
     if form == 'two-phase-sp':
-        e_w,p_w,p_n,p_c = two_phase_sp_primary_variables(u,nodes)
+        e_w,p_w,p_n,p_c = two_phase_sp_primary_variables(u,nodes,model)
     elif form == 'two-phase-pp':
-        e_w,p_w,p_n,p_c = two_phase_pp_primary_variables(u,nodes)
+        e_w,p_w,p_n,p_c = two_phase_pp_primary_variables(u,nodes,model)
     else:
         print('Error Model From is unknown')
 
     for n in range(1,nodes-2):
     
         # w density
-        rho_w_plus = utils.calc_function_average(state_equations.rhow_of_Pw,p_w[n],p_w[n+1])
-        rho_w_minus = utils.calc_function_average(state_equations.rhow_of_Pw,p_w[n],p_w[n-1]) 
+        rho_w_plus = utils.calc_function_average(model.w_phase.density_function,p_w[n],p_w[n+1])
+        rho_w_minus = utils.calc_function_average(model.w_phase.density_function,p_w[n],p_w[n-1]) 
 
         # n density
-        rho_n_plus = utils.calc_function_average(state_equations.rhon_of_Pn,p_n[n],p_n[n+1])
-        rho_n_minus = utils.calc_function_average(state_equations.rhon_of_Pn,p_n[n],p_n[n-1])
+        rho_n_plus = utils.calc_function_average(model.n_phase.density_function,p_n[n],p_n[n+1])
+        rho_n_minus = utils.calc_function_average(model.n_phase.density_function,p_n[n],p_n[n-1])
 
         # Darcy velocity
-        q_w_plus = darcy_velocity(p_w,p_c,rho_w_plus,parameters,discretization)
-        q_w_minus = darcy_velocity(p_w,p_c,rho_w_minus,parameters,discretization)
+        q_w_plus = 0.#darcy_velocity(p_w,p_c,rho_w_plus,parameters,discretization)
+        q_w_minus = 0.#darcy_velocity(p_w,p_c,rho_w_minus,parameters,discretization)
 
-        q_n_plus = darcy_velocity(p_n,p_c,rho_n_plus,parameters,discretization)
-        q_n_minus = darcy_velocity(p_n,p_c,rho_n_minus,parameters,discretization)
+        q_n_plus = 0.#darcy_velocity(p_n,p_c,rho_n_plus,parameters,discretization)
+        q_n_minus = 0.#darcy_velocity(p_n,p_c,rho_n_minus,parameters,discretization)
 
         # Calculate the spacial descretization parts
         Od_w = (1./dx)*(rho_w_plus* q_w_plus - rho_w_minus*q_w_minus)
@@ -69,11 +69,14 @@ def two_sphase_residual_internal(f,u,udot,model):
 
         # Time derivative matrix
         
-        rho_w = state_equations.rhow_of_Pw(p_w[n]) 
-        rho_n = state_equations.rhon_of_Pn(p_n[n])
-        e_n = state_equations.Epsilon_n_of_Pc(e_w[n])
+        rho_w = model.w_phase.density_function(p_w[n])
+        rho_n = model.n_phase.density_function(p_n[n])
+        e_n = 0.#state_equations.Epsilon_n_of_Pc(e_w[n])
 
-        A = formulation.get_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w,rho_n,e_n)
+        if form == 'two-phase-sp':
+            A = two_phase_sp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w,rho_n,e_n,model)
+        elif form == 'two-phase-pp':
+            A = two_phase_pp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w,rho_n,e_n)
 
         f[n][0] = A[0,0] * udot[n][0] + A[0,1] * udot[n][1] - Od_w
         f[n][1] = A[1,0] * udot[n][0] + A[1,1] * udot[n][1] - Od_n
@@ -81,40 +84,41 @@ def two_sphase_residual_internal(f,u,udot,model):
     return f
 
 
-def two_phase_sp_primary_variables(u,nodes):
+def two_phase_sp_primary_variables(u,nodes,model):
     """
     Collect primary variables from solution variables
     """
     # Solution Variables
-    e_w = u[:][0]
-    p_w = u[:][1]
+    e_w = u[:,0]
+    p_w = u[:,1]
 
     # Primary Variables 
     p_c = np.zeros_like(p_w)
     p_n = np.zeros_like(p_w)
     for n in range(0,nodes):
-        p_c[n] = state_equations.Pc(e_w[n])
+        p_c[n] = model.interface.pc_function(e_w[n])
         p_n[n] = p_w[n] + p_c[n]
 
     return e_w,p_w,p_n,p_c
 
-def two_phase_sp_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n):
+def two_phase_sp_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,model):
     """
     Calculate the A matrix. See Kees_Miller_02 for formulation
     """
     A = np.zeros([2,2])
 
-    d_rho_w_p_w = state_equations.d_rho_w_p_w(p_w)
-    d_rho_n_p_n = state_equations.d_rho_n_p_n(p_n)
-    d_p_c_e_w = state_equations.d_p_c_e_w(e_w)
+    d_rho_w_p_w = model.w_phase.d_density_function(p_w)
+    d_rho_n_p_n = model.n_phase.d_density_function(p_n)
+    d_p_c_e_w = 0.0#state_equations.d_p_c_e_w(e_w)
 
     A[0,0] = rho_w
     A[0,1] = e_w*d_rho_w_p_w
     A[1,0] = e_n*d_rho_n_p_n*d_p_c_e_w - rho_n
     A[1,1] = e_n*d_rho_n_p_n    
 
+    return A
 
-def two_phase_pp_primary_variables(u,nodes):
+def two_phase_pp_primary_variables(u,nodes,model):
     """
     Collect primary variables from solution variables
     """
@@ -131,7 +135,7 @@ def two_phase_pp_primary_variables(u,nodes):
 
     return e_w,p_w,p_n,p_c
 
-def get_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n):
+def two_phase_pp_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n):
     """
     Calculate the A matrix. See Kees_Miller_02 for formulation
     """

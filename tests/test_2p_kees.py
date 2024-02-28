@@ -47,18 +47,37 @@ s_phase.set_permeability(1e-10)
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
 w_phase.set_viscosity(1.e-3)
-w_den_args = {'rho0':1.e3,
-            'beta':4.9e-10}
-w_phase.set_density_function(TCAT2Phase.state_equations.density_exp_pressure,**w_den_args)
-w_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_exp_pressure,**w_den_args)
+w_den_params = {'rho0':1.e3,
+                'beta':4.9e-10}
+w_phase.set_density_function(TCAT2Phase.state_equations.density_exp_pressure,**w_den_params)
+w_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_exp_pressure,**w_den_params)
 
 # Set nonwetting-phase properties
 n_phase = TCAT2Phase.properties.phase.Fluid('n')
 n_phase.set_viscosity(1.78e-5)
-n_den_args = {'rho0':1.2,
-              '1.189e-5':4.9e-10}
-n_phase.set_density_function(TCAT2Phase.state_equations.density_linear_pressure,**n_den_args)
-n_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_linear_pressure,**n_den_args)
+n_den_params = {'rho0':1.2,
+                'alpha':1.189e-5
+                }
+n_phase.set_density_function(TCAT2Phase.state_equations.density_linear_pressure,**n_den_params)
+n_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_linear_pressure,**n_den_params)
+
+# Set w-n interphase properties
+nw_interface = TCAT2Phase.properties.interface.Interface() 
+pc_params = {'Epsilon_w': 0.,
+             'Const_Epsilon': 0.,
+             'm_inv': 0.,
+             'n_inv': 0.,
+             'alpha_inv': 0.
+            }
+nw_interface.set_pc_function(TCAT2Phase.state_equations.vg_capillary_pressure,**pc_params)
+
+
+model.solid = s_phase
+model.w_phase = w_phase
+model.n_phase = n_phase
+model.interface = nw_interface
+
+
 
 # Time
 time_interval = np.array([0.,864.,1728.,2592.,3456.,6048.])

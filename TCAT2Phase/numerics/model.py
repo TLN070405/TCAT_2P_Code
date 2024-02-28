@@ -45,6 +45,10 @@ class Model:
         self.boundary_value = {}
         self.initial_condition = {}
         self.time = None
+        self.solid = None
+        self.w_phase = None
+        self.n_phase = None
+        self.interface = None
 
 
     def select_model(self,model_type,form):
@@ -77,8 +81,8 @@ class Model:
         """
         Set the boundary type for each boundary and solution variable
         """
-        for u in self.model.u_names:
-            self.boundary_value[u] = boundary_value[u]
+        for n_u,u in enumerate(self.model.u_names):
+            self.boundary_value[n_u] = boundary_value[u]
 
     def set_initial_conditions(self,initial_conditions):
         """
