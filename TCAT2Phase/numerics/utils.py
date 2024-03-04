@@ -17,8 +17,9 @@ def calc_function_average(func,x,y):
     avg_func = 0.5*(func(x) + func(y))
     return avg_func
 
-def calc_gradient(x,y,dz):
+def gradient(x,delta):
     """
-    Return the gradient of a value
+    Return the gradient of a value. Should these be at points or cell-centers?
+
     """
-    return (x-y)/dz
+    return (x[1:] - x[:-1])/delta

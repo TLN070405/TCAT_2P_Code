@@ -46,33 +46,42 @@ def two_sphase_residual_internal(f,u,udot,model):
     else:
         print('Error Model From is unknown')
 
+
+    rho_w = np.zeros_like(e_w)
+    rho_n = np.zeros_like(e_w)
+    e_n = np.zeros_like(e_w)
+    del_pw = np.zeros_like(e_w)
+    del_pn = np.zeros_like(e_w)
+    k_rw = np.zeros_like(e_w)
+    k_rn = np.zeros_like(e_w)
+    q_w = np.zeros_like(e_w)
+    q_n = np.zeros_like(e_w)
+    for n in range(0,nodes):
+        rho_w[n] = model.w_phase.density_function(p_w[n])
+        rho_n[n] = model.n_phase.density_function(p_n[n])
+        e_n[n] = 0.#state_equations.Epsilon_n_of_Pc(e_w[n]) 
+
+        del_pw[n] = utils.gradient(p_w[n],dx)
+        del_pn[n] = utils.gradient(p_n[n],dx)
+
+        k = model.solid.permability
+
+        k_rw[n] = model.w_phase.permeability_function()
+        mu_w = model.w_phase.viscosity
+
+        k_rn[n] = model.n_phase.permeability_function()
+        mu_n = model.n_phase.viscosity
+
+        q_w[n] = darcy_velocity(k,k_rw[n],mu_w,del_pw[n],rho_w[n],g)
+        q_n[n] = darcy_velocity(k,k_rn[n],mu_n,del_pn[n],rho_w[n],g)
+
     for n in range(1,nodes-2):
     
-        # w density
-        rho_w_plus = utils.calc_function_average(model.w_phase.density_function,p_w[n],p_w[n+1])
-        rho_w_minus = utils.calc_function_average(model.w_phase.density_function,p_w[n],p_w[n-1]) 
-
-        # n density
-        rho_n_plus = utils.calc_function_average(model.n_phase.density_function,p_n[n],p_n[n+1])
-        rho_n_minus = utils.calc_function_average(model.n_phase.density_function,p_n[n],p_n[n-1])
-
-        # Darcy velocity
-        q_w_plus = 0.#darcy_velocity(p_w,p_c,rho_w_plus,parameters,discretization)
-        q_w_minus = 0.#darcy_velocity(p_w,p_c,rho_w_minus,parameters,discretization)
-
-        q_n_plus = 0.#darcy_velocity(p_n,p_c,rho_n_plus,parameters,discretization)
-        q_n_minus = 0.#darcy_velocity(p_n,p_c,rho_n_minus,parameters,discretization)
-
         # Calculate the spacial descretization parts
-        Od_w = (1./dx)*(rho_w_plus* q_w_plus - rho_w_minus*q_w_minus)
-        Od_n = (1./dx)*(rho_n_plus* q_n_plus - rho_n_minus*q_n_minus) 
+        Od_w = (1./dx)*(rho_w[n-1]*q_w[n-1] - rho_w[n]*q_w[n])
+        Od_n = (1./dx)*(rho_n[n-1]*q_n[n-1] - rho_n[n]*q_n[n])
 
         # Time derivative matrix
-        
-        rho_w = model.w_phase.density_function(p_w[n])
-        rho_n = model.n_phase.density_function(p_n[n])
-        e_n = 0.#state_equations.Epsilon_n_of_Pc(e_w[n])
-
         if form == 'two-phase-sp':
             A = two_phase_sp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w,rho_n,e_n,model)
         elif form == 'two-phase-pp':
@@ -88,7 +97,7 @@ def two_phase_sp_primary_variables(u,nodes,model):
     """
     Collect primary variables from solution variables
     """
-    # Solution Variables
+    # Solution Variables  
     e_w = u[:,0]
     p_w = u[:,1]
 
@@ -152,18 +161,10 @@ def two_phase_pp_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n):
     return A    
 
 
-def darcy_velocity(p_a,p_c,rho,parameters,discretization):
+def darcy_velocity(k,k_r,mu,del_p,rho,g):
     """
     Calaculate the Darcy velocity as:
         q^a = -k*k_r^a/mu^a(\grad p^a - rho^a*g)
     """
-    dx = discretization.dx
-    k = parameters.k
-    g = parameters.g
-    mu = parameters.mu
-
-    grad_pa = utils.calc_gradient(p_a,dx)
-    k_ra = utils.calc_function_average(state_equations.k_ra_p_c,p_c)
-    q = k*k_ra/mu*(grad_pa - rho*g)
-
+    q = k*k_r/mu*(del_p - rho*g)
     return q   

@@ -31,7 +31,7 @@ def drvt_ew_of_pc(pc):
         drvt_ew = 0.0
     return drvt_ew
 
-def krw_of_pc(pc):
+def rel_perm_w_of_pc(pc,alpha,n,m,m_inv):
     """
     The w phase relative permeability function
     """
