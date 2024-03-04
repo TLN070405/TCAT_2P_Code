@@ -60,11 +60,16 @@ n_den_params = {'rho0':1.2,
                 }
 n_phase.set_density_function(TCAT2Phase.state_equations.density_linear_pressure,**n_den_params)
 n_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_linear_pressure,**n_den_params)
+n_en_params = {'porosity':s_phase.porosity
+                }
+n_phase.set_volume_fraction_funtion(TCAT2Phase.state_equations.volume_fraction,**n_en_params)
+e_n = n_phase.volume_fraction_function(.3)
+print(e_n)
 
 # Set w-n interphase properties
 nw_interface = TCAT2Phase.properties.interface.Interface() 
 pc_params = {'Epsilon_w': 0.,
-             'Const_Epsilon': 0.,
+             'Const_Epsilon': 1.,
              'm_inv': 0.,
              'n_inv': 0.,
              'alpha_inv': 0.
@@ -87,7 +92,7 @@ model.set_simulation_time(time_interval)
 numerics = TCAT2Phase.numerics.Numerics()
 
 # Solve model
-TCAT2Phase.numerics.solver(model,numerics)
+# TCAT2Phase.numerics.solver(model,numerics)
 
 
 

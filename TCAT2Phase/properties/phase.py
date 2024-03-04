@@ -19,6 +19,7 @@ class Fluid(Phase):
         self.density_function = None
         self.d_density_function = None
         self.rel_perm_function = None
+        self.volume_fraction_function = None
 
     def set_viscosity(self,viscosity):
         """
@@ -43,6 +44,13 @@ class Fluid(Phase):
         Set density
         """
         self.rel_perm_function = partial(rel_perm_function,**parameters)
+
+    def set_volume_fraction_funtion(self,volume_fraction_function,**parameters):
+        """
+        Set Volume Fraction
+        """
+        self.volume_fraction_function = partial(volume_fraction_function,**parameters)
+
 
 class Solid(Phase):
     """

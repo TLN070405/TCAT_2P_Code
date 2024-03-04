@@ -80,3 +80,8 @@ def d_density_linear_pressure(p,rho0,alpha):
     """
     d_rho = alpha
     return d_rho
+
+def volume_fraction(e_in,porosity):
+    """caluculate volume fraction assuming 2P model"""
+    e_out = porosity - e_in
+    return e_out
