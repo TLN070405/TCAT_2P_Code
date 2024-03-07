@@ -37,12 +37,10 @@ initial_conditions = {'e_w': 0.008,
                       'p_w': -13706.965861446095}
 model.set_initial_conditions(initial_conditions)
 
-
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s')
 s_phase.set_porosity(0.4)
 s_phase.set_permeability(1e-10)
-
 
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
@@ -76,21 +74,16 @@ pc_params = {'Epsilon_w': 0.,
             }
 nw_interface.set_pc_function(TCAT2Phase.state_equations.vg_capillary_pressure,**pc_params)
 
-
 model.solid = s_phase
 model.w_phase = w_phase
 model.n_phase = n_phase
 model.interface = nw_interface
 
-
-
 # Time
 time_interval = np.array([0.,864.,1728.,2592.,3456.,6048.])
 model.set_simulation_time(time_interval)
-
 # Numerical Parameters
 numerics = TCAT2Phase.numerics.Numerics()
-
 # Solve model
 # TCAT2Phase.numerics.solver(model,numerics)
 
