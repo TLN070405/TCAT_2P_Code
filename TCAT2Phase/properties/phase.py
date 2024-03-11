@@ -51,6 +51,11 @@ class Fluid(Phase):
         """
         self.volume_fraction_function = partial(volume_fraction_function,**parameters)
 
+    def set_d_volume_fraction_function(self,d_volume_fraction_function,**parameters):
+        """
+        Set derivative of Volume Fraction 
+        """
+        self.d_volume_fraction_function = partial(d_volume_fraction_function,**parameters)
 
 class Solid(Phase):
     """
