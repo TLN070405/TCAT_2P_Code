@@ -20,4 +20,4 @@ rho_new = w_phase.d_density_function(-1000)
 np.testing.assert_almost_equal(rho_new, 4.899997599000587e-07)
 
 rho_new = n_phase.d_density_function(-1000)
-np.testing.assert_almost_equal(rho_new,1e-3)
+np.testing.assert_almost_equal(rho_new,1.189e-05)

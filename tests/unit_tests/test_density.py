@@ -18,5 +18,5 @@ n_phase.set_density_function(TCAT2Phase.state_equations.density_linear_pressure,
 rho_new = w_phase.density_function(-1000)
 np.testing.assert_almost_equal(rho_new,999.99951000012)
 
-rho_new = n_phase.d_density_function(-1000)
-np.testing.assert_almost_equal(rho_new,1e-3)
+rho_new = n_phase.density_function(-1000)
+np.testing.assert_almost_equal(rho_new,1.18811)
