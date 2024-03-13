@@ -6,14 +6,14 @@ import TCAT2Phase
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
 n_phase = TCAT2Phase.properties.phase.Fluid('n')
 # Set pressure-saturation-permeability parameters
-w_psk_params = {'psk:alpha': 1e-3,
-                'psk:n': 2.494,
-                'psk:m': 0.5990376904570971 ,
+w_psk_params = {'alpha': 1e-3,
+                'n': 2.494,
+                'm': 0.5990376904570971 ,
                 'm_inv': 1.6693440428380186 ,
                 }
-n_psk_params = {'psk:alpha': 1e-3,
-                'psk:n': 2.494,
-                'psk:m': 0.5990376904570971 ,
+n_psk_params = {'alpha': 1e-3,
+                'n': 2.494,
+                'm': 0.5990376904570971 ,
                 'm_inv': 1.6693440428380186 ,
                 'm2'   : 1.1980753809141942,
                 }

@@ -8,11 +8,11 @@ s_phase.set_porosity(0.4)
 
 # Set wetting-phase properties and pressure-saturation-permeability parameters
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
-w_psk_params = {'e_wr:wetting phase residual volume fraction': 0.0,
-                'e_nr:nonwetting phase residual volume fraction': 0.0 ,
+w_psk_params = {'e_wr': 0.0,
+                'e_nr': 0.0 ,
                 'porosity': s_phase.porosity,
-                'psk:alpha': 1e-3,
-                'psk:n': 2.494,
+                'alpha': 1e-3,
+                'n': 2.494,
                 'alpha_m_n': 0.001494,
                 'n1': 1.4940000000000002,
                 'm1': -1.599037690457097,

@@ -8,12 +8,12 @@ s_phase.set_porosity(0.4)
 
 # Set wetting-phase properties and pressure-saturation-permeability parameters
 wn_interface = TCAT2Phase.properties.interface
-wn_psk_params = {'e_wr:wetting phase residual volume fraction': 0.0,
-                'e_nr:nonwetting phase residual volume fraction': 0.0,
+wn_psk_params = {'e_wr': 0.0,
+                'e_nr': 0.0,
                 'porosity': s_phase.porosity,
-                'psk:alpha_m_n': 0.001494,
-                'psk:m_inv': 1.6693440428380186,
-                'psk:n_inv1': -0.5990376904570971,
+                'alpha_m_n': 0.001494,
+                'm_inv': 1.6693440428380186,
+                'n_inv1': -0.5990376904570971,
                 }
 
 wn_interface.set_d_pc_function(TCAT2Phase.state_equations_interface.d_vg_capillary_pressure,**wn_psk_params)
