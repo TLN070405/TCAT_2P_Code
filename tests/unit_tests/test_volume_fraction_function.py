@@ -14,4 +14,4 @@ n_phase.set_volume_fraction_function(TCAT2Phase.state_equations.volume_fraction,
 e_n = n_phase.volume_fraction_function(.3)
 # unittest.assertAlmostEqual(e_n,0.1)
 np.testing.assert_almost_equal(e_n,0.1)
-print(e_n)
+#print(e_n)
