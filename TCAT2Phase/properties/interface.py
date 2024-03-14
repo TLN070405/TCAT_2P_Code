@@ -5,7 +5,7 @@ class Interface:
     """
     Interface class
     """
-    def __init__(self,):
+    def __init__(self):
         self.pc_function = None
         self.d_pc_function = None
 

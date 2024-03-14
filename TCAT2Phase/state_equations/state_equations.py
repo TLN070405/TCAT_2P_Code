@@ -45,24 +45,36 @@ def vg_rel_perm_n(pc,alpha,n,m,m_inv,m2):
         krn = 0.0
     return krn
 
-def effective_saturation(ew,Epsilon_wr,Const_Epsilon):
+def effective_saturation(e_w,e_wr,e_nr,porosity):
     """
     Effective saturation
     """
-    se = (ew - Epsilon_wr) / Const_Epsilon
+    se = (e_w - e_wr) / (porosity-e_wr-e_nr)
     return se
 
 
-def vg_capillary_pressure(ew,Epsilon_w,Const_Epsilon,m_inv,n_inv,alpha_inv):
+def vg_capillary_pressure(e_w,e_wr,e_nr,porosity,m_inv,n_inv,alpha_inv):
     """
     Van-Genuchten capillary pressure
     """
-    se = effective_saturation(ew,Epsilon_w,Const_Epsilon)
+    se = effective_saturation(e_w,e_wr,e_nr,porosity)
     if 0.0 < se < 1.0:
         p_c = (  ( se**(-m_inv)  - 1.0)**n_inv )*alpha_inv
     else:
         p_c = 0.0
     return p_c
+
+def d_vg_capillary_pressure(e_w,e_wr,e_nr,porosity,alpha_m_n,m_inv,n_inv1):
+    """
+    dpc/dew
+    """
+    se = effective_saturation(e_w,e_wr,e_nr,porosity)
+    if 0.0 <se <1.0:
+        c0      = (alpha_m_n*(e_w-e_wr)*(se**m_inv))
+        drvt_pc = -(( se**(-m_inv) - 1.0)**n_inv1 )*(1.0/c0)
+    else:
+        drvt_pc = 0.0
+    return drvt_pc
 
 def drvt_ew_of_pc(pc):
     """
