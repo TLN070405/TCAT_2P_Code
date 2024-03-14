@@ -16,6 +16,8 @@ class Fluid(Phase):
     def __init__(self,phase_name):
         super().__init__(phase_name)
         self.viscosity = None
+        self.e_wr = None
+        self.e_nr = None
         self.density_function = None
         self.d_density_function = None
         self.rel_perm_function = None
@@ -26,6 +28,18 @@ class Fluid(Phase):
         Set viscosity
         """
         self.viscosity = viscosity
+
+    def set_e_wr(self,e_wr):
+        """
+        Set e_wr or irreducible wetting phase volume fraction
+        """
+        self.e_wr = e_wr    
+
+    def set_e_nr(self,e_nr):
+        """
+        Set e_nr or residual nonwetting phase volume fraction
+        """
+        self.e_nr = e_nr
 
     def set_density_function(self,density_function,**parameters):
         """
