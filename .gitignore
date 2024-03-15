@@ -1,0 +1,6 @@
+#Ignore files
+*.pyc
+*.c
+*.html
+*.DS_Store
+*.so
