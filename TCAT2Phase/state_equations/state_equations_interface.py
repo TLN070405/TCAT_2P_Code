@@ -15,6 +15,8 @@ class VGdata:
     alpha_inv: float = 0
     alpha_m_n: float = 0
     n_inv1: float = 0
+    m1: float = 0
+    n1: float = 0
 
 
 class VanGenuchten:
@@ -74,6 +76,18 @@ class VanGenuchten:
             e_w = self.s.porosity - self.n.e_nr
         return e_w
     
+    def d_volume_fraction_w(self,p_c):
+        """
+        Derivative of w phase volume fraction
+        """
+
+        if p_c > 0.0:
+            drvt_se = -self.data.alpha_m_n*((self.data.alpha*p_c)**self.data.n1)*((1.0 + ((self.data.alpha*p_c)**self.data.n))**self.data.m1)
+            drvt_ew = drvt_se * (self.s.porosity - self.w.e_wr - self.n.e_nr)
+        else:
+            drvt_ew = 0.0
+        return drvt_ew
+
     def effective_saturation(self,p_c):
         """
         Effective saturation

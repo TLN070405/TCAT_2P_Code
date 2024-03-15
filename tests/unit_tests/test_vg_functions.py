@@ -37,6 +37,14 @@ def test_w_volume_fraction():
     e_w = w_phase.volume_fraction_function(p_c = 100)
     assert e_w == 0.39923369351710036
 
+def test_d_w_volume_fraction():
+    """
+    d_e_w = f(p_c,Van_Genuchten)
+    """
+    w_phase.set_d_volume_fraction_function(vg.volume_fraction_w)
+    e_w = w_phase.volume_fraction_function(p_c = 100)
+    assert e_w == 0.39923369351710036
+
 def test_capillary_pressure():
     """
     p_c = f(e_w,Van_Genuchten)
@@ -56,5 +64,6 @@ def test_d_capillary_pressure():
 
 
 test_w_volume_fraction()
+test_d_w_volume_fraction()
 test_capillary_pressure()
 test_d_capillary_pressure()
