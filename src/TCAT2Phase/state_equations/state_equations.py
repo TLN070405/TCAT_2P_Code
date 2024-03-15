@@ -1,89 +1,12 @@
 """state_equations.py"""
 import math
 
-def vg_volume_fraction_w(pc,e_wr,e_nr,porosity,alpha,n,m):
-    """
-    Volume fraction of w phase from Van-Genuchten model
-    """
-    if pc > 0.0:
-        se =  (1.0 + (alpha*pc)**n)**(-m)
-        ew = (porosity-e_wr-e_nr) *  se + e_wr
-    else:
-        ew = porosity - e_nr
-    return ew
-
-def d_vg_volume_fraction_w(pc,e_wr,e_nr,porosity,alpha,n,alpha_m_n,n1,m1):
-    """
-    this function is dew/dpc
-    """
-    if pc > 0.0:
-        drvt_se = -alpha_m_n*((alpha*pc)**n1)*((1.0 + ((alpha*pc)**n))**m1)
-        drvt_ew = (porosity-e_wr-e_nr)*drvt_se
-    else:
-        drvt_ew = 0.0
-    return drvt_ew
-
-def vg_rel_perm_w(pc,alpha,n,m,m_inv):
-    """
-    The w phase relative permeability function
-    """
-    if pc > 0.0:
-        se =  (1.0 + ((alpha*pc)**n))**(-m)
-        krw =    (se**0.5)  *(  (1.0 - (  (1.0 - se**m_inv)**m  )   )**2.0)
-    else:
-        krw = 1.0
-    return krw
-
-def vg_rel_perm_n(pc,alpha,n,m,m_inv,m2):
-    """
-    The nw phase relative permeability function
-    """
-    if pc > 0.0:
-        se =  (1.0 + (alpha*pc)**n)**(-m)
-        krn = ((1.0 - se)**0.5)*((1.0 - (se**(m_inv)))**(m2))
-    else:
-        krn = 0.0
-    return krn
-
 def effective_saturation(e_w,e_wr,e_nr,porosity):
     """
     Effective saturation
     """
     se = (e_w - e_wr) / (porosity-e_wr-e_nr)
     return se
-
-def drvt_ew_of_pc(pc):
-    """
-    this function is dew/dpc
-    """
-    if pc > 0.0:
-        drvt_se = -alpha_m_n*((alpha*pc)**n1)*((1.0 + ((alpha*pc)**n))**m1)
-        drvt_ew = Const_Epsilon*drvt_se
-    else:
-        drvt_ew = 0.0
-    return drvt_ew
-
-def rel_perm_w_of_pc(pc,alpha,n,m,m_inv):
-    """
-    The w phase relative permeability function
-    """
-    if pc > 0.0:
-        se =  (1.0 + ((alpha*pc)**n))**(-m)
-        krw =    (se**0.5)  *(  (1.0 - (  (1.0 - se**m_inv)**m  )   )**2.0)
-    else:
-        krw = 1.0
-    return krw
-
-def ew_of_pc(pc):
-    """
-    Volume fraction from Van-Genuchten model
-    """
-    if pc > 0.0:
-        se =  (1.0 + (alpha*pc)**n)**(-m)
-        ew = Const_Epsilon *  se + Epsilon_wr
-    else:
-        ew = epsilon - Epsilon_nr
-    return ew
 
 def density_exp_pressure(p,rho0,beta):
     """
@@ -114,6 +37,8 @@ def d_density_linear_pressure(p,rho0,alpha):
     return d_rho
 
 def volume_fraction(e_in,porosity):
-    """caluculate volume fraction assuming 2P model"""
+    """
+    Caluculate volume fraction assuming 2P model
+    """
     e_out = porosity - e_in
     return e_out
