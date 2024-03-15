@@ -60,7 +60,7 @@ n_phase.set_density_function(TCAT2Phase.state_equations.density_linear_pressure,
 n_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_linear_pressure,**n_den_params)
 n_en_params = {'porosity':s_phase.porosity
                 }
-n_phase.set_volume_fraction_funtion(TCAT2Phase.state_equations.volume_fraction,**n_en_params)
+n_phase.set_volume_fraction_function(TCAT2Phase.state_equations.volume_fraction,**n_en_params)
 e_n = n_phase.volume_fraction_function(.3)
 print(e_n)
 
