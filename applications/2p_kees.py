@@ -1,5 +1,7 @@
 import numpy as np
+from petsc4py import PETSc
 import TCAT2Phase
+
 
 # Domain
 domain_size = np.array([[0.0,1.0]])
@@ -65,66 +67,51 @@ e_n = n_phase.volume_fraction_function(.3)
 print(e_n)
 
 # Set w-n interphase properties
-nw_interface = TCAT2Phase.properties.interface.Interface() 
-pc_params = {'Epsilon_w': 0.,
-             'Const_Epsilon': 1.,
-             'm_inv': 0.,
-             'n_inv': 0.,
-             'alpha_inv': 0.
-            }
-nw_interface.set_pc_function(TCAT2Phase.state_equations.vg_capillary_pressure,**pc_params)
+wn_interface = TCAT2Phase.properties.interface.Interface()
+
+m = 0.5990376904570971
+n = 2.494
+alpha = 1.e-3
+
+vg = TCAT2Phase.state_equations_interface.VanGenuchten(
+    m = m,
+    n = n,
+    alpha = alpha,
+    porosity = s_phase.porosity,
+    e_wr = w_phase.residual_volume_fraction,
+    e_nr = n_phase.residual_volume_fraction,
+    )
+
+wn_interface.set_pc_function(vg.capillary_pressure)
 
 model.solid = s_phase
 model.w_phase = w_phase
 model.n_phase = n_phase
-model.interface = nw_interface
+model.interface = wn_interface
 
 # Time
 time_interval = np.array([0.,864.,1728.,2592.,3456.,6048.])
 model.set_simulation_time(time_interval)
+ 
 # Numerical Parameters
-numerics = TCAT2Phase.numerics.Numerics()
+OptDB = PETSc.Options()
+
+# Time-Stepper Options
+OptDB.setValue('ts_type', 'bdf')
+OptDB.setValue('ts_bdf_order', 1)
+OptDB.setValue('ts_max_steps',500)
+OptDB.setValue('ts_max_reject',10000)
+OptDB.setValue('ts_max_snes_failures',20000)
+
+# Nonlinear Solver Options
+
+
+# Linear Solver Options
+OptDB.setValue('ksp_atol', 1.e-8)
+
+# Preconditioner Options 
+OptDB.setValue('pc_type', 'sor')
+
+
 # Solve model
-# TCAT2Phase.numerics.solver(model,numerics)
-
-
-
-
-# Archive
-
-# # Physical parameters of the problem and van genuchten model parameters
-# phi = 0.4
-# epsilon_nr = 0.0
-# epsilon_wr = 0.0
-# n = 2.494
-# rho_w0 = 1e3  
-# rho_n0 = 1.2 
-# mu_w = 1e-3 
-# mu_n = 1.78e-5
-# g = 9.8066
-# d = -1  
-# alpha = 1e-3 
-# a = 4.9e-10 
-# b = 1.189e-5 
-# K = 1e-10
-# tau = 0.0  
-
-# # Boundary and initial conditions of the problem
-# #S0= 0.02
-# #SL= 0.3
-# Ew_bc_0 = 0.12                         # phi*SL
-# Ew_bc_L = 0.008                        # phi*S0
-# Pw_bc_0 = -2113.152788450121           #-Pc(phi*SL)
-# Pw_bc_L = -13706.965861446095          #-Pc(phi*S0)
-# Pn_bc_0 = 0.0 
-# Pn_bc_L = 0.0
-# Ew_IC = 0.008                          #phi*S0
-# Pw_IC = -13706.965861446095            #-Pc(phi*S0)
-# Pn_IC = 0.0
-
-# # Solver parameters
-# r_tol = 1e-8
-# a_tol = 1e-8
-# MaxStepRejections = 500
-# MaxSNESFailures = 10000  
-# MaxTimeSteps = 20000
+TCAT2Phase.numerics.solver(model)

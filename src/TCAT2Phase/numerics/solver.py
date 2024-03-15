@@ -6,74 +6,98 @@ __all__ = [
     "solver"
 ]
 
-def solver(model,numerics):
+def solver(model):
     """
     Collect all information and drive the simulation 
     """
 
-    da=PETSc.DMDA().create(dof=model.model.num_u,
-                           sizes=(model.nodes,),
-                           boundary_type=PETSc.DMDA.BoundaryType.NONE,
-                           stencil_type=None,
-                           stencil_width=1, 
-                           comm=PETSc.COMM_WORLD 
-                            ) 
-    da.setUp()
-    da.setMatType(PETSc.Mat.Type.AIJ)           # create a sparse matrix related to the grid created before (actually this is the type)
-    da.createMatrix()                           # create the matrix
-    u= da.createGlobalVec() # create a structured array related to the grid created before 
-
-    # create a time-stepping solver object 
-    ts = PETSc.TS().create(PETSc.COMM_WORLD)
-
-    # set type of problem
-    ts.setProblemType(ts.ProblemType.NONLINEAR)
+    # PETSc arrays and grid
+    da, u = _get_da(model)
     
-    # set type to BDF method
-    ts.setType(ts.Type.BDF)
+    # PETSc time-stepper
+    ts = _get_time_stepper(model,da)
 
-    # pass the residual function to "ts" so it can use it
-    ts.setIFunction(model.model.residual,args=[model])
+    # PETSc non-linear solver
+    snes = _get_nonlinear_solver(ts)
 
-    # attach the ts solver to the grid created
-    ts.setDM(da)
+    # PETSc linear solver 
+    ksp =  _get_linear_solver(snes)
 
-    # maximum steps allowed to take to reach final time
-    ts.setMaxSteps(numerics.max_time_steps)
-
-    # maximum steps rejections allowed , this is related to snes functions
-    ts.setMaxStepRejections(numerics.max_step_rejections)
-    ts.setMaxSNESFailures(numerics.max_snes_failures)
-
-    # set tolerance
-    ts.setTolerances(numerics.r_tol,numerics.a_tol)
-
-    # set initial time
-    ts.setTime(model.time[0])
-
-    # this option is to match the output time of ts with the output time defined by user.
-    ts.setExactFinalTime(ts.ExactFinalTime.MATCHSTEP)
-
-    # get the snes solver
-    snes=ts.getSNES()
-    snes.setFromOptions()
+    # PETSc preconditioner
+    pc = _get_preconditioner(ksp)
     
-    # get the ksp solver
-    ksp=snes.getKSP()
-    ksp.setFromOptions()
-    
-    # get the pc object from ksp
-    pc=ksp.getPC()
-    pc.setFromOptions()
-    
+    # Set inital conditions
     model.initial_conditions(ts,u)
 
+    # Loop through time
     for t in model.time:
         ts.setMaxTime(t)
         ts.solve(u)
         U = da.getVecArray(u)
 
-
-    #print solvers parameters
     ts.view()  
 
+    return ts
+
+
+def _get_da(model):
+    """
+    Create a PETSc da object:
+    da” - A DM object that is used to manage data for a structured grid in 1, 2, or 3 dimensions.
+    """
+    da = PETSc.DMDA().create(
+        dof = model.model.num_u,
+        sizes = (model.nodes,),
+        boundary_type = PETSc.DMDA.BoundaryType.NONE,
+        stencil_type = None,
+        stencil_width = 1,
+        comm = PETSc.COMM_WORLD 
+        )
+
+    da.setUp()
+    da.setMatType(PETSc.Mat.Type.AIJ)
+    da.createMatrix()
+    u = da.createGlobalVec()
+
+    return da,u
+
+def _get_time_stepper(model,da):
+    """
+    Creatw PETSc time stepper and set options 
+    """
+    ts = PETSc.TS().create(PETSc.COMM_WORLD)
+    ts.setProblemType(ts.ProblemType.NONLINEAR)
+    ts.setIFunction(model.model.residual,args=[model])
+    ts.setDM(da)
+    ts.setTime(model.time[0])
+    ts.setExactFinalTime(ts.ExactFinalTime.MATCHSTEP)
+    ts.setFromOptions()
+
+    return ts
+
+def _get_nonlinear_solver(ts):
+    """
+    Set PETSc nonlinear solver snes and set options
+    """
+    snes = ts.getSNES()
+    snes.setFromOptions()
+
+    return snes
+
+def _get_linear_solver(snes):
+    """
+    Set PETSc linear solver ksp and set options
+    """
+    ksp = snes.getKSP()
+    ksp.setFromOptions()
+
+    return ksp
+    
+def _get_preconditioner(ksp):
+    """
+    Set PETSc preconditioner  and set options
+    """
+    pc = ksp.getPC()
+    pc.setFromOptions()
+
+    return pc

@@ -36,7 +36,7 @@ def test_w_volume_fraction():
     """
     w_phase.set_volume_fraction_function(vg.volume_fraction_w)
     e_w = w_phase.volume_fraction_function(p_c = 100)
-    
+
     assert abs(e_w - 0.39923369351710036) <= allowable_error
 
 def test_d_w_volume_fraction():
@@ -45,7 +45,7 @@ def test_d_w_volume_fraction():
     """
     w_phase.set_d_volume_fraction_function(vg.d_volume_fraction_w)
     d_e_w = w_phase.d_volume_fraction_function(p_c = 100)
-    
+
     assert abs(d_e_w - 0.0) <= allowable_error
 
 def test_capillary_pressure():
@@ -72,7 +72,7 @@ def test_w_relative_permability():
     """
     w_phase.set_rel_perm_function(vg.w_relative_permability)
     k_wr = w_phase.rel_perm_function(100)
-    
+
     assert abs(k_wr - 0.9361235565573552) <= allowable_error
 
 def test_n_relative_permability():
@@ -81,7 +81,7 @@ def test_n_relative_permability():
     """
     n_phase.set_rel_perm_function(vg.n_relative_permability)
     k_nr = n_phase.rel_perm_function(100)
-    
+
     assert abs(k_nr - 0.04376946660914664) <= allowable_error
 
 
