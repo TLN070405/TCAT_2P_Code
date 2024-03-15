@@ -61,8 +61,6 @@ def test_d_capillary_pressure():
     d_p_c = wn_interface.d_pc_function(e_w = 0.3)
     assert d_p_c == -4818.89597078695
 
-
-
 test_w_volume_fraction()
 test_d_w_volume_fraction()
 test_capillary_pressure()
