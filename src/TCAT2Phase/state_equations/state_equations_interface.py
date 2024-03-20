@@ -18,7 +18,8 @@ class VGdata:
     m1: float = 0
     n1: float = 0
     m2: float = 0
-    
+
+@dataclasses.dataclass
 class BCdata:
     """
     Node info for set class
@@ -47,6 +48,11 @@ class VanGenuchten:
         self.data.m_inv = 1./self.data.m
         self.data.n_inv = 1./self.data.n
         self.data.alpha_inv = 1./self.data.alpha
+        self.data.n_inv1=self.data.n_inv-1.0
+        self.data.n1=self.data.n-1.0
+        self.data.m1=-self.data.m-1.0
+        self.data.m2=2.0*self.data.m
+        self.data.alpha_m_n=self.data.alpha*self.data.m*self.data.n
 
     def capillary_pressure(self,e_w):
         """
