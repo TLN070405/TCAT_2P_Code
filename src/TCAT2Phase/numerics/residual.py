@@ -64,28 +64,28 @@ def two_sphase_residual_internal(f,u,udot,model):
         del_pw[n] = utils.gradient(p_w[n],dx)
         del_pn[n] = utils.gradient(p_n[n],dx)
 
-        k = model.solid.permability
+        k = model.solid.permeability
 
-        k_rw[n] = model.w_phase.permeability_function()
+        k_rw[n] = model.w_phase.rel_perm_function(p_c[n])
         mu_w = model.w_phase.viscosity
 
-        k_rn[n] = model.n_phase.permeability_function()
+        k_rn[n] = model.n_phase.rel_perm_function(p_c[n])
         mu_n = model.n_phase.viscosity
-
-        q_w[n] = darcy_velocity(k,k_rw[n],mu_w,del_pw[n],rho_w[n],g)
-        q_n[n] = darcy_velocity(k,k_rn[n],mu_n,del_pn[n],rho_w[n],g)
-
-    for n in range(1,nodes-2):
+    for n in range(0,nodes-1):
+        q_w[n] =darcy_velocity(k,0.5*(k_rw[n+1]*rho_w[n+1]+k_rw[n]*rho_w[n]),mu_w,del_pw[n] ,0.5*(rho_w[n+1]+rho_w[n]),g)
+        q_n[n] =darcy_velocity(k,0.5*(k_rn[n+1]*rho_n[n+1]+k_rn[n]*rho_n[n]),mu_n,del_pn[n] ,0.5*(rho_n[n+1]+rho_n[n]),g)
+ 
+    for n in range(1,nodes-1):
     
         # Calculate the spacial descretization parts
-        Od_w = (1./dx)*(rho_w[n-1]*q_w[n-1] - rho_w[n]*q_w[n])
-        Od_n = (1./dx)*(rho_n[n-1]*q_n[n-1] - rho_n[n]*q_n[n])
+        Od_w = (1./dx)*(q_w[n] - q_w[n-1])
+        Od_n = (1./dx)*(q_n[n] - q_n[n-1])
 
         # Time derivative matrix
         if form == 'two-phase-sp':
             A = two_phase_sp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w,rho_n,e_n,model)
         elif form == 'two-phase-pp':
-            A = two_phase_pp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w,rho_n,e_n)
+            A = two_phase_pp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w,rho_n,e_n,model)
 
         f[n][0] = A[0,0] * udot[n][0] + A[0,1] * udot[n][1] - Od_w
         f[n][1] = A[1,0] * udot[n][0] + A[1,1] * udot[n][1] - Od_n
@@ -118,7 +118,7 @@ def two_phase_sp_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,model):
 
     d_rho_w_p_w = model.w_phase.d_density_function(p_w)
     d_rho_n_p_n = model.n_phase.d_density_function(p_n)
-    d_p_c_e_w = 0.0#state_equations.d_p_c_e_w(e_w)
+    d_p_c_e_w   = model.interface.d_pc_function(e_w)
 
     A[0,0] = rho_w
     A[0,1] = e_w*d_rho_w_p_w
@@ -140,18 +140,18 @@ def two_phase_pp_primary_variables(u,nodes,model):
     e_w = np.zeros_like(p_w)
     for n in range(0,nodes):
         p_c[n] = p_n[n] - p_w[n]
-        e_w[n] = state_equations.Epsilon_w_of_Pc(p_c[n])
+        e_w[n] = model.w_phase.volume_fraction_function(p_c[n])
 
     return e_w,p_w,p_n,p_c
 
-def two_phase_pp_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n):
+def two_phase_pp_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,model):
     """
     Calculate the A matrix. See Kees_Miller_02 for formulation
     """
     A = np.zeros([2,2])
-    d_e_w_p_c = state_equations.d_e_w_p_c(p_c)
-    d_rho_w_p_w = state_equations.d_rho_w_p_w(p_w)
-    d_rho_n_p_n = state_equations.d_rho_n_p_n(p_n)
+    d_e_w_p_c   = model.w_phase.d_volume_fraction_function(p_c)
+    d_rho_w_p_w = model.w_phase.d_density_function(p_w)
+    d_rho_n_p_n = model.n_phase.d_density_function(p_n)
 
     A[0,0] = -rho_w*d_e_w_p_c + e_w*d_rho_w_p_w
     A[0,1] = rho_w*d_e_w_p_c
