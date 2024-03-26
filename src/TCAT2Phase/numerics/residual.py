@@ -46,49 +46,64 @@ def two_sphase_residual_internal(f,u,udot,model):
     else:
         print('Error Model From is unknown')
 
+    mesh = model.mesh
 
-    rho_w = np.zeros_like(e_w)
-    rho_n = np.zeros_like(e_w)
-    e_n = np.zeros_like(e_w)
-    del_pw = np.zeros_like(e_w)
-    del_pn = np.zeros_like(e_w)
-    k_rw = np.zeros_like(e_w)
-    k_rn = np.zeros_like(e_w)
-    q_w = np.zeros_like(e_w)
-    q_n = np.zeros_like(e_w)
-    for n in range(0,nodes):
-        rho_w[n] = model.w_phase.density_function(p_w[n])
-        rho_n[n] = model.n_phase.density_function(p_n[n])
-        e_n[n] = 0.#state_equations.Epsilon_n_of_Pc(e_w[n]) 
+    # Constant Pameters
+    k = model.solid.permeability
+    gravity = 9.81
+    mu_w = model.w_phase.viscosity
+    mu_n = model.n_phase.viscosity
+    porosity = model.solid.porosity
 
-        del_pw[n] = utils.gradient(p_w[n],dx)
-        del_pn[n] = utils.gradient(p_n[n],dx)
+    # Cell Centered Variables
+    rho_w = utils.cell_center(p_w,model.w_phase.density_function,mesh)
+    rho_n = utils.cell_center(p_n,model.n_phase.density_function,mesh)
+    e_n  = porosity - e_w
+    k_rw = utils.cell_center(p_c,model.w_phase.rel_perm_function,mesh)
+    k_rn = utils.cell_center(p_c,model.n_phase.rel_perm_function,mesh)
 
-        k = model.solid.permability
+    # Face Centered Values
+    del_pw = utils.gradient(p_w,mesh)
+    del_pn = utils.gradient(p_n,mesh)
 
-        k_rw[n] = model.w_phase.permeability_function()
-        mu_w = model.w_phase.viscosity
+    rho_w_face = utils.interpolate(rho_w,mesh)
+    rho_n_face = utils.interpolate(rho_n,mesh)
 
-        k_rn[n] = model.n_phase.permeability_function()
-        mu_n = model.n_phase.viscosity
+    q_w = darcy_velocity(
+                   mesh,
+                   k,
+                   utils.interpolate(k_rw,mesh),
+                   mu_w,
+                   del_pw,
+                   rho_w_face,
+                   gravity)
 
-        q_w[n] = darcy_velocity(k,k_rw[n],mu_w,del_pw[n],rho_w[n],g)
-        q_n[n] = darcy_velocity(k,k_rn[n],mu_n,del_pn[n],rho_w[n],g)
+    q_n = darcy_velocity(
+                   mesh,
+                   k,
+                   utils.interpolate(k_rn,mesh),
+                   mu_n,
+                   del_pn,
+                   rho_n_face,
+                   gravity)
 
-    for n in range(1,nodes-2):
-    
-        # Calculate the spacial descretization parts
-        Od_w = (1./dx)*(rho_w[n-1]*q_w[n-1] - rho_w[n]*q_w[n])
-        Od_n = (1./dx)*(rho_n[n-1]*q_n[n-1] - rho_n[n]*q_n[n])
+    for cell in mesh.cells:
+        if cell.boundary:
+            continue
 
+        n = cell.ID
+
+        od_w = 1./cell.length*(rho_w_face[n]*q_w[n] - rho_w_face[n-1]*q_w[n-1])
+        od_n = 1./cell.length*(rho_n_face[n]*q_n[n] - rho_n_face[n-1]*q_n[n-1])
+        
         # Time derivative matrix
         if form == 'two-phase-sp':
-            A = two_phase_sp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w,rho_n,e_n,model)
+            A = two_phase_sp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n],model)
         elif form == 'two-phase-pp':
-            A = two_phase_pp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w,rho_n,e_n)
+            A = two_phase_pp_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n])
 
-        f[n][0] = A[0,0] * udot[n][0] + A[0,1] * udot[n][1] - Od_w
-        f[n][1] = A[1,0] * udot[n][0] + A[1,1] * udot[n][1] - Od_n
+        f[n][0] = A[0,0] * udot[n][0] + A[0,1] * udot[n][1] - od_w
+        f[n][1] = A[1,0] * udot[n][0] + A[1,1] * udot[n][1] - od_n
 
     return f
 
@@ -97,7 +112,7 @@ def two_phase_sp_primary_variables(u,nodes,model):
     """
     Collect primary variables from solution variables
     """
-    # Solution Variables  
+    # Solution Variables
     e_w = u[:,0]
     p_w = u[:,1]
 
@@ -118,12 +133,12 @@ def two_phase_sp_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,model):
 
     d_rho_w_p_w = model.w_phase.d_density_function(p_w)
     d_rho_n_p_n = model.n_phase.d_density_function(p_n)
-    d_p_c_e_w = 0.0#state_equations.d_p_c_e_w(e_w)
+    d_p_c_e_w = model.interface.d_pc_function(e_w)
 
     A[0,0] = rho_w
     A[0,1] = e_w*d_rho_w_p_w
     A[1,0] = e_n*d_rho_n_p_n*d_p_c_e_w - rho_n
-    A[1,1] = e_n*d_rho_n_p_n    
+    A[1,1] = e_n*d_rho_n_p_n
 
     return A
 
@@ -161,10 +176,14 @@ def two_phase_pp_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n):
     return A    
 
 
-def darcy_velocity(k,k_r,mu,del_p,rho,g):
+def darcy_velocity(mesh,k,k_r,mu,del_p,rho,g):
     """
     Calaculate the Darcy velocity as:
         q^a = -k*k_r^a/mu^a(\grad p^a - rho^a*g)
     """
-    q = k*k_r/mu*(del_p - rho*g)
+    q = np.zeros(mesh.num_faces)
+    for face in mesh.faces:
+        if face.boundary:
+            continue
+        q[face.ID] = k*k_r[face.ID]/mu*(del_p[face.ID] - rho[face.ID]*g)
     return q   

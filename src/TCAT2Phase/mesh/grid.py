@@ -23,7 +23,7 @@ class Points:
                 self.num_points
                 )
             
-        return self.points
+        return self.points,self.num_points
 
 
 @dataclasses.dataclass
@@ -36,7 +36,8 @@ class Cell:
     boundary: bool
     faces: list[int] = dataclasses.field(default_factory=list)
     neighbors: list[int] = dataclasses.field(default_factory=list)
-    distance: list[int] = dataclasses.field(default_factory=list) # distance to neighbor cell centroid
+    distance: list[float] = dataclasses.field(default_factory=list) # distance to neighbor cell centroid
+    length: float = -1
 
 
 class Cells:
@@ -58,33 +59,44 @@ class Cells:
                 _cell.faces = [n_p, n_p+1]
                 _cell.neighbors = [n_p-1, n_p+1]
                 _cell.distance = [-1, self.points[n_p+1] - p ]
+                _cell.length = self.points[n_p+1] - self.points[n_p]
             
             elif n_p == num_cells - 1:
                 _cell =  Cell( ID = n_p, point_ID = n_p, boundary = True)
                 _cell.faces = [n_p,n_p+1]
                 _cell.neighbors = [n_p-1, -1]
                 _cell.distance = [p - self.points[n_p-1], -1 ]
+                _cell.length = self.points[n_p] - self.points[n_p-1]
             
             else:
-                _cell =  Cell( ID = n_p, point_ID = n_p, boundary = True)
+                _cell =  Cell( ID = n_p, point_ID = n_p, boundary = False)
                 _cell.faces = [n_p, n_p+1]
                 _cell.neighbors = [n_p-1, n_p+1]
                 _cell.distance = [p - self.points[n_p-1], self.points[n_p+1] - p ]
+                _cell.length = self.points[n_p+1] - self.points[n_p]
 
             self.cells.append(_cell)
 
-        return self.cells
+        return self.cells,num_cells
 
 
 @dataclasses.dataclass
 class Face:
     """
-    Face data
+    Face data:
+        ID: face ID
+        boundary: boundary Face
+        owner: Cell ID that owns face
+        neighbor: Cell ID that is adjacent
+        x: Location of face centroid
+        distance: Distance from face centroid to cell center
     """
     ID: int
+    boundary: bool
     owner: int
     neighbor: int
     x: list[float] = dataclasses.field(default_factory=list)
+    distance: list[float] = dataclasses.field(default_factory=list)
 
 class Faces:
     """
@@ -105,23 +117,29 @@ class Faces:
         for n_f in range(num_faces):
 
             if n_f == 0:
-                _face = Face( ID = n_f, owner = n_f, neighbor = -1)
+                _face = Face(ID=n_f, boundary=True, owner=n_f, neighbor= -1)
                 x = domain.domain_size[0][0] - 0.5*(self.points[n_f+ 1] - self.points[n_f])
                 _face.x = x
+                distance = x - self.points[n_f]
+                _face.distance = distance
 
             elif n_f == num_faces - 1:
-                _face = Face( ID = n_f, owner = n_f - 1, neighbor = -1)
+                _face = Face(ID=n_f, boundary=True, owner = n_f-1, neighbor= -1)
                 x = domain.domain_size[0][1] + 0.5*(self.points[n_f - 1] - self.points[n_f - 2])
                 _face.x = x
+                distance = x - self.points[n_f-1]
+                _face.distance = distance
 
             else:
-                _face = Face( ID = n_f, owner = n_f - 1, neighbor = n_f + 1)
+                _face = Face( ID = n_f, boundary=False, owner = n_f - 1, neighbor = n_f + 1)
                 x = self.points[n_f] - 0.5*(self.points[n_f] - self.points[n_f-1])
                 _face.x = x
+                distance = x - self.points[n_f-1]
+                _face.distance = distance
 
             self.faces.append(_face)
 
-        return self.faces
+        return self.faces,num_faces
 
 class Mesh:
     """
@@ -129,18 +147,21 @@ class Mesh:
     """
     def __init__(self):
         self.points = None
+        self.num_points = -1
         self.cells = None
+        self.num_cells = -1
         self.faces = None
+        self.num_faces = -1
 
     def uniform_mesh_1d(self,domain,nodes):
         """
         Generate 1-Dimensional Uniform Grid
         """
         _points = Points(domain,nodes)
-        self.points = _points.gen_uniform_points()
+        self.points,self.num_points = _points.gen_uniform_points()
         
         _cells = Cells(self.points)
-        self.cells = _cells.gen_uniform_cells()
+        self.cells,self.num_cells = _cells.gen_uniform_cells()
 
         _faces = Faces(self.points)
-        self.faces = _faces.gen_uniform_faces(domain)
+        self.faces,self.num_faces = _faces.gen_uniform_faces(domain)

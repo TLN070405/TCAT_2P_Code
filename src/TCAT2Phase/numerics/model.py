@@ -24,7 +24,7 @@ class Model:
     """
     Class for discretizations
     """
-    def __init__(self, model_type, form, domain,nodes):
+    def __init__(self, model_type, form, domain, nodes, mesh):
         """
         domain is instance to domain class
         nodes = [X,X,X] integer for total number of nodes in each dimension
@@ -39,6 +39,7 @@ class Model:
         self.select_model(model_type, form)
         self.domain = domain
         self.nodes = nodes
+        self.mesh = mesh
         self.res = np.zeros_like(self.nodes)
         self.boundary_type = {}
         self.boundary_value = {}
@@ -109,8 +110,8 @@ class Model:
         self.time = time
     
 
-def initialize_model(model_type,form,domain,nodes):
+def initialize_model(model_type,form,domain,nodes,mesh):
     """
     Initialize model class
     """
-    return Model(model_type,form,domain,nodes)
+    return Model(model_type,form,domain,nodes,mesh)

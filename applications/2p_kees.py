@@ -12,12 +12,19 @@ domain =  TCAT2Phase.properties.domain.initialize_domain(
 
 # Discretization
 nodes = 101
+
+# Mesh
+mesh = TCAT2Phase.mesh.grid.Mesh()
+mesh.uniform_mesh_1d(domain,nodes)
+
+# Boundaries
 boundary_type = [0,0]
 model = TCAT2Phase.model.initialize_model(
                                 model_type = 'two_phase',
                                 form = 'sp',
                                 domain = domain,
-                                nodes = nodes
+                                nodes = nodes,
+                                mesh = mesh
                                     )
 
 # Set boundary types: 0 - Dirchlet
@@ -64,7 +71,6 @@ n_en_params = {'porosity':s_phase.porosity
                 }
 n_phase.set_volume_fraction_function(TCAT2Phase.state_equations.volume_fraction,**n_en_params)
 e_n = n_phase.volume_fraction_function(.3)
-print(e_n)
 
 # Set w-n interphase properties
 wn_interface = TCAT2Phase.properties.interface.Interface()
@@ -83,6 +89,13 @@ vg = TCAT2Phase.state_equations_interface.VanGenuchten(
     )
 
 wn_interface.set_pc_function(vg.capillary_pressure)
+wn_interface.set_d_pc_function(vg.capillary_pressure)
+
+
+w_phase.set_rel_perm_function(vg.w_relative_permability)
+n_phase.set_rel_perm_function(vg.n_relative_permability)
+
+
 
 model.solid = s_phase
 model.w_phase = w_phase
