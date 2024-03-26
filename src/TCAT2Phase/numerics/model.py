@@ -14,9 +14,9 @@ model_options = [
                 ]
 
 form_options = {
-        'two_phase': {'pp':model_types.TwoPhase('pp'),
-                      'sp':model_types.TwoPhase('sp')
-                     }
+        'two_phase': {'pp': model_types.TwoPhase('pp'),
+                      'sp': model_types.TwoPhase('sp')
+                      }
                }
 
 
@@ -24,7 +24,7 @@ class Model:
     """
     Class for discretizations
     """
-    def __init__(self,model_type,form,domain,nodes):
+    def __init__(self, model_type, form, domain,nodes):
         """
         domain is instance to domain class
         nodes = [X,X,X] integer for total number of nodes in each dimension
@@ -35,9 +35,8 @@ class Model:
 
         where bcXX = 0 for Dirchlet
                      1 for Neumann (not currently supported)
-        
         """
-        self.select_model(model_type,form)
+        self.select_model(model_type, form)
         self.domain = domain
         self.nodes = nodes
         self.res = np.zeros_like(self.nodes)
@@ -51,7 +50,7 @@ class Model:
         self.interface = None
 
 
-    def select_model(self,model_type,form):
+    def select_model(self, model_type, form):
         """
         Select the model class
         """
@@ -70,7 +69,7 @@ class Model:
         for d in range(self.domain.dims):
             self.res[d] = self.domain.domain_length[d]/(self.nodes[d]-1)
 
-    def set_boundary_type(self,boundary_type):
+    def set_boundary_type(self, boundary_type):
         """
         Set the boundary type for each boundary and solution variable
         """
