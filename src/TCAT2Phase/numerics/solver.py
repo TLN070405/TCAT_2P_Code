@@ -8,26 +8,30 @@ __all__ = [
 
 def solver(model):
     """
-    Collect all information and drive the simulation 
+    Collect all information and drive the simulation
     """
 
     # PETSc arrays and grid
     da, u = _get_da(model)
-    
+
     # PETSc time-stepper
     ts = _get_time_stepper(model,da)
 
     # PETSc non-linear solver
     snes = _get_nonlinear_solver(ts)
 
-    # PETSc linear solver 
+    # PETSc linear solver
     ksp =  _get_linear_solver(snes)
 
     # PETSc preconditioner
     pc = _get_preconditioner(ksp)
-    
+
     # Set inital conditions
     model.initial_conditions(ts,u)
+
+    # Solve initial conditions (IC are not excplicitly expressed in terms of solution variabes e.g:Neumann BC)
+    _solve_ic(model)
+
 
     # Loop through time
     for t in model.time:
@@ -35,7 +39,7 @@ def solver(model):
         ts.solve(u)
         U = da.getVecArray(u)
 
-    ts.view()  
+    ts.view()
 
     return ts
 
@@ -43,7 +47,7 @@ def solver(model):
 def _get_da(model):
     """
     Create a PETSc da object:
-    da” - A DM object that is used to manage data for a structured grid in 1, 2, or 3 dimensions.
+    da - A DM object that is used to manage data for a structured grid in 1, 2, or 3 dimensions.
     """
     da = PETSc.DMDA().create(
         dof = model.model.num_u,
@@ -51,7 +55,7 @@ def _get_da(model):
         boundary_type = PETSc.DMDA.BoundaryType.NONE,
         stencil_type = None,
         stencil_width = 1,
-        comm = PETSc.COMM_WORLD 
+        comm = PETSc.COMM_WORLD
         )
 
     da.setUp()
@@ -63,7 +67,7 @@ def _get_da(model):
 
 def _get_time_stepper(model,da):
     """
-    Creatw PETSc time stepper and set options 
+    Creatw PETSc time stepper and set options
     """
     ts = PETSc.TS().create(PETSc.COMM_WORLD)
     ts.setProblemType(ts.ProblemType.NONLINEAR)
@@ -92,7 +96,7 @@ def _get_linear_solver(snes):
     ksp.setFromOptions()
 
     return ksp
-    
+
 def _get_preconditioner(ksp):
     """
     Set PETSc preconditioner  and set options
@@ -101,3 +105,19 @@ def _get_preconditioner(ksp):
     pc.setFromOptions()
 
     return pc
+
+
+
+def _solve_ic(model):
+    """
+    Create nonlinear solver to calculate initial conditions
+    """
+    # create a da object to use with snes
+    da_ic, u_ic = _get_da(model)
+    snes_ic =PETSc.SNES().create(PETSc.COMM_WORLD)
+    snes_ic.setFunction(model.model.form_function,args=[model])
+    snes_ic.setDM(da_ic)
+    # provide an initial estimation for the solution of initial conditions+ boundary conditions
+    model.initial_conditions(snes_ic,u_ic)
+    # solve the system to get initial conditions in terms of solution variables
+    snes_ic.solve(None,u_ic)
