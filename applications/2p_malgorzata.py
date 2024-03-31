@@ -1,64 +1,155 @@
-#Malgorzata paper inputs (coarse sand)
 import numpy as np
-############space domain inputs
-Nz= 101
-Omega_0= 0.0 
-Omega_L=  1.0
-############ time inputs 
-t0= 0.0 # first time to start with
-time_interval=np.array([20000.0])  #20000.0
-# time_interval contains all the time outputs to be shown after solving the problem
-############ physical parameters of the problem and van genuchten model parameters
-phi= 0.4 
-Epsilon_nr= 0.0 
-Epsilon_wr= 0.0
-n= 2.494
-rho_w0= 1e3  
-rho_n0= 1.2 
-mu_w=  1e-3 
-mu_n=  1.78e-5
-g= 9.8066
-d=-1  
-alpha= 1e-3 
-a= 4.9e-10 
-b= 1.189e-5 
-K= 1e-10
-tau= 0.0  
-Lx=1.0   # x dimension 
-Ly=1.0   # y dimension
-############ boundary and initial conditions of the problem
-#S0= 0.02
-#SL= 0.3
-Ew_bc_0= 0.12                         # phi*SL
-Ew_bc_L= 0.008                        # phi*S0
-Pw_bc_0= -2113.152788450121           #-Pc(phi*SL)
-Pw_bc_L= -13706.965861446095          #-Pc(phi*S0)
-Pn_bc_0= 0.0 
-Pn_bc_L= 0.0
-Ew_IC= 0.008                          #phi*S0
-Pw_IC= -13706.965861446095            #-Pc(phi*S0)
-Pn_IC= 0.0
+from petsc4py import PETSc
+import TCAT2Phase
+import matplotlib.pyplot as plt
 
-############ ts solver parameters inputs
-rtol= 1e-8
-atol= 1e-8
-MaxStepRejections=500
-MaxSNESFailures=10000  
-MaxTimeSteps=20000 
-############
-dz = (Omega_L - Omega_0) / (Nz - 1.0)
-Cz = 1.0 / dz
-m = 1.0 - (1.0 / n)
-k_muw_half=0.5*(K/mu_w)
-k_mun_half=0.5*(K/mu_n)
-Const_Epsilon = phi-Epsilon_nr - Epsilon_wr
-n_inv=1.0/n
-n_inv1=n_inv-1.0
-n1=n-1.0
-m_inv=1.0/m
-m1=-m-1.0
-m2=2.0*m
-alpha_inv=1.0/alpha
-alpha_m_n=alpha*m*n
-############
+# Domain
+domain_size = np.array([[0.0,1.0]])
+domain =  TCAT2Phase.properties.domain.initialize_domain(
+                            dims = 1,
+                            domain_size = domain_size,
+                            )
 
+# Discretization
+nodes = 101
+
+# Mesh
+mesh = TCAT2Phase.mesh.grid.Mesh()
+mesh.uniform_mesh_1d(domain,nodes)
+
+# Boundaries
+boundary_type = [0,0]
+model = TCAT2Phase.model.initialize_model(
+                                model_type = 'two_phase',
+                                form = 'sp',
+                                domain = domain,
+                                nodes = nodes,
+                                mesh = mesh
+                                    )
+
+# Set boundary types: 0 - Dirchlet
+#                     1 - Neumann (but not supported yet)
+boundary_type = {'e_w': [[0, 0]],
+                 'p_w': [[0, 0]]}
+
+model.set_boundary_type(boundary_type = boundary_type)
+
+# Set boundary values
+boundary_value = {'e_w': [[0.12, 0.008]],
+                  'p_w': [[-2113.152788450121, -13706.965861446095]]}
+
+model.set_boundary_value(boundary_value = boundary_value)
+
+
+# Set initial conditions: Only set up for constant values!
+initial_conditions = {'e_w': 0.008,
+                      'p_w': -13706.965861446095}
+model.set_initial_conditions(initial_conditions)
+
+# Set solid phase properties
+s_phase = TCAT2Phase.properties.phase.Solid('s')
+s_phase.set_porosity(0.4)
+s_phase.set_permeability(1e-10)
+
+# Set wetting-phase properties
+w_phase = TCAT2Phase.properties.phase.Fluid('w')
+w_phase.set_residual_volume_fraction(0.0)
+w_phase.set_viscosity(1.e-3)
+w_den_params = {'rho0':1.e3,
+                'beta':4.9e-10}
+w_phase.set_density_function(TCAT2Phase.state_equations.density_exp_pressure,**w_den_params)
+w_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_exp_pressure,**w_den_params)
+
+# Set nonwetting-phase properties
+n_phase = TCAT2Phase.properties.phase.Fluid('n')
+n_phase.set_residual_volume_fraction(0.0)
+n_phase.set_viscosity(1.78e-5)
+n_den_params = {'rho0':1.2,
+                'alpha':1.189e-5
+                }
+n_phase.set_density_function(TCAT2Phase.state_equations.density_linear_pressure,**n_den_params)
+n_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_linear_pressure,**n_den_params)
+n_en_params = {'porosity':s_phase.porosity
+                }
+n_phase.set_volume_fraction_function(TCAT2Phase.state_equations.volume_fraction,**n_en_params)
+e_n = n_phase.volume_fraction_function(.3)
+
+# Set w-n interphase properties
+wn_interface = TCAT2Phase.properties.interface.Interface()
+
+m = 0.5990376904570971
+n = 2.494
+alpha = 1.e-3
+
+vg = TCAT2Phase.state_equations_interface.VanGenuchten(
+    m = m,
+    n = n,
+    alpha = alpha,
+    porosity = s_phase.porosity,
+    e_wr = w_phase.residual_volume_fraction,
+    e_nr = n_phase.residual_volume_fraction,
+    )
+
+wn_interface.set_pc_function(vg.capillary_pressure)
+wn_interface.set_d_pc_function(vg.d_capillary_pressure)
+
+
+w_phase.set_rel_perm_function(vg.w_relative_permability)
+n_phase.set_rel_perm_function(vg.n_relative_permability)
+
+
+
+model.solid = s_phase
+model.w_phase = w_phase
+model.n_phase = n_phase
+model.interface = wn_interface
+
+# Time (here 0 should not be part of the time_interval)
+time_interval = np.array([1000])
+model.set_simulation_time(time_interval)
+ 
+# Numerical Parameters
+OptDB = PETSc.Options()
+
+# Time-Stepper Options
+OptDB.setValue('snes_fd_color', None)
+OptDB.setValue('ts_type', 'bdf')
+OptDB.setValue('ts_bdf_order', 5)
+OptDB.setValue('ts_max_steps',100000)
+OptDB.setValue('ts_max_reject',500)
+OptDB.setValue('ts_monitor', None)
+
+# Nonlinear Solver Options
+OptDB.setValue('ts_max_snes_failures',10000)
+
+# Linear Solver Options
+OptDB.setValue('ts_rtol', 1.e-8)
+OptDB.setValue('ts_atol', 1.e-8)
+# Preconditioner Options 
+OptDB.setValue('pc_type', 'sor')
+
+
+# Solve model
+ts=TCAT2Phase.numerics.solver(model)
+# just a temporair plot to see if solver gives results or not
+Solution=ts.getSolution() 
+mesh = np.linspace(0, 1, model.nodes)
+Ve_w_Time_Results=np.zeros([model.nodes], dtype=np.double) 
+Vp_w_Time_Results=np.zeros([model.nodes], dtype=np.double) 
+for j in range(0,model.nodes):
+    Ve_w_Time_Results[j]   = Solution[2*j]
+    Vp_w_Time_Results[j]   = Solution[2*j+1]
+
+print(Solution[0])
+plt.plot(mesh,Ve_w_Time_Results,label='t=%5.4f'%model.time[0])
+plt.xlabel("x (m)")
+plt.ylabel("ew")
+plt.title("Malgorzata Solution ")
+plt.show()  
+#####visualization  pressure pw    
+
+plt.plot(mesh,Vp_w_Time_Results,label='t=%5.4f'%model.time[0])
+plt.xlabel("x (m)")
+plt.ylabel("Pw")
+plt.title("Malgorzata Solution ")
+plt.show()    

@@ -41,6 +41,11 @@ class VanGenuchten:
         self.data.m_inv = 1./self.data.m
         self.data.n_inv = 1./self.data.n
         self.data.alpha_inv = 1./self.data.alpha
+        self.data.alpha_m_n = self.data.alpha*self.data.m*self.data.n
+        self.data.n_inv1    = self.data.n_inv-1.0
+        self.data.m1        = -self.data.m-1.0
+        self.data.n1        = self.data.n-1.0
+        self.data.m2        =  2.0*self.data.m
 
     def capillary_pressure(self,e_w):
         """

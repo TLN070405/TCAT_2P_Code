@@ -69,7 +69,8 @@ def _get_time_stepper(model,da):
     ts.setProblemType(ts.ProblemType.NONLINEAR)
     ts.setIFunction(model.model.residual,args=[model])
     ts.setDM(da)
-    ts.setTime(model.time[0])
+    #ts.setTime(model.time[0])
+    ts.setTime(0)
     ts.setExactFinalTime(ts.ExactFinalTime.MATCHSTEP)
     ts.setFromOptions()
 

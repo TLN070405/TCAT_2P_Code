@@ -1,4 +1,5 @@
 import numpy as np
+import pdb
 from TCAT2Phase import state_equations
 from TCAT2Phase.numerics import utils
 
@@ -72,7 +73,7 @@ def two_sphase_residual_internal(f,u,udot,model):
     q_w = darcy_velocity(
                    mesh,
                    k,
-                   utils.interpolate(k_rw,mesh),
+                   utils.interpolate(k_rw*rho_w,mesh),
                    mu_w,
                    del_pw,
                    rho_w_face,
@@ -81,11 +82,13 @@ def two_sphase_residual_internal(f,u,udot,model):
     q_n = darcy_velocity(
                    mesh,
                    k,
-                   utils.interpolate(k_rn,mesh),
+                   utils.interpolate(k_rn*rho_n,mesh),
                    mu_n,
                    del_pn,
                    rho_n_face,
                    gravity)
+
+ #   pdb.set_trace()
 
     for cell in mesh.cells:
         if cell.boundary:
@@ -93,8 +96,8 @@ def two_sphase_residual_internal(f,u,udot,model):
 
         n = cell.ID
 
-        od_w = 1./cell.length*(rho_w_face[n]*q_w[n] - rho_w_face[n-1]*q_w[n-1])
-        od_n = 1./cell.length*(rho_n_face[n]*q_n[n] - rho_n_face[n-1]*q_n[n-1])
+        od_w = 1./cell.length*(q_w[n+1] - q_w[n])
+        od_n = 1./cell.length*(q_n[n+1] - q_n[n])
         
         # Time derivative matrix
         if form == 'two-phase-sp':

@@ -101,7 +101,10 @@ class Model:
         for n_u,u_name in enumerate(self.model.u_names):
             for n in range(0,self.nodes):
                 u[n][n_u] = self.initial_condition[u_name]
-
+        for n in range(self.model.num_u):
+            u[0][n] = self.boundary_value[n][0][0]
+            u[self.nodes-1][n] = self.boundary_value[n][0][1]
+            
     def set_simulation_time(self,time):
         """
         Collect the simulation output times
