@@ -44,6 +44,7 @@ class Model:
         self.boundary_type = {}
         self.boundary_value = {}
         self.initial_condition = {}
+        self.solution = {}
         self.time = None
         self.solid = None
         self.w_phase = None
@@ -111,6 +112,14 @@ class Model:
         where time = [t0,t1,t2,...,tn]
         """
         self.time = time
+
+    def clean_solution(self,solution,time):
+        """
+        Take in output PETSc array of solutions and store in self.solutions
+        """
+        self.solution[time] = {}
+        for n_u,u_name in enumerate(self.model.u_names):
+            self.solution[time][u_name] = np.copy(solution[n_u::self.model.num_u])
     
 
 def initialize_model(model_type,form,domain,nodes,mesh):
