@@ -94,11 +94,8 @@ vg = TCAT2Phase.state_equations_interface.VanGenuchten(
 wn_interface.set_pc_function(vg.capillary_pressure)
 wn_interface.set_d_pc_function(vg.d_capillary_pressure)
 
-
 w_phase.set_rel_perm_function(vg.w_relative_permability)
 n_phase.set_rel_perm_function(vg.n_relative_permability)
-
-
 
 model.solid = s_phase
 model.w_phase = w_phase
@@ -106,7 +103,7 @@ model.n_phase = n_phase
 model.interface = wn_interface
 
 # Time (here 0 should not be part of the time_interval)
-time_interval = np.array([1000])
+time_interval = np.array([2,5,10,100,1000])
 model.set_simulation_time(time_interval)
  
 # Numerical Parameters
@@ -126,63 +123,39 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
+
 # Preconditioner Options 
 OptDB.setValue('pc_type', 'sor')
 
+# Solve model and return model.solutions
+# which is a dictionary where
+# solutions[time][u_name] = np.array
+solutions = TCAT2Phase.numerics.solver(model)
 
-# Solve model
-ts=TCAT2Phase.numerics.solver(model)
-# just a temporair plot to see if solver gives results or not
-Solution=ts.getSolution() 
-mesh = np.linspace(0, 1, model.nodes)
-Ve_w_Time_Results=np.zeros([model.nodes], dtype=np.double) 
-Vp_w_Time_Results=np.zeros([model.nodes], dtype=np.double) 
-for j in range(0,model.nodes):
-    Ve_w_Time_Results[j]   = Solution[2*j]
-    Vp_w_Time_Results[j]   = Solution[2*j+1]
-
-print(Solution[0])
-plt.plot(mesh,Ve_w_Time_Results,label='t=%5.4f'%model.time[0])
-plt.xlabel("x (m)")
-plt.ylabel("ew")
-plt.title("Malgorzata Solution ")
+for time,variable in solutions.items():
+    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
+    plt.xlabel("x(m)")
+    plt.ylabel("e_w")
+    plt.title("Malgorzata Solution")
+    plt.legend()
 plt.show()  
-#####visualization  pressure pw    
 
-plt.plot(mesh,Vp_w_Time_Results,label='t=%5.4f'%model.time[0])
-plt.xlabel("x (m)")
-plt.ylabel("Pw")
-plt.title("Malgorzata Solution ")
+
+for time,variable in solutions.items():
+    print(time,variable)
+    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
+    plt.xlabel('x(m)')
+    plt.ylabel('Pw')
+    plt.title('Malgorzata Solution')
+    plt.legend()
 plt.show()    
 
-# read external file
-def read_txt_file(filename):
-    try:
-        with open(filename, 'r') as file:
-            # Read the lines of the file
-            lines = file.readlines()
-            numbers = []
-            for line in lines:
-                # Split each line into numbers
-                line_numbers = line.strip().split()
-                line_numbers=line_numbers[1:]
-                # Convert the numbers from strings to floats and append to the list
-                numbers.extend([float(num) for num in line_numbers])
-            return numbers
-    except FileNotFoundError:
-        print(f"File '{filename}' not found.")
-        return None
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
-
-
 filename = "Output_Malgorzata_Exact.txt"
-exact_results = read_txt_file(filename)
 
+exact_results = TCAT2Phase.io.read_txt_file(filename)
 
-absolute_error_ew=linalg.norm(np.subtract(exact_results[0:nodes],Ve_w_Time_Results))
-absolute_error_pw=linalg.norm(np.subtract(exact_results[nodes:2*nodes],Vp_w_Time_Results))
+absolute_error_ew=linalg.norm(np.subtract(exact_results[0:nodes],solutions[time_interval[-1]]['e_w']))
+absolute_error_pw=linalg.norm(np.subtract(exact_results[nodes:2*nodes],solutions[time_interval[-1]]['p_w']))
 print(absolute_error_ew)
 print(absolute_error_pw)
 

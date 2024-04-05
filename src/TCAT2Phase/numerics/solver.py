@@ -33,11 +33,11 @@ def solver(model):
     for t in model.time:
         ts.setMaxTime(t)
         ts.solve(u)
-        U = da.getVecArray(u)
+        model.clean_solution(u.getArray(),t)
 
-    ts.view()  
+    #ts.view() 
 
-    return ts
+    return model.solution
 
 
 def _get_da(model):
@@ -69,7 +69,6 @@ def _get_time_stepper(model,da):
     ts.setProblemType(ts.ProblemType.NONLINEAR)
     ts.setIFunction(model.model.residual,args=[model])
     ts.setDM(da)
-    #ts.setTime(model.time[0])
     ts.setTime(0)
     ts.setExactFinalTime(ts.ExactFinalTime.MATCHSTEP)
     ts.setFromOptions()
