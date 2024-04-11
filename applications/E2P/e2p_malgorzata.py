@@ -3,7 +3,6 @@ from  numpy import linalg
 from petsc4py import PETSc
 import TCAT2Phase
 import matplotlib.pyplot as plt
-
 # Domain
 domain_size = np.array([[0.0,1.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -21,8 +20,8 @@ mesh.uniform_mesh_1d(domain,nodes)
 # Boundaries
 boundary_type = [0,0]
 model = TCAT2Phase.model.initialize_model(
-                                model_type = 'two_phase',
-                                form = 'sp',
+                                model_type = 'extended_two_phase',
+                                form = 'spp',
                                 domain = domain,
                                 nodes = nodes,
                                 mesh = mesh
@@ -31,26 +30,31 @@ model = TCAT2Phase.model.initialize_model(
 # Set boundary types: 0 - Dirchlet
 #                     1 - Neumann (but not supported yet)
 boundary_type = {'e_w': [[0, 0]],
-                 'p_w': [[0, 0]]}
+                 'p_w': [[0, 0]],
+                 'p_n': [[0, 0]]}
 
 model.set_boundary_type(boundary_type = boundary_type)
 
 # Set boundary values
 boundary_value = {'e_w': [[0.12, 0.008]],
-                  'p_w': [[-2113.152788450121, -13706.965861446095]]}
+                  'p_w': [[-2113.152788450121, -13706.965861446095]],
+                  'p_n': [[0., 0.]]}
 
 model.set_boundary_value(boundary_value = boundary_value)
 
 
 # Set initial conditions: Only set up for constant values!
-initial_conditions = {'e_w': 0.008,
-                      'p_w': -13706.965861446095}
+initial_conditions = {'e_w':0.008,
+                      'p_w': -13706.965861446095,
+                      'p_n': 0. }
 model.set_initial_conditions(initial_conditions)
 
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s')
 s_phase.set_porosity(0.4)
 s_phase.set_permeability(1e-10)
+s_phase.set_gravity(9.8066)
+s_phase.set_dynamic_capillary_pressure_parameter(1e7)
 
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
@@ -73,7 +77,6 @@ n_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_linear_press
 n_en_params = {'porosity':s_phase.porosity
                 }
 n_phase.set_volume_fraction_function(TCAT2Phase.state_equations.volume_fraction,**n_en_params)
-e_n = n_phase.volume_fraction_function(.3)
 
 # Set w-n interphase properties
 wn_interface = TCAT2Phase.properties.interface.Interface()
@@ -81,7 +84,7 @@ wn_interface = TCAT2Phase.properties.interface.Interface()
 m = 0.5990376904570971
 n = 2.494
 alpha = 1.e-3
-
+ 
 vg = TCAT2Phase.state_equations_interface.VanGenuchten(
     m = m,
     n = n,
@@ -98,6 +101,8 @@ wn_interface.set_d_pc_function(vg.d_capillary_pressure)
 w_phase.set_rel_perm_function(vg.w_relative_permability)
 n_phase.set_rel_perm_function(vg.n_relative_permability)
 
+w_phase.set_volume_fraction_function(vg.volume_fraction_w)
+w_phase.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 
 
 model.solid = s_phase
@@ -105,8 +110,8 @@ model.w_phase = w_phase
 model.n_phase = n_phase
 model.interface = wn_interface
 
-# Time (here 0 should not be part of the time_interval)
-time_interval = np.array([1000])
+# Time
+time_interval = np.array([1000.,5000.,10000.,20000.])
 model.set_simulation_time(time_interval)
  
 # Numerical Parameters
@@ -128,61 +133,40 @@ OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
 # Preconditioner Options 
 OptDB.setValue('pc_type', 'sor')
+ 
 
 
-# Solve model
-ts=TCAT2Phase.numerics.solver(model)
-# just a temporair plot to see if solver gives results or not
-Solution=ts.getSolution() 
-mesh = np.linspace(0, 1, model.nodes)
-Ve_w_Time_Results=np.zeros([model.nodes], dtype=np.double) 
-Vp_w_Time_Results=np.zeros([model.nodes], dtype=np.double) 
-for j in range(0,model.nodes):
-    Ve_w_Time_Results[j]   = Solution[2*j]
-    Vp_w_Time_Results[j]   = Solution[2*j+1]
-
-print(Solution[0])
-plt.plot(mesh,Ve_w_Time_Results,label='t=%5.4f'%model.time[0])
-plt.xlabel("x (m)")
-plt.ylabel("ew")
-plt.title("Malgorzata Solution ")
+ 
+# Solve model and return model.solutions
+# which is a dictionary where
+# solutions[time][u_name] = np.array
+solutions = TCAT2Phase.numerics.solver(model)
+ 
+for time,variable in solutions.items():
+    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
+    plt.xlabel("x(m)")
+    plt.ylabel("e_w")
+    plt.title("Malgorzata Extended 2P Solution")
+    plt.legend()
 plt.show()  
-#####visualization  pressure pw    
 
-plt.plot(mesh,Vp_w_Time_Results,label='t=%5.4f'%model.time[0])
-plt.xlabel("x (m)")
-plt.ylabel("Pw")
-plt.title("Malgorzata Solution ")
+
+for time,variable in solutions.items():
+    print(time,variable)
+    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
+    plt.xlabel('x(m)')
+    plt.ylabel('Pw')
+    plt.title('Malgorzata Extended 2P  Solution')
+    plt.legend()
 plt.show()    
 
-# read external file
-def read_txt_file(filename):
-    try:
-        with open(filename, 'r') as file:
-            # Read the lines of the file
-            lines = file.readlines()
-            numbers = []
-            for line in lines:
-                # Split each line into numbers
-                line_numbers = line.strip().split()
-                line_numbers=line_numbers[1:]
-                # Convert the numbers from strings to floats and append to the list
-                numbers.extend([float(num) for num in line_numbers])
-            return numbers
-    except FileNotFoundError:
-        print(f"File '{filename}' not found.")
-        return None
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
-
-
-filename = "Output_Malgorzata_Exact.txt"
-exact_results = read_txt_file(filename)
-
-
-absolute_error_ew=linalg.norm(np.subtract(exact_results[0:nodes],Ve_w_Time_Results))
-absolute_error_pw=linalg.norm(np.subtract(exact_results[nodes:2*nodes],Vp_w_Time_Results))
-print(absolute_error_ew)
-print(absolute_error_pw)
-
+for time,variable in solutions.items():
+    print(time,variable)
+    plt.plot(mesh.points,variable['p_n'],label=f't={time}')
+    plt.xlabel('x(m)')
+    plt.ylabel('Pn')
+    plt.title('Malgorzata Extended 2P  Solution')
+    plt.legend()
+plt.show()    
+ 
+ 
