@@ -53,6 +53,5 @@ def interpolate(x,mesh):
             
             if mesh.faces[face].boundary or mesh.faces[face].owner != cell.ID:
                 continue
-            #value[face] = x[cell.ID] + mesh.faces[face].distance/dist*(x[cell.ID] - x[neigh])
-            value[face] = 0.5*(x[cell.ID] + x[neigh])
+            value[face] = x[cell.ID] + mesh.faces[face].distance/dist*(x[neigh] - x[cell.ID])
     return value

@@ -29,21 +29,21 @@ def solver(model):
     # Set inital conditions
     model.initial_conditions(ts,u)
 
+    # Set boundary conditions
+    model.boundary_conditions(ts,u)
+
     # Loop through time
     for t in model.time:
         ts.setMaxTime(t)
         ts.solve(u)
-        U = da.getVecArray(u)
+        model.clean_solution(u.getArray(),t)
 
-    ts.view()  
-
-    return ts
-
+    return model.solution
 
 def _get_da(model):
     """
     Create a PETSc da object:
-    da” - A DM object that is used to manage data for a structured grid in 1, 2, or 3 dimensions.
+    da - A DM object that is used to manage data for a structured grid in 1, 2, or 3 dimensions.
     """
     da = PETSc.DMDA().create(
         dof = model.model.num_u,
@@ -69,7 +69,6 @@ def _get_time_stepper(model,da):
     ts.setProblemType(ts.ProblemType.NONLINEAR)
     ts.setIFunction(model.model.residual,args=[model])
     ts.setDM(da)
-    #ts.setTime(model.time[0])
     ts.setTime(0)
     ts.setExactFinalTime(ts.ExactFinalTime.MATCHSTEP)
     ts.setFromOptions()
