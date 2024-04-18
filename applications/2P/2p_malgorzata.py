@@ -36,15 +36,24 @@ boundary_type = {'p_w': [[0, 0]],
 model.set_boundary_type(boundary_type = boundary_type)
 
 # Set boundary values
-boundary_value = {'p_w': [[-2113.152788450121, -13706.965861446095]],
-                  'p_n': [[0., 0.]]}
+def pw0_bc(t): return -2113.152788450121
+def pn0_bc(t): return 0.
+def pwL_bc(t): return -13706.965861446095
+def pnL_bc(t): return 0.
+
+
+boundary_value = {'p_w': [[ pw0_bc,pwL_bc ]],
+                  'p_n': [[ pn0_bc,pnL_bc  ]]}
 
 model.set_boundary_value(boundary_value = boundary_value)
 
 
-# Set initial conditions: Only set up for constant values!
-initial_conditions = {'p_w': -13706.965861446095,
-                      'p_n': 0. }
+pw_ic= np.full((nodes), -13706.965861446095)
+pn_ic= np.full((nodes), 0.)
+# Set initial conditions
+initial_conditions = {'p_w': pw_ic,
+                      'p_n': pn_ic }
+
 model.set_initial_conditions(initial_conditions)
 
 # Set solid phase properties
@@ -108,7 +117,7 @@ model.n_phase = n_phase
 model.interface = wn_interface
 
 # Time
-time_interval = np.array([2,5,10,100,1000])
+time_interval = np.array([20000])
 model.set_simulation_time(time_interval)
  
 # Numerical Parameters
@@ -157,13 +166,3 @@ for time,variable in solutions.items():
     plt.legend()
 plt.show()    
 
-"""
-filename = "Output_Malgorzata_Exact.txt"
-
-exact_results = TCAT2Phase.io.input.read_txt_file(filename)
-
-absolute_error_ew=linalg.norm(np.subtract(exact_results[0:nodes],solutions[time_interval[-1]]['e_w']))
-absolute_error_pw=linalg.norm(np.subtract(exact_results[nodes:2*nodes],solutions[time_interval[-1]]['p_w']))
-print(absolute_error_ew)
-print(absolute_error_pw)
-"""

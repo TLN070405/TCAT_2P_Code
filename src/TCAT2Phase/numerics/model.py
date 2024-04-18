@@ -47,6 +47,7 @@ class Model:
         self.res = np.zeros_like(self.nodes)
         self.boundary_type = {}
         self.boundary_value = {}
+        self.boundary_name = {}
         self.initial_condition = {}
         self.solution = {}
         self.time = None
@@ -75,7 +76,7 @@ class Model:
         for d in range(self.domain.dims):
             self.res[d] = self.domain.domain_length[d]/(self.nodes[d]-1)
 
-    def set_boundary_type(self, boundary_type):
+    def set_boundary_type(self,boundary_type):
         """
         Set the boundary type for each boundary and solution variable
         """
@@ -84,10 +85,17 @@ class Model:
 
     def set_boundary_value(self,boundary_value):
         """
-        Set the boundary type for each boundary and solution variable
+        Set the boundary value for each boundary and solution variable
         """
         for n_u,u in enumerate(self.model.u_names):
             self.boundary_value[n_u] = boundary_value[u]
+
+    def set_boundary_name(self,boundary_name):
+        """
+        Set the quantity name for each boundary and solution variable
+        """
+        for n_u,u in enumerate(self.model.u_names):
+            self.boundary_name[n_u] = boundary_name[u]
 
     def set_initial_conditions(self,initial_conditions):
         """
@@ -106,26 +114,25 @@ class Model:
         for n_u,u_name in enumerate(self.model.u_names):
             if self.model.num_u==1:
                 for n in range(1,self.nodes-1): 
-                    u[n] = self.initial_condition[u_name]
+                    u[n] = self.initial_condition[u_name][n]
             else:
                 for n in range(1,self.nodes-1): 
-                    u[n][n_u] = self.initial_condition[u_name]
+                    u[n][n_u] = self.initial_condition[u_name][n]
 
     def boundary_conditions(self,ts,U):
         """
-        Set the bounsadry conditions in the PETSc arrays
+        Set the boundary conditions in the PETSc arrays
         """
         da = ts.getDM()
         u = da.getVecArray(U)
 
-         
         if self.model.num_u==1:
-            u[0] = self.boundary_value[0][0][0]
-            u[self.nodes-1] = self.boundary_value[0][0][1]
+            u[0] = self.boundary_value[0][0][0](0)
+            u[self.nodes-1] = self.boundary_value[0][0][1](0)
         else:
             for n in range(self.model.num_u):
-                u[0][n] = self.boundary_value[n][0][0]
-                u[self.nodes-1][n] = self.boundary_value[n][0][1]
+                u[0][n] = self.boundary_value[n][0][0](0)
+                u[self.nodes-1][n] = self.boundary_value[n][0][1](0)
 
     def set_simulation_time(self,time):
         """

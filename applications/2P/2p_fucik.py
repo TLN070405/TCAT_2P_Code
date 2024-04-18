@@ -35,15 +35,25 @@ boundary_type = {'e_w': [[0, 0]],
 model.set_boundary_type(boundary_type = boundary_type)
 
 # Set boundary values
-boundary_value = {'e_w': [[0.12096000000000001 , 0.448]],
-                  'p_w': [[ -10067.198963341432, -3450.0  ]]}
+def ew0_bc(t): return 0.12096000000000001
+def pw0_bc(t): return -10067.198963341432
+def ewL_bc(t): return 0.448
+def pwL_bc(t): return -3450.0
+
+
+boundary_value = {'e_w': [[ew0_bc, ewL_bc]],
+                  'p_w': [[pw0_bc, pwL_bc ]]}
 
 model.set_boundary_value(boundary_value = boundary_value)
 
 
 # Set initial conditions: Only set up for constant values!
-initial_conditions = {'e_w': 0.448 ,
-                      'p_w': -3450.0  }
+
+ew_ic= np.full((nodes), 0.448 )
+pw_ic= np.full((nodes), -3450.0)
+
+initial_conditions = {'e_w': ew_ic ,
+                      'p_w': pw_ic }
 model.set_initial_conditions(initial_conditions)
 
 # Set solid phase properties

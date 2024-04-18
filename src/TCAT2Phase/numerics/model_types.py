@@ -21,7 +21,7 @@ class ExtendedTwoPhase(BaseModel):
             self.name = 'extended-two-phase-spp'
             self.u_names = ['e_w','p_w','p_n']
             self.num_u = 3
-            self.residual = residual.extended_two_phase_residual
+            self.residual = residual.model_residual
 
 class TwoPhase(BaseModel):
     """
@@ -32,13 +32,13 @@ class TwoPhase(BaseModel):
             self.name = 'two-phase-sp'
             self.u_names = ['e_w','p_w']
             self.num_u = 2
-            self.residual = residual.two_phase_residual
+            self.residual = residual.model_residual
 
         if form == 'pp':
             self.name = 'two-phase-pp'
             self.u_names = ['p_w','p_n']
             self.num_u = 2
-            self.residual = residual.two_phase_residual
+            self.residual = residual.model_residual
 
 class Richards(BaseModel):
     """
@@ -49,7 +49,7 @@ class Richards(BaseModel):
             self.name = 'richards-pr'
             self.u_names = ['p_w']
             self.num_u = 1
-            self.residual = residual.richards_residual
+            self.residual = residual.model_residual
 
 
 
