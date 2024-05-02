@@ -12,6 +12,17 @@ class BaseModel:
         self.u_names = []
         self.num_u = 0 
 
+class ExtendedTwoPhase(BaseModel):
+    """
+    Standard two phase model formulation
+    """
+    def __init__(self,form):
+        if form == 'spp':
+            self.name = 'extended-two-phase-spp'
+            self.u_names = ['e_w','p_w','p_n']
+            self.num_u = 3
+            self.residual = residual.model_residual
+
 class TwoPhase(BaseModel):
     """
     Standard two phase model formulation
@@ -21,14 +32,24 @@ class TwoPhase(BaseModel):
             self.name = 'two-phase-sp'
             self.u_names = ['e_w','p_w']
             self.num_u = 2
-            self.residual = residual.two_phase_residual
+            self.residual = residual.model_residual
 
         if form == 'pp':
             self.name = 'two-phase-pp'
             self.u_names = ['p_w','p_n']
             self.num_u = 2
-            self.residual = residual.two_phase_residual
+            self.residual = residual.model_residual
 
+class Richards(BaseModel):
+    """
+    Richards model formulation
+    """
+    def __init__(self,form):
+        if form == 'pr':
+            self.name = 'richards-pr'
+            self.u_names = ['p_w']
+            self.num_u = 1
+            self.residual = residual.model_residual
 
 
 
