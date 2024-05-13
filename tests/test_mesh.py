@@ -10,9 +10,13 @@ domain =  TCAT2Phase.properties.domain.initialize_domain(
                             domain_size = domain_size,
                             )
 
-
 mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain,nodes)
-for f in mesh.points:
+for p in mesh.points:
+    print(p)
+for f in mesh.faces:
     print(f)
-#print(mesh.faces)
+for c in mesh.cells:
+    print(c)
+
+ 

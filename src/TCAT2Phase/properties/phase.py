@@ -15,8 +15,8 @@ class Fluid(Phase):
     """
     def __init__(self,phase_name):
         super().__init__(phase_name)
-        self.viscosity = None
-        self.residual_volume_fraction = None
+        self.viscosity = 1.
+        self.residual_volume_fraction = 0.
         self.density_function = None
         self.d_density_function = None
         self.rel_perm_function = None
@@ -73,8 +73,8 @@ class Solid(Phase):
     """
     def __init__(self,phase_name):
         super().__init__(phase_name)
-        self.porosity = None
-        self.permeability = None
+        self.porosity = 0.
+        self.permeability = 0.
         self.gravity = 0.
         self.dynamic_capillary_pressure_parameter = None
 

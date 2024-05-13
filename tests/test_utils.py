@@ -45,3 +45,4 @@ def test_interpolate_function():
 
 test_gradient_function()
 test_interpolate_function()
+print(utils.gradient(y,mesh))
