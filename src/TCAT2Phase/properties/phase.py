@@ -77,6 +77,7 @@ class Solid(Phase):
         self.permeability = None
         self.gravity = 0.
         self.dynamic_capillary_pressure_parameter = None
+
     def set_porosity(self,porosity):
         """
         Set porosity

@@ -3,6 +3,7 @@ from  numpy import linalg
 from petsc4py import PETSc
 import TCAT2Phase
 import matplotlib.pyplot as plt
+
 # Domain
 domain_size = np.array([[0.0,1.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -34,6 +35,7 @@ boundary_type = {'p_w': [[0, 0]],
 
 model.set_boundary_type(boundary_type = boundary_type)
 
+
 # Set boundary names
 boundary_name = {'p_w': [['p_w', 'p_w']],
                  'p_n': [['p_n', 'p_n']]}
@@ -52,6 +54,7 @@ boundary_value = {'p_w': [[ pw0_bc,pwL_bc ]],
 
 model.set_boundary_value(boundary_value = boundary_value)
 
+
 # Set initial conditions
 pw_ic= np.zeros([nodes] )
 pn_ic= np.zeros([nodes] )
@@ -61,7 +64,6 @@ pn_ic[0] =  0.0
 for i in range(1,nodes):
     pw_ic[i] = -13706.965861446095 
     pn_ic[i] =   0.0
-
 
 initial_conditions = {'p_w': pw_ic,
                       'p_n': pn_ic }
@@ -129,7 +131,9 @@ model.n_phase = n_phase
 model.interface = wn_interface
 
 # Time
+
 time_interval = np.array([2,5,10,100,1000])
+
 model.set_simulation_time(time_interval)
  
 # Numerical Parameters
@@ -151,8 +155,6 @@ OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
 # Preconditioner Options 
 OptDB.setValue('pc_type', 'sor')
- 
-
  
 # Solve model and return model.solutions
 # which is a dictionary where
@@ -176,6 +178,3 @@ for time,variable in solutions.items():
     plt.title('Malgorzata Solution')
     plt.legend()
 plt.show()    
-
-
-
