@@ -35,23 +35,37 @@ boundary_type = {'p_w': [[0, 0]],
 
 model.set_boundary_type(boundary_type = boundary_type)
 
+# Set boundary names
+
+boundary_name = {'p_w': [['p_w', 'p_w']],
+                 'p_n': [['p_n', 'p_n']]}
+
+model.set_boundary_name(boundary_name = boundary_name)
+
+# Set boundary values
+
 def pw0_bc(t): return -5.0*9.982e2*9.81 
 def pn0_bc(t): return 0.
 def pwL_bc(t): return -10.0*(1.0 - 1.01*math.exp(-(t)/(24.0*3600.0)))*(9.982e2*9.81 )
 def pnL_bc(t): return 0.
 
 # Set boundary values
+
 boundary_value = {'p_w': [[ pw0_bc,pwL_bc ]],
                   'p_n': [[ pn0_bc,pnL_bc  ]]}
 
 model.set_boundary_value(boundary_value = boundary_value)
 
 
+# Set initial conditions
+
 pw_ic= np.zeros([nodes] )
 pn_ic= np.zeros([nodes] )
 for i in range(0,nodes):
     pw_ic[i] = (-5- i *(5 / (nodes - 1.0)))*9.982e2*9.81
     pn_ic[i] = 0.0  
+
+
 # Set initial conditions
 initial_conditions = {'p_w': pw_ic,
                       'p_n': pn_ic }
@@ -62,7 +76,8 @@ model.set_initial_conditions(initial_conditions)
 s_phase = TCAT2Phase.properties.phase.Solid('s')
 s_phase.set_porosity(0.301 )
 s_phase.set_permeability(5.957035950473679e-12)
-s_phase.set_gravity(9.81)
+s_phase.set_gravity(-9.81)
+
 
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
@@ -140,7 +155,10 @@ OptDB.setValue('ts_max_snes_failures',10000)
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
 # Preconditioner Options 
-OptDB.setValue('pc_type', 'sor')
+
+OptDB.setValue('ksp_type', 'gmres')
+OptDB.setValue('pc_type', 'lu')
+
  
 
  

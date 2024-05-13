@@ -4,6 +4,7 @@ from petsc4py import PETSc
 import TCAT2Phase
 import matplotlib.pyplot as plt
 import math
+
 # Domain
 domain_size = np.array([[0.0,0.8]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -30,20 +31,28 @@ model = TCAT2Phase.model.initialize_model(
 
 # Set boundary types: 0 - Dirchlet
 #                     1 - Neumann (but not supported yet)
-boundary_type = {'e_w': [[0, 0]],
-                 'p_w': [[0, 0]]}
+
+boundary_type = {'e_w': [[0, 1]],
+                 'p_w': [[0, 1]]}
+
 
 model.set_boundary_type(boundary_type = boundary_type)
 
+# Set boundary names
+boundary_name = {'e_w': [['e_w', 'q_w']],
+                 'p_w': [['p_w', 'q_n']]}
+
+model.set_boundary_name(boundary_name = boundary_name)
 
 # Set boundary values
 def ew0_bc(t): return 0.27 
 def pw0_bc(t): return -1049.67
-def ewL_bc(t): return 0.003 
-def pwL_bc(t): return -9996.39
+def qwL_bc(t): return 0.0 
+def qnL_bc(t): return 0.0 
 
-boundary_value = {'e_w': [[ ew0_bc, ewL_bc ]],
-                 'p_w': [[ pw0_bc , pwL_bc  ]]}
+boundary_value = {'e_w': [[ ew0_bc, qwL_bc ]],
+                 'p_w': [[ pw0_bc , qnL_bc  ]]}
+
 
 
 model.set_boundary_value(boundary_value = boundary_value)
@@ -51,7 +60,10 @@ model.set_boundary_value(boundary_value = boundary_value)
 # Set initial conditions: Only set up for constant values!
 ew_ic= np.zeros([nodes] )
 pw_ic= np.zeros([nodes] )
-for i in range(0,nodes):
+
+pw_ic[0] = -1049.67 
+ew_ic[0] =  0.27 
+for i in range(1,nodes):
     pw_ic[i] = -9996.39 
     ew_ic[i] =   0.003 
 

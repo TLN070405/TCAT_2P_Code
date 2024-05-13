@@ -34,33 +34,47 @@ boundary_type = {'e_w': [[0, 0]],
 
 model.set_boundary_type(boundary_type = boundary_type)
 
+# Set boundary names
+
+boundary_name = {'e_w': [['e_w', 'e_w']],
+                 'p_w': [['p_w', 'p_w']]}
+
+model.set_boundary_name(boundary_name = boundary_name)
+
 # Set boundary values
 def ew0_bc(t): return 0.12096000000000001
-def pw0_bc(t): return -10067.198963341432
 def ewL_bc(t): return 0.448
+def pw0_bc(t): return -10067.198963341432
 def pwL_bc(t): return -3450.0
 
 
-boundary_value = {'e_w': [[ew0_bc, ewL_bc]],
-                  'p_w': [[pw0_bc, pwL_bc ]]}
+boundary_value = {'e_w': [[ ew0_bc, ewL_bc ]],
+                  'p_w': [[ pw0_bc, pwL_bc  ]]}
+
+
 
 model.set_boundary_value(boundary_value = boundary_value)
 
 
-# Set initial conditions: Only set up for constant values!
 
-ew_ic= np.full((nodes), 0.448 )
-pw_ic= np.full((nodes), -3450.0)
+# Set initial conditions 
+ew_ic= np.zeros([nodes] )
+pw_ic= np.zeros([nodes] )
+for i in range(0,nodes):
+    ew_ic[i] = 0.448 
+    pw_ic[i] = -3450.0
 
-initial_conditions = {'e_w': ew_ic ,
+initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic }
+
 model.set_initial_conditions(initial_conditions)
 
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s')
 s_phase.set_porosity(0.448)
 s_phase.set_permeability(1.63e-11)
-s_phase.set_gravity(9.8066)
+s_phase.set_gravity(0.)
+
 
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
