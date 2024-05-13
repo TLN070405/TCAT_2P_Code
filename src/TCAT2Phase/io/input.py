@@ -1,8 +1,5 @@
 """input.py"""
 
-
-
-
 def read_txt_file(filename):
     """
     Read external text file

@@ -55,7 +55,7 @@ class Model:
         self.w_phase = None
         self.n_phase = None
         self.interface = None
-
+        self.data_hysteresis = {}
 
     def select_model(self, model_type, form):
         """
@@ -113,10 +113,10 @@ class Model:
 
         for n_u,u_name in enumerate(self.model.u_names):
             if self.model.num_u==1:
-                for n in range(1,self.nodes-1): 
+                for n in range(0,self.nodes): 
                     u[n] = self.initial_condition[u_name][n]
             else:
-                for n in range(1,self.nodes-1): 
+                for n in range(0,self.nodes): 
                     u[n][n_u] = self.initial_condition[u_name][n]
 
     def boundary_conditions(self,ts,U):
@@ -149,6 +149,11 @@ class Model:
         for n_u,u_name in enumerate(self.model.u_names):
             self.solution[time][u_name] = np.copy(solution[n_u::self.model.num_u])
 
+    def set_data_hysteresis(self,data_hysteresis):
+        """
+        Set the hysteresis arrays
+        """
+        self.data_hysteresis = data_hysteresis
 
 def initialize_model(model_type,form,domain,nodes,mesh):
     """

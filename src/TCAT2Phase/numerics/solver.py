@@ -6,16 +6,17 @@ __all__ = [
     "solver"
 ]
 
-def solver(model):
+def solver(models):
     """
     Collect all information and drive the simulation 
     """
 
     # PETSc arrays and grid
-    da, u = _get_da(model)
+    model_imb=models[0]
+    da, u = _get_da(model_imb)
     
     # PETSc time-stepper
-    ts = _get_time_stepper(model,da)
+    ts = _get_time_stepper(models,da)
 
     # PETSc non-linear solver
     snes = _get_nonlinear_solver(ts)
@@ -26,19 +27,20 @@ def solver(model):
     # PETSc preconditioner
     pc = _get_preconditioner(ksp)
     
-    # Set inital conditions
-    model.initial_conditions(ts,u)
-
-    # Set boundary conditions
-    model.boundary_conditions(ts,u)
+    # Solve initial conditions (ic are not excplicitly expressed in terms of solution variabes e.g:Neumann BC)
+    da_ic, u_ic=_solve_ic(model_imb)
+    U=da.getVecArray(u)
+    U_ic=da_ic.getVecArray(u_ic)
+    for i in range(0,model_imb.nodes):
+        U[i] = U_ic[i]
 
     # Loop through time
-    for t in model.time:
+    for t in model_imb.time:
         ts.setMaxTime(t)
         ts.solve(u)
-        model.clean_solution(u.getArray(),t)
+        model_imb.clean_solution(u.getArray(),t)
 
-    return model.solution
+    return model_imb.solution
 
 def _get_da(model):
     """
@@ -61,13 +63,14 @@ def _get_da(model):
 
     return da,u
 
-def _get_time_stepper(model,da):
+def _get_time_stepper(models,da):
     """
     Creatw PETSc time stepper and set options 
     """
+    model_imb=models[0]
     ts = PETSc.TS().create(PETSc.COMM_WORLD)
     ts.setProblemType(ts.ProblemType.NONLINEAR)
-    ts.setIFunction(model.model.residual,args=[model])
+    ts.setIFunction(model_imb.model.residual,args=[models])
     ts.setDM(da)
     ts.setTime(0)
     ts.setExactFinalTime(ts.ExactFinalTime.MATCHSTEP)
@@ -101,3 +104,22 @@ def _get_preconditioner(ksp):
     pc.setFromOptions()
 
     return pc
+
+def _solve_ic(model):
+    """
+    Create nonlinear solver to solve initial and boundary conditions
+    """
+    # create a da object to use with snes
+    da_ic, u_ic = _get_da(model)
+    r_ic=u_ic.duplicate()
+    snes_ic =PETSc.SNES().create(PETSc.COMM_WORLD)
+    snes_ic.setFunction(model.model.form_function,r_ic,args=[model]) 
+    snes_ic.setDM(da_ic)
+    # provide an initial estimation for the solution of initial conditions+ boundary conditions
+    model.initial_conditions(snes_ic,u_ic)
+
+    # solve the system to get initial conditions in terms of solution variables
+    snes_ic.solve(None,u_ic)
+
+    return da_ic, u_ic
+    

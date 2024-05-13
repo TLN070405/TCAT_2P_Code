@@ -50,7 +50,7 @@ class Cells:
 
     def gen_uniform_cells(self):
         """
-        Generate cells based on unirom grid spacing
+        Generate cells based on unifrom grid spacing
         """
         num_cells = len(self.points)
         for n_p,p in enumerate(self.points):

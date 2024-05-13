@@ -1,7 +1,7 @@
 """model_types.py"""
 
 from TCAT2Phase.numerics import residual
-
+from TCAT2Phase.numerics import form_function
 
 class BaseModel:
     """
@@ -22,6 +22,7 @@ class ExtendedTwoPhase(BaseModel):
             self.u_names = ['e_w','p_w','p_n']
             self.num_u = 3
             self.residual = residual.model_residual
+            self.form_function = form_function.model_formfunction
 
 class TwoPhase(BaseModel):
     """
@@ -33,12 +34,14 @@ class TwoPhase(BaseModel):
             self.u_names = ['e_w','p_w']
             self.num_u = 2
             self.residual = residual.model_residual
+            self.form_function = form_function.model_formfunction
 
         if form == 'pp':
             self.name = 'two-phase-pp'
             self.u_names = ['p_w','p_n']
             self.num_u = 2
             self.residual = residual.model_residual
+            self.form_function = form_function.model_formfunction
 
 class Richards(BaseModel):
     """
@@ -50,7 +53,7 @@ class Richards(BaseModel):
             self.u_names = ['p_w']
             self.num_u = 1
             self.residual = residual.model_residual
-
+            self.form_function = form_function.model_formfunction
 
 
 
