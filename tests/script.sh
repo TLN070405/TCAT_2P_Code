@@ -3,6 +3,6 @@
  
  #-ksp_converged_reason 
 export PYTHONPATH=/home/farah/Desktop/petsc/arch-linux-c-debug/lib
-python3 test_utils.py  
+python3 test_hysteresis.py  
 
  

@@ -75,7 +75,7 @@ def model_residual_internal(f,u,udot,models):
 
     num_u = model_imb.model.num_u
     
-    ih_new          = model_imb.data_hysteresis[1]
+    drainage_new    = model_imb.data_hysteresis[1]
     ew_reversal     = model_imb.data_hysteresis[4]
     ew_endpoint     = model_imb.data_hysteresis[5]
     pc_reversal     = model_imb.data_hysteresis[6]
@@ -92,7 +92,7 @@ def model_residual_internal(f,u,udot,models):
         od    = [od_dp,od_w[0],od_n[0]]
         
         # Time derivative matrix
-        data_d_pc_hysteresis=[ih_new[n],ew_reversal[n],ew_endpoint[n],pc_reversal[n],pc_endpoint[n] ]
+        data_d_pc_hysteresis=[drainage_new[n],ew_reversal[n],ew_endpoint[n],pc_reversal[n],pc_endpoint[n] ]
         A = model_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n],data_d_pc_hysteresis,models)
         # residuals
         f[n] = np.dot(A, udot[n]) -  od[ int(num_u*(-0.5*num_u+1.5)):int(num_u*(-0.5*num_u+2.5))]
@@ -124,14 +124,14 @@ def model_primary_variables(u,models):
         p_c = np.zeros_like(p_w)
         p_n = np.zeros_like(p_w)
 
-        ih_new          = model_imb.data_hysteresis[1]
+        drainage        = model_imb.data_hysteresis[1]
         ew_reversal     = model_imb.data_hysteresis[4]
         ew_endpoint     = model_imb.data_hysteresis[5]
         pc_reversal     = model_imb.data_hysteresis[6]
         pc_endpoint     = model_imb.data_hysteresis[7]
         for n in range(0,nodes):
-            data_pc_hysteresis=[ih_new[n],ew_reversal[n],ew_endpoint[n],pc_reversal[n],pc_endpoint[n] ]
-            p_c[n] = state_equations_hysteresis.pc_hysteretic(model_imb,model_dr, e_w[n], data_pc_hysteresis)
+            data_pc_hysteresis=[drainage[n],ew_reversal[n],ew_endpoint[n],pc_reversal[n],pc_endpoint[n] ]
+            p_c[n] = model_imb.interface.pc_hysteretic(model_imb,model_dr, e_w[n], data_pc_hysteresis)
             p_n[n] = p_w[n] + p_c[n]
     elif form == 'two-phase-pp':
         # Solution Variables
@@ -183,7 +183,7 @@ def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,data_d_pc_hysteresis,models):
         A[2,0] = -rho_n  
         A[2,2] = e_n*d_rho_n_p_n
     elif form == 'two-phase-sp':
-        d_p_c_e_w   = state_equations_hysteresis.d_pc_hysteretic(model_imb,model_dr, e_w, data_d_pc_hysteresis)
+        d_p_c_e_w   = model_imb.interface.d_pc_hysteretic(model_imb,model_dr, e_w, data_d_pc_hysteresis)
         A[0,0] = rho_w
         A[0,1] = e_w*d_rho_w_p_w
         A[1,0] = e_n*d_rho_n_p_n*d_p_c_e_w - rho_n
@@ -300,8 +300,8 @@ def model_hysteresis(ts,counter_hysteresis,models):
     model_imb = models[0]
     model_dr  = models[1]
     
-    ih_old          = model_imb.data_hysteresis[0]
-    ih_new          = model_imb.data_hysteresis[1]
+    drainage_old    = model_imb.data_hysteresis[0]
+    drainage_new    = model_imb.data_hysteresis[1]
     pc_old          = model_imb.data_hysteresis[2]
     ew_old          = model_imb.data_hysteresis[3]
     ew_reversal     = model_imb.data_hysteresis[4]
@@ -316,21 +316,21 @@ def model_hysteresis(ts,counter_hysteresis,models):
       solution_now = ts.getSolution()
 
       for n in range(0,nodes):  
-          data_pc_hysteresis = [solution_now[2*n], ih_new[n], ew_reversal[n], ew_endpoint[n], pc_reversal[n], pc_endpoint[n]]
-          pc_old[n]   = state_equations_hysteresis.pc_hysteretic(model_imb,model_dr, data_pc_hysteresis)
+          data_pc_hysteresis = [solution_now[2*n], drainage_new[n], ew_reversal[n], ew_endpoint[n], pc_reversal[n], pc_endpoint[n]]
+          pc_old[n]   = model_imb.interface.pc_hysteretic(model_imb,model_dr, data_pc_hysteresis)
           if( solution_now[2*n]-ew_old[n]>1e-9 ):
-            ih_old[n] = ih_new[n]
-            ih_new[n] = -1
+            drainage_old[n] = drainage_new[n]
+            drainage_new[n] = -1
           else:      
-            ih_old[n] = ih_new[n]
-            ih_new[n] = 1
+            drainage_old[n] = drainage_new[n]
+            drainage_new[n] = 1
           #####  
           ew_old[n]=solution_now[2*n] 
           #####
-          if(ih_new[n] != ih_old[n]): 
-            data_pc_hysteresis = [solution_now[2*n], ih_old[n], ew_reversal[n], ew_endpoint[n], pc_reversal[n], pc_endpoint_old[n]]
+          if(drainage_new[n] != drainage_old[n]): 
+            data_pc_hysteresis = [solution_now[2*n], drainage_old[n], ew_reversal[n], ew_endpoint[n], pc_reversal[n], pc_endpoint_old[n]]
             pc_endpoint[n]     = pc_reversal[n] 
-            pc_reversal[n]     = state_equations_hysteresis.pc_hysteretic(model_imb,model_dr, data_pc_hysteresis)
+            pc_reversal[n]     = model_imb.interface.pc_hysteretic(model_imb,model_dr, data_pc_hysteresis)
             pc_endpoint_old[n] = pc_endpoint[n]
             ew_endpoint[n]     = ew_reversal[n]
             ew_reversal[n]     = solution_now[2*n]
