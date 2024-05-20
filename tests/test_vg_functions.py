@@ -1,5 +1,5 @@
 import TCAT2Phase
-
+from TCAT2Phase.state_equations import state_equations_interface
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s')
 s_phase.set_porosity(0.4)
@@ -19,7 +19,7 @@ m = 0.5990376904570971
 n = 2.494
 alpha = 1.e-3
 
-vg = TCAT2Phase.state_equations_interface.VanGenuchten(
+vg = state_equations_interface.VanGenuchten(
     m = m,
     n = n,
     alpha = alpha,
