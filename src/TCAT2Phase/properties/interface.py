@@ -8,10 +8,10 @@ class Interface:
     def __init__(self):
         self.pc_function = None
         self.d_pc_function = None
-        self.pc_hysteretic_function = None
-        self.d_pc_hysteretic_function = None
-        self.volume_fraction_hysteretic_function = None
-        
+        self.volume_fraction_function = None
+        self.d_volume_fraction_function = None
+
+
     def set_pc_function(self,pc_function,**parameters):
         """
         Set capillary pressure
@@ -24,20 +24,14 @@ class Interface:
         """
         self.d_pc_function = partial(d_pc_function,**parameters)
 
-    def set_pc_hysteretic_function(self,pc_hysteretic_function,**parameters):
+    def set_volume_fraction_function(self,volume_fraction_function,**parameters):
         """
-        Set hysteretic capillary pressure
+        Set Volume Fraction
         """
-        self.pc_hysteretic_function = partial(pc_hysteretic_function,**parameters)
+        self.volume_fraction_function = partial(volume_fraction_function,**parameters)
 
-    def set_d_pc_hysteretic_function(self,d_pc_hysteretic_function,**parameters):
+    def set_d_volume_fraction_function(self,d_volume_fraction_function,**parameters):
         """
-        Set derivative of hysteretic capillary pressure
+        Set derivative of Volume Fraction 
         """
-        self.d_pc_hysteretic_function = partial(d_pc_hysteretic_function,**parameters)
-
-    def set_volume_fraction_hysteretic_function(self,volume_fraction_hysteretic_function,**parameters):
-        """
-        Set hysteretic volume fraction  
-        """
-        self.volume_fraction_hysteretic_function = partial(volume_fraction_hysteretic_function,**parameters)
+        self.d_volume_fraction_function = partial(d_volume_fraction_function,**parameters)

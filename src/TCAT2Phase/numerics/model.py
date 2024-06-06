@@ -55,7 +55,9 @@ class Model:
         self.w_phase = None
         self.n_phase = None
         self.interface = None
+        self.hysteresis = False
         self.data_hysteresis = {}
+
 
     def select_model(self, model_type, form):
         """
