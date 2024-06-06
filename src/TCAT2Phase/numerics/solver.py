@@ -6,17 +6,17 @@ __all__ = [
     "solver"
 ]
 
-def solver(models):
+def solver(model):
     """
     Collect all information and drive the simulation 
     """
 
     # PETSc arrays and grid
-    model_imb=models[0]
-    da, u = _get_da(model_imb)
+
+    da, u = _get_da(model)
     
     # PETSc time-stepper
-    ts = _get_time_stepper(models,da)
+    ts = _get_time_stepper(model,da)
 
     # PETSc non-linear solver
     snes = _get_nonlinear_solver(ts)
@@ -28,19 +28,19 @@ def solver(models):
     pc = _get_preconditioner(ksp)
     
     # Solve initial conditions (ic are not excplicitly expressed in terms of solution variabes e.g:Neumann BC)
-    da_ic, u_ic=_solve_ic(model_imb)
+    da_ic, u_ic=_solve_ic(model)
     U=da.getVecArray(u)
     U_ic=da_ic.getVecArray(u_ic)
-    for i in range(0,model_imb.nodes):
+    for i in range(0,model.nodes):
         U[i] = U_ic[i]
 
     # Loop through time
-    for t in model_imb.time:
+    for t in model.time:
         ts.setMaxTime(t)
         ts.solve(u)
-        model_imb.clean_solution(u.getArray(),t)
+        model.clean_solution(u.getArray(),t)
 
-    return model_imb.solution
+    return model.solution
 
 def _get_da(model):
     """
@@ -63,14 +63,13 @@ def _get_da(model):
 
     return da,u
 
-def _get_time_stepper(models,da):
+def _get_time_stepper(model,da):
     """
     Creatw PETSc time stepper and set options 
     """
-    model_imb=models[0]
     ts = PETSc.TS().create(PETSc.COMM_WORLD)
     ts.setProblemType(ts.ProblemType.NONLINEAR)
-    ts.setIFunction(model_imb.model.residual,args=[models])
+    ts.setIFunction(model.model.residual,args=[model])
     ts.setDM(da)
     ts.setTime(0)
     ts.setExactFinalTime(ts.ExactFinalTime.MATCHSTEP)
