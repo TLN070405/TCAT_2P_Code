@@ -57,6 +57,7 @@ class Model:
         self.interface = None
         self.hysteresis = False
         self.data_hysteresis = {}
+        self.counter_hysteresis = 1
 
 
     def select_model(self, model_type, form):

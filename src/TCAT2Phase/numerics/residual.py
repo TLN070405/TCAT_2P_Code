@@ -3,8 +3,6 @@ from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_hysteresis
 from TCAT2Phase.numerics import utils
 
-counter_hysteresis=1
-
 def model_residual(ts,t,U,Udot,F,model):
     """
     Residual function for the selected model. 
@@ -303,7 +301,6 @@ def model_hysteresis(ts,model):
     """
     Hysteresis function
     """
-    global counter_hysteresis
 
     drainage_old    = model.data_hysteresis['drainage_old']
     drainage_new    = model.data_hysteresis['drainage_new']
@@ -314,12 +311,13 @@ def model_hysteresis(ts,model):
     pc_reversal     = model.data_hysteresis['p_c_reversal']
     pc_endpoint     = model.data_hysteresis['p_c_endpoint' ]
     pc_endpoint_old = model.data_hysteresis['p_c_endpoint_old']
-    hysteresis_tolerance=model.data_hysteresis['hysteresis_tolerance']
+    ew_hysteresis   = model.data_hysteresis['e_w_hysteresis']
+    pc_hysteresis   = model.data_hysteresis['p_c_hysteresis']
+    hysteresis_tolerance = model.data_hysteresis['hysteresis_tolerance']
 
-    n_dt=ts.getStepNumber()
     nodes = model.nodes
 
-    if(n_dt==counter_hysteresis):
+    if(ts.getStepNumber()==model.counter_hysteresis):
       solution_now = ts.getSolution()
 
       for n in range(0,nodes):  
@@ -332,16 +330,19 @@ def model_hysteresis(ts,model):
             drainage_new[n] = True
           #  
           ew_old[n]  = solution_now[2*n] 
-          # 
+          #  store hysteresis ew and pc just for visualization
+          ew_hysteresis[n,model.counter_hysteresis]=ew_old[n]   
+          pc_hysteresis[n,model.counter_hysteresis]=pc_old[n] 
+          # update reversal and endpoints (ew and pc)
           if(drainage_new[n] != drainage_old[n]): 
             pc_endpoint[n]     = pc_reversal[n] 
             pc_reversal[n]     = model.interface.pc_function( solution_now[2*n], drainage_old[n], ew_reversal[n], ew_endpoint[n], pc_reversal[n], pc_endpoint_old[n])
             pc_endpoint_old[n] = pc_endpoint[n]
             ew_endpoint[n]     = ew_reversal[n]
             ew_reversal[n]     = solution_now[2*n] 
-
-      counter_hysteresis=counter_hysteresis+1
-
+ 
+      model.counter_hysteresis += 1
+    
 
 def darcy_velocity(mesh,k,k_r,mu,del_p,rho,g):
     """
