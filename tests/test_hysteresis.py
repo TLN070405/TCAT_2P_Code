@@ -165,11 +165,11 @@ for i in range(1,len(time)):
           drainage_new= True
         # update the hysteresis parameters
         if(drainage_new != drainage_old):
-          p_c_endpoint= p_c_reversal
-          p_c_reversal= model_test.interface.pc_function(e_w_old,drainage_old,e_w_reversal,e_w_endpoint,p_c_reversal, p_c_endpoint_old)
-          p_c_endpoint_old= p_c_endpoint
-          e_w_endpoint=e_w_reversal
-          e_w_reversal= e_w_old
+          p_c_endpoint     = p_c_reversal
+          p_c_reversal     = model_test.interface.pc_function(e_w_old,drainage_old,e_w_reversal,e_w_endpoint,p_c_reversal, p_c_endpoint_old)
+          p_c_endpoint_old = p_c_endpoint
+          e_w_endpoint     = e_w_reversal
+          e_w_reversal     = e_w_old
         # calculate the pc at current time.
         p_c[i]=model_test.interface.pc_function(e_w[i],drainage_old,e_w_reversal,e_w_endpoint,p_c_reversal, p_c_endpoint) 
         e_w_old=e_w[i]

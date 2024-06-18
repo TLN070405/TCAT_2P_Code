@@ -74,12 +74,6 @@ def model_residual_internal(f,u,udot,model):
 
     num_u = model.model.num_u
     
-    drainage_new     = model.data_hysteresis['drainage_new']
-    e_w_reversal     = model.data_hysteresis['e_w_reversal']
-    e_w_endpoint     = model.data_hysteresis['e_w_endpoint']
-    p_c_reversal     = model.data_hysteresis['p_c_reversal']
-    p_c_endpoint     = model.data_hysteresis['p_c_endpoint']
-    
  
     for cell in mesh.cells:
         if cell.boundary:
@@ -92,8 +86,7 @@ def model_residual_internal(f,u,udot,model):
         od    = [od_dp,od_w[0],od_n[0]]
         
         # Time derivative matrix
-        data_d_pc_hysteresis=[drainage_new[n],e_w_reversal[n],e_w_endpoint[n],p_c_reversal[n],p_c_endpoint[n] ]
-        A = model_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n],data_d_pc_hysteresis,model)
+        A = model_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n],n,model)
         # residuals
         f[n] = np.dot(A, udot[n]) -  od[ int(num_u*(-0.5*num_u+1.5)):int(num_u*(-0.5*num_u+2.5))]
     
@@ -103,6 +96,9 @@ def model_primary_variables(u,model):
     """
     primary variables for each formulation
     """
+    if(model.hysteresis==True):
+       model.data_hysteresis['state']="new"
+
 
     nodes = model.nodes
     form  = model.model.name
@@ -114,6 +110,7 @@ def model_primary_variables(u,model):
         # Primary Variables 
         p_c = np.zeros_like(p_w)
         for n in range(0,nodes):
+            model.current_cell=n
             p_c[n] = model.interface.pc_function(e_w[n])
     elif form == 'two-phase-sp':
         # Solution Variables
@@ -122,15 +119,10 @@ def model_primary_variables(u,model):
         # Primary Variables 
         p_c = np.zeros_like(p_w)
         p_n = np.zeros_like(p_w)
-    
-        drainage_new     = model.data_hysteresis['drainage_new']
-        e_w_reversal     = model.data_hysteresis['e_w_reversal']
-        e_w_endpoint     = model.data_hysteresis['e_w_endpoint']
-        p_c_reversal     = model.data_hysteresis['p_c_reversal']
-        p_c_endpoint     = model.data_hysteresis['p_c_endpoint']
 
         for n in range(0,nodes):
-            p_c[n] = model.interface.pc_function( e_w[n], drainage_new[n],e_w_reversal[n],e_w_endpoint[n],p_c_reversal[n],p_c_endpoint[n])
+            model.current_cell=n
+            p_c[n] = model.interface.pc_function(e_w[n])
             p_n[n] = p_w[n] + p_c[n]
     elif form == 'two-phase-pp':
         # Solution Variables
@@ -140,8 +132,9 @@ def model_primary_variables(u,model):
         p_c = np.zeros_like(p_w)
         e_w = np.zeros_like(p_w)
         for n in range(0,nodes):
+            model.current_cell=n
             p_c[n] = p_n[n] - p_w[n]
-            e_w[n] = model.w_phase.volume_fraction_function(p_c[n])
+            e_w[n] = model.interface.volume_fraction_function(p_c[n])
     elif form == 'richards-pr':
         # Solution Variables
         p_w = u[:]
@@ -150,34 +143,30 @@ def model_primary_variables(u,model):
         e_w = np.zeros_like(p_w)
         p_n = np.zeros_like(p_w)
         for n in range(0,nodes):
+            model.current_cell=n
             p_c[n] = - p_w[n]
-            e_w[n] = model.w_phase.volume_fraction_function(p_c[n])
+            e_w[n] = model.interface.volume_fraction_function(p_c[n])
     else:
         print('Error Model Form is unknown')
 
     return e_w,p_w,p_n,p_c
 
-def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,data_d_pc_hysteresis,model):
+def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,cell_id,model):
     """
     A matrix components for each formulation
     """
-    drainage        = data_d_pc_hysteresis[0]
-    ew_reversal     = data_d_pc_hysteresis[1]
-    ew_endpoint     = data_d_pc_hysteresis[2]
-    pc_reversal     = data_d_pc_hysteresis[3]
-    pc_endpoint     = data_d_pc_hysteresis[4]
-
+    
     if(model.hysteresis==True):
-        d_p_c_e_w   = model.interface.d_pc_function( e_w, drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint)
-        #d_e_w_p_c   = model.interface.d_volume_fraction_function(p_c, drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint)
-    else:
-        d_p_c_e_w   = model.interface.d_pc_function(e_w)
-        d_e_w_p_c   = model.w_phase.d_volume_fraction_function(p_c)
+       model.current_cell             = cell_id
+       model.data_hysteresis['state'] = "new"
 
+    d_p_c_e_w   = model.interface.d_pc_function(e_w)
+    d_e_w_p_c   = model.interface.d_volume_fraction_function(p_c)
     d_rho_n_p_n = model.n_phase.d_density_function(p_n)
     d_rho_w_p_w = model.w_phase.d_density_function(p_w)
-    A = np.zeros([model.model.num_u,model.model.num_u])
 
+    A = np.zeros([model.model.num_u,model.model.num_u])
+    
     form = model.model.name
     
     if form == 'extended-two-phase-spp':
@@ -263,18 +252,18 @@ def model_residual_boundary(t,f,u,model):
 
        #Residual at Boundary 1 
        if(boundary_type[u_names[0]][0][0]==0):
-          f[0]= u[0] - boundary_value[0][0][0](t)  
+          f[0]= u[0] - boundary_value[0][0][0](t)
        elif(boundary_type[u_names[0]][0][0]==1):
           f[0]= flux_bc[boundary_name[0][0][0]][0] - boundary_value[0][0][0](t)
        else:
-          print('Boundary type non supported')   
+          print('Boundary type non supported')
        # Residual at Boundary 2
        if(boundary_type[u_names[0]][0][1]==0):
-          f[nodes-1] = u[nodes-1] - boundary_value[0][0][1](t)  
+          f[nodes-1] = u[nodes-1] - boundary_value[0][0][1](t)
        elif(boundary_type[u_names[0]][0][1]==1):
-          f[nodes-1] =  flux_bc[boundary_name[0][0][1]][1] - boundary_value[0][0][1](t) 
+          f[nodes-1] =  flux_bc[boundary_name[0][0][1]][1] - boundary_value[0][0][1](t)
        else:
-          print('Boundary type non supported')   
+          print('Boundary type non supported')
        
     else:
     # boundary conditions for two or more variables formulations    
@@ -282,18 +271,18 @@ def model_residual_boundary(t,f,u,model):
        for n in range(model.model.num_u):
            #Residual at Boundary 1 
            if(boundary_type[u_names[n]][0][0]==0):
-              f[0][n]= u[0][n] - boundary_value[n][0][0](t)  
+              f[0][n]= u[0][n] - boundary_value[n][0][0](t)
            elif(boundary_type[u_names[n]][0][0]==1):
-              f[0][n]= flux_bc[boundary_name[n][0][0]][0] - boundary_value[n][0][0](t) 
+              f[0][n]= flux_bc[boundary_name[n][0][0]][0] - boundary_value[n][0][0](t)
            else:
                print('Boundary type non supported')   
            # Residual at Boundary 2
            if(boundary_type[u_names[n]][0][1]==0):
-              f[nodes-1][n]= u[nodes-1][n] - boundary_value[n][0][1](t)  
+              f[nodes-1][n]= u[nodes-1][n] - boundary_value[n][0][1](t)
            elif(boundary_type[u_names[n]][0][1]==1):
               f[nodes-1][n]= flux_bc[boundary_name[n][0][1]][1] - boundary_value[n][0][1](t)
            else:
-               print('Boundary type non supported')  
+               print('Boundary type non supported')
 
        
 
@@ -304,43 +293,150 @@ def model_hysteresis(ts,model):
 
     drainage_old    = model.data_hysteresis['drainage_old']
     drainage_new    = model.data_hysteresis['drainage_new']
-    pc_old          = model.data_hysteresis['p_c_old']
-    ew_old          = model.data_hysteresis['e_w_old']
-    ew_reversal     = model.data_hysteresis['e_w_reversal']
-    ew_endpoint     = model.data_hysteresis['e_w_endpoint']
     pc_reversal     = model.data_hysteresis['p_c_reversal']
     pc_endpoint     = model.data_hysteresis['p_c_endpoint' ]
+    ew_reversal     = model.data_hysteresis['e_w_reversal']
+    ew_endpoint     = model.data_hysteresis['e_w_endpoint']
+    pc_reversal_old = model.data_hysteresis['p_c_reversal_old']
     pc_endpoint_old = model.data_hysteresis['p_c_endpoint_old']
+    ew_reversal_old = model.data_hysteresis['e_w_reversal_old']
+    ew_endpoint_old = model.data_hysteresis['e_w_endpoint_old']
+    pc_old          = model.data_hysteresis['p_c_old']
+    ew_old          = model.data_hysteresis['e_w_old']
+
     ew_hysteresis   = model.data_hysteresis['e_w_hysteresis']
     pc_hysteresis   = model.data_hysteresis['p_c_hysteresis']
-    hysteresis_tolerance = model.data_hysteresis['hysteresis_tolerance']
+    hysteresis_tol  = model.data_hysteresis['hysteresis_tol']
 
     nodes = model.nodes
+    form = model.model.name
 
     if(ts.getStepNumber()==model.counter_hysteresis):
       solution_now = ts.getSolution()
+      
+      if(form == 'extended-two-phase-spp'):
+        for n in range(0,nodes):
+            model.data_hysteresis['state'] = "new"
+            model.current_cell = n
+            pc_old[n]          = model.interface.pc_function(solution_now[3*n])
+            if(solution_now[3*n]-ew_old[n]>hysteresis_tol):
+                drainage_old[n] = drainage_new[n]
+                drainage_new[n] = False
+            else:      
+                drainage_old[n] = drainage_new[n]
+                drainage_new[n] = True
+            #  
+            ew_old[n]  = solution_now[3*n] 
+            #  store hysteresis ew and pc just for visualization
+            ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
+            pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
+            # update reversal and endpoints (ew and pc)
+            if(drainage_new[n] != drainage_old[n]): 
+                model.data_hysteresis['state'] = "old"
+                model.current_cell = n
+                
+                pc_reversal_old[n] = pc_reversal[n]
+                pc_endpoint_old[n] = pc_endpoint[n]
+                ew_endpoint_old[n] = ew_endpoint[n]
+                ew_reversal_old[n] = ew_reversal[n]
 
-      for n in range(0,nodes):  
-          pc_old[n]   = model.interface.pc_function(solution_now[2*n], drainage_new[n], ew_reversal[n], ew_endpoint[n], pc_reversal[n], pc_endpoint[n])
-          if( solution_now[2*n]-ew_old[n]>hysteresis_tolerance ):
-            drainage_old[n] = drainage_new[n]
-            drainage_new[n] = False
-          else:      
-            drainage_old[n] = drainage_new[n]
-            drainage_new[n] = True
-          #  
-          ew_old[n]  = solution_now[2*n] 
-          #  store hysteresis ew and pc just for visualization
-          ew_hysteresis[n,model.counter_hysteresis]=ew_old[n]   
-          pc_hysteresis[n,model.counter_hysteresis]=pc_old[n] 
-          # update reversal and endpoints (ew and pc)
-          if(drainage_new[n] != drainage_old[n]): 
-            pc_endpoint[n]     = pc_reversal[n] 
-            pc_reversal[n]     = model.interface.pc_function( solution_now[2*n], drainage_old[n], ew_reversal[n], ew_endpoint[n], pc_reversal[n], pc_endpoint_old[n])
-            pc_endpoint_old[n] = pc_endpoint[n]
-            ew_endpoint[n]     = ew_reversal[n]
-            ew_reversal[n]     = solution_now[2*n] 
- 
+                pc_endpoint[n]     = pc_reversal[n]
+                pc_reversal[n]     = model.interface.pc_function(solution_now[3*n])
+                ew_endpoint[n]     = ew_reversal[n]
+                ew_reversal[n]     = solution_now[3*n]
+      elif(form == 'two-phase-sp'):
+        for n in range(0,nodes):
+            model.data_hysteresis['state'] = "new"
+            model.current_cell = n
+            pc_old[n]          = model.interface.pc_function(solution_now[2*n])
+            if(solution_now[2*n]-ew_old[n]>hysteresis_tol):
+                drainage_old[n] = drainage_new[n]
+                drainage_new[n] = False
+            else:      
+                drainage_old[n] = drainage_new[n]
+                drainage_new[n] = True
+            #  
+            ew_old[n]  = solution_now[2*n] 
+            #  store hysteresis ew and pc just for visualization
+            ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
+            pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
+            # update reversal and endpoints (ew and pc)
+            if(drainage_new[n] != drainage_old[n]): 
+                model.data_hysteresis['state'] = "old"
+                model.current_cell = n
+                
+                pc_reversal_old[n] = pc_reversal[n]
+                pc_endpoint_old[n] = pc_endpoint[n]
+                ew_endpoint_old[n] = ew_endpoint[n]
+                ew_reversal_old[n] = ew_reversal[n]
+
+                pc_endpoint[n]     = pc_reversal[n]
+                pc_reversal[n]     = model.interface.pc_function(solution_now[2*n])
+                ew_endpoint[n]     = ew_reversal[n]
+                ew_reversal[n]     = solution_now[2*n]
+
+      elif(form == 'two-phase-pp'):
+        for n in range(0,nodes):
+            model.data_hysteresis['state'] = "new"
+            model.current_cell = n
+            ew_old[n]  = model.interface.volume_fraction_function(solution_now[2*n+1]-solution_now[2*n])
+            if(pc_old[n]-(solution_now[2*n+1]-solution_now[2*n])>hysteresis_tol):
+                drainage_old[n] = drainage_new[n]
+                drainage_new[n] = False
+            else:      
+                drainage_old[n] = drainage_new[n]
+                drainage_new[n] = True
+            #  
+            pc_old[n]         = solution_now[2*n+1]-solution_now[2*n]
+            #  store hysteresis ew and pc just for visualization
+            ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
+            pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
+            # update reversal and endpoints (ew and pc)
+            if(drainage_new[n] != drainage_old[n]): 
+                model.data_hysteresis['state'] = "old"
+                model.current_cell = n
+                
+                pc_reversal_old[n] = pc_reversal[n]
+                pc_endpoint_old[n] = pc_endpoint[n]
+                ew_endpoint_old[n] = ew_endpoint[n]
+                ew_reversal_old[n] = ew_reversal[n]
+
+                ew_endpoint[n]     = ew_reversal[n]
+                ew_reversal[n]     = model.interface.volume_fraction_function(solution_now[2*n+1]-solution_now[2*n]) 
+                pc_endpoint[n]     = pc_reversal[n]
+                pc_reversal[n]     = (solution_now[2*n+1]-solution_now[2*n])
+
+      elif(form == 'richards-pr'):
+        for n in range(0,nodes):
+            model.data_hysteresis['state'] = "new"
+            model.current_cell = n
+            ew_old[n]  = model.interface.volume_fraction_function(-solution_now[n])
+            if(pc_old[n]-(-solution_now[n])>hysteresis_tol):
+                drainage_old[n] = drainage_new[n]
+                drainage_new[n] = False
+            else:      
+                drainage_old[n] = drainage_new[n]
+                drainage_new[n] = True
+            #  
+            pc_old[n]         = -solution_now[n]
+            #  store hysteresis ew and pc just for visualization
+            ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
+            pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
+            # update reversal and endpoints (ew and pc)
+            if(drainage_new[n] != drainage_old[n]): 
+                model.data_hysteresis['state'] = "old"
+                model.current_cell = n
+                
+                pc_reversal_old[n] = pc_reversal[n]
+                pc_endpoint_old[n] = pc_endpoint[n]
+                ew_endpoint_old[n] = ew_endpoint[n]
+                ew_reversal_old[n] = ew_reversal[n]
+
+                ew_endpoint[n]     = ew_reversal[n]
+                ew_reversal[n]     = model.interface.volume_fraction_function(-solution_now[n]) 
+                pc_endpoint[n]     = pc_reversal[n]
+                pc_reversal[n]     = -solution_now[n]
+                
       model.counter_hysteresis += 1
     
 

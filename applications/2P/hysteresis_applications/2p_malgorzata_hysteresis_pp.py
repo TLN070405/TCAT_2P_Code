@@ -26,7 +26,7 @@ mesh.uniform_mesh_1d(domain,nodes)
 boundary_type = [0,0]
 model = TCAT2Phase.numerics.model.initialize_model(
                                 model_type = 'two_phase',
-                                form = 'sp',
+                                form = 'pp',
                                 domain = domain,
                                 nodes = nodes,
                                 mesh = mesh
@@ -34,14 +34,14 @@ model = TCAT2Phase.numerics.model.initialize_model(
 
 # Set boundary types: 0 - Dirchlet
 #                     1 - Neumann (but not supported yet)
-boundary_type = {'e_w': [[0, 0]],
-                 'p_w': [[0, 0]]}
+boundary_type = {'p_w': [[0, 0]],
+                 'p_n': [[0, 0]]}
 
 model.set_boundary_type(boundary_type = boundary_type)
 
 # Set boundary names
-boundary_name = {'e_w': [['e_w', 'e_w']],
-                 'p_w': [['p_w', 'p_w']]}
+boundary_name = {'p_w': [['p_w', 'p_w']],
+                 'p_n': [['p_n', 'p_n']]}
 
 model.set_boundary_name(boundary_name = boundary_name)
 
@@ -99,7 +99,7 @@ vg_imb = state_equations_interface.VanGenuchten(
 wn_interface_imb.set_pc_function(vg_imb.capillary_pressure)
 wn_interface_imb.set_d_pc_function(vg_imb.d_capillary_pressure)
 wn_interface_imb.set_volume_fraction_function(vg_imb.volume_fraction_w)
-
+wn_interface_imb.set_d_volume_fraction_function(vg_imb.d_volume_fraction_w)
 
 # Set wn-interface properties drainage
 wn_interface_dr = TCAT2Phase.properties.interface.Interface()
@@ -119,11 +119,11 @@ vg_dr = state_equations_interface.VanGenuchten(
 wn_interface_dr.set_pc_function(vg_dr.capillary_pressure)
 wn_interface_dr.set_d_pc_function(vg_dr.d_capillary_pressure)
 wn_interface_dr.set_volume_fraction_function(vg_dr.volume_fraction_w)
+wn_interface_dr.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 
 
 
-
-model.interface = state_equations_hysteresis.Hysteresis(wn_interface_imb,wn_interface_dr)
+model.interface = state_equations_hysteresis.Hysteresis(model,wn_interface_imb,wn_interface_dr)
 
 
 w_phase.set_rel_perm_function(vg_dr.w_relative_permability)
@@ -137,53 +137,70 @@ w_phase.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 # Set hysteresis data
 model.hysteresis = True
 
-
 drainage_new         = np.full((nodes), True)
 drainage_old         = np.full((nodes), True)
-e_w_reversal         = np.full((nodes), 0.0) 
-e_w_endpoint         = np.full((nodes), 0.0)
+
 p_c_reversal         = np.full((nodes), 0.0)
 p_c_endpoint         = np.full((nodes), 0.0)
+e_w_reversal         = np.full((nodes), 0.0) 
+e_w_endpoint         = np.full((nodes), 0.0)
+
+p_c_reversal_old     = np.full((nodes), 0.0)
 p_c_endpoint_old     = np.full((nodes), 0.0)
+e_w_reversal_old     = np.full((nodes), 0.0) 
+e_w_endpoint_old     = np.full((nodes), 0.0)
+
 e_w_old              = np.full((nodes), 0.0) 
-p_c_old              = np.full((nodes), 0.0)  
+p_c_old              = np.full((nodes), 0.0) 
+
 e_w_hysteresis       = np.full((nodes,100000), 0.0)  
 p_c_hysteresis       = np.full((nodes,100000), 0.0) 
-hysteresis_tolerance = 1e-6
- 
+
+hysteresis_tol = 1e-6
  
 for n in range(1,nodes-1):
- 
-    e_w_old[n] = 0.397
-    p_c_old[n] = 346.73   #wn_interface_dr.pc_function(e_w_old[n] ) 
-    e_w_reversal[n] = 0.4
-    e_w_endpoint[n] = 0.003
-    p_c_reversal[n] = wn_interface_dr.pc_function(e_w_reversal[n] )    
-    p_c_endpoint[n] = wn_interface_dr.pc_function(e_w_endpoint[n] )      
-    p_c_endpoint_old[n]=p_c_endpoint[n]
-    e_w_hysteresis[n][0]= e_w_old[n]
-    p_c_hysteresis[n][0]= p_c_old[n]
+    e_w_old[n]           = 0.397
+    p_c_old[n]           = 346.73  
+    e_w_reversal[n]      = 0.4
+    e_w_endpoint[n]      = 0.003
+    p_c_reversal[n]      = wn_interface_dr.pc_function(e_w_reversal[n])    
+    p_c_endpoint[n]      = wn_interface_dr.pc_function(e_w_endpoint[n])      
+
+    e_w_reversal_old[n]  = e_w_reversal[n]
+    e_w_endpoint_old[n]  = e_w_endpoint[n]
+    p_c_reversal_old[n]  = p_c_reversal[n]
+    p_c_endpoint_old[n]  = p_c_endpoint[n]
+
+    e_w_hysteresis[n][0] = e_w_old[n]
+    p_c_hysteresis[n][0] = p_c_old[n]
 
 #####    x=0
-e_w_old[0] = 0.397 #wn_interface_dr.volume_fraction_function(346.73)
-p_c_old[0] = 346.73 
-e_w_reversal[0] = 0.4 
-e_w_endpoint[0] = 0.003
-p_c_reversal[0] = wn_interface_dr.pc_function(e_w_reversal[0] )     
-p_c_endpoint[0] =  wn_interface_dr.pc_function(e_w_endpoint[0] )   
-p_c_endpoint_old[0] = p_c_endpoint[0]
-e_w_hysteresis[0][0]= e_w_old[0]
-p_c_hysteresis[0][0]= p_c_old[0]
+e_w_old[0]           = 0.397 
+p_c_old[0]           = 346.73 
+e_w_reversal[0]      = 0.4 
+e_w_endpoint[0]      = 0.003
+p_c_reversal[0]      = wn_interface_dr.pc_function(e_w_reversal[0])     
+p_c_endpoint[0]      = wn_interface_dr.pc_function(e_w_endpoint[0])   
+e_w_reversal_old[0]  = e_w_reversal[0]
+e_w_endpoint_old[0]  = e_w_endpoint[0]
+p_c_reversal_old[0]  = p_c_reversal[0]
+p_c_endpoint_old[0]  = p_c_endpoint[0]
+e_w_hysteresis[0][0] = e_w_old[0]
+p_c_hysteresis[0][0] = p_c_old[0]
+
 #####    x=L
-e_w_old[nodes-1] = 0.397
-p_c_old[nodes-1] = 346.73 
-e_w_reversal[nodes-1] = 0.4 
-e_w_endpoint[nodes-1] = 0.003
-p_c_reversal[nodes-1] = wn_interface_dr.pc_function(e_w_reversal[nodes-1] )     
-p_c_endpoint[nodes-1] = wn_interface_dr.pc_function(e_w_endpoint[nodes-1] )  
-p_c_endpoint_old[nodes-1] = p_c_endpoint[nodes-1]
-e_w_hysteresis[nodes-1][0]= e_w_old[nodes-1]
-p_c_hysteresis[nodes-1][0]= p_c_old[nodes-1]
+e_w_old[nodes-1]           = 0.397
+p_c_old[nodes-1]           = 346.73 
+e_w_reversal[nodes-1]      = 0.4 
+e_w_endpoint[nodes-1]      = 0.003
+p_c_reversal[nodes-1]      = wn_interface_dr.pc_function(e_w_reversal[nodes-1])     
+p_c_endpoint[nodes-1]      = wn_interface_dr.pc_function(e_w_endpoint[nodes-1])  
+e_w_reversal_old[nodes-1]  = e_w_reversal[nodes-1]
+e_w_endpoint_old[nodes-1]  = e_w_endpoint[nodes-1]
+p_c_reversal_old[nodes-1]  = p_c_reversal[nodes-1]
+p_c_endpoint_old[nodes-1]  = p_c_endpoint[nodes-1]
+e_w_hysteresis[nodes-1][0] = e_w_old[nodes-1]
+p_c_hysteresis[nodes-1][0] = p_c_old[nodes-1]
 
 
 data_hysteresis = {'drainage_old'         : drainage_old,
@@ -195,21 +212,24 @@ data_hysteresis = {'drainage_old'         : drainage_old,
                    'p_c_reversal'         : p_c_reversal,
                    'p_c_endpoint'         : p_c_endpoint , 
                    'p_c_endpoint_old'     : p_c_endpoint_old,
+                   'p_c_reversal_old'     : p_c_reversal_old,
+                   'e_w_reversal_old'     : e_w_reversal_old,
+                   'e_w_endpoint_old'     : e_w_endpoint_old,
                    'e_w_hysteresis'       : e_w_hysteresis,
                    'p_c_hysteresis'       : p_c_hysteresis,
-                   'hysteresis_tolerance' : hysteresis_tolerance}
+                   'state'                : "old",
+                   'hysteresis_tol'       : hysteresis_tol}
 
 model.set_data_hysteresis(data_hysteresis)
 
 
 # Set initial conditions
-ew_ic = np.full((nodes), 0.397)
 pw_ic = np.full((nodes), -346.73)
- 
-ew_ic[0]=wn_interface_dr.volume_fraction_function(346.73)
+pn_ic = np.full((nodes), 0)
 
-initial_conditions = {'e_w': ew_ic,
-                      'p_w': pw_ic}
+
+initial_conditions = {'p_w': pw_ic,
+                      'p_n': pn_ic}
 
 model.set_initial_conditions(initial_conditions)
 
@@ -239,29 +259,20 @@ def pw0_bc(t):
       P_w0=aa*t+bb  
     return P_w0
 
-def ew0_bc(t): 
-    drainage_new     = model.data_hysteresis['drainage_new']
-    e_w_reversal     = model.data_hysteresis['e_w_reversal']
-    e_w_endpoint     = model.data_hysteresis['e_w_endpoint']
-    p_c_reversal     = model.data_hysteresis['p_c_reversal']
-    p_c_endpoint     = model.data_hysteresis['p_c_endpoint']
-    
-    e_w_bc = model.interface.ew_hysteretic(-pw0_bc(t), drainage_new[0], e_w_reversal[0], e_w_endpoint[0], p_c_reversal[0], p_c_endpoint[0])
-    return  e_w_bc
-
-def ewL_bc(t): return  0.397
+def pn0_bc(t): return  0.0
+def pnL_bc(t): return  0.0
 def pwL_bc(t): return  -346.73
 
 
-boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
-                  'p_w': [[ pw0_bc,pwL_bc  ]]}
+boundary_value = {'p_w': [[ pw0_bc,pwL_bc]],
+                  'p_n': [[ pn0_bc,pnL_bc  ]]}
 
 model.set_boundary_value(boundary_value = boundary_value)
 
 
 # Time
-#time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600,700,800,900.0,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000])
-time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
+time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600,700,800,900.0,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000])
+#time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
 
 model.set_simulation_time(time_interval)
  
@@ -293,9 +304,9 @@ OptDB.setValue('pc_type', 'sor')
 solutions = TCAT2Phase.numerics.solver.solver(model)
  
 for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
+    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
     plt.xlabel("x (m)")
-    plt.ylabel("e_w")
+    plt.ylabel("p_w")
     plt.title("Malgorzata Solution")
     plt.legend()
 plt.show()  
@@ -303,9 +314,9 @@ plt.show()
 
 for time,variable in solutions.items():
     print(time,variable)
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
+    plt.plot(mesh.points,variable['p_n'],label=f't={time}')
     plt.xlabel('x (m)')
-    plt.ylabel('p_w')
+    plt.ylabel('p_n')
     plt.title('Malgorzata Solution')
     plt.legend()
 plt.show()    
@@ -320,7 +331,7 @@ for n in range(len(e_w_range)):
     p_c_mpc_imb[n]  = wn_interface_imb.pc_function(e_w_range[n]) 
 
 
-print()
+
 plt.plot(e_w_hysteresis[0,0:model.counter_hysteresis],p_c_hysteresis[0,0:model.counter_hysteresis],label='scanning curves')
 plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
@@ -328,5 +339,5 @@ plt.xlabel('e_w')
 plt.ylabel('p_c')
 plt.title('Hysteresis pc-ew curves')
 plt.legend()
-plt.show()    
+plt.show()   
 
