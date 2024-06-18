@@ -44,6 +44,7 @@ class Model:
         self.domain = domain
         self.nodes = nodes
         self.mesh = mesh
+        self.current_cell = 0
         self.res = np.zeros_like(self.nodes)
         self.boundary_type = {}
         self.boundary_value = {}
