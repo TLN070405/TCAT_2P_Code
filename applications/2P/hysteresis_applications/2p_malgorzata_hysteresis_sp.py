@@ -99,7 +99,7 @@ vg_imb = state_equations_interface.VanGenuchten(
 wn_interface_imb.set_pc_function(vg_imb.capillary_pressure)
 wn_interface_imb.set_d_pc_function(vg_imb.d_capillary_pressure)
 wn_interface_imb.set_volume_fraction_function(vg_imb.volume_fraction_w)
-
+wn_interface_imb.set_d_volume_fraction_function(vg_imb.d_volume_fraction_w)
 
 # Set wn-interface properties drainage
 wn_interface_dr = TCAT2Phase.properties.interface.Interface()
@@ -119,7 +119,7 @@ vg_dr = state_equations_interface.VanGenuchten(
 wn_interface_dr.set_pc_function(vg_dr.capillary_pressure)
 wn_interface_dr.set_d_pc_function(vg_dr.d_capillary_pressure)
 wn_interface_dr.set_volume_fraction_function(vg_dr.volume_fraction_w)
-
+wn_interface_dr.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 
 
 
@@ -278,8 +278,8 @@ model.set_boundary_value(boundary_value = boundary_value)
 
 
 # Time
-time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600,700,800,900.0,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000])
-#time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
+#time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600,700,800,900.0,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000])
+time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
 
 model.set_simulation_time(time_interval)
  
