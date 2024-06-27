@@ -117,10 +117,10 @@ class Model:
 
         for n_u,u_name in enumerate(self.model.u_names):
             if self.model.num_u==1:
-                for n in range(0,self.nodes): 
+                for n in range(0,self.nodes):
                     u[n] = self.initial_condition[u_name][n]
             else:
-                for n in range(0,self.nodes): 
+                for n in range(0,self.nodes):
                     u[n][n_u] = self.initial_condition[u_name][n]
 
     def boundary_conditions(self,ts,U):

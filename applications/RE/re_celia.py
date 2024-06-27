@@ -101,6 +101,8 @@ vg = state_equations_interface.VanGenuchten(
 
 wn_interface.set_pc_function(vg.capillary_pressure)
 wn_interface.set_d_pc_function(vg.d_capillary_pressure)
+wn_interface.set_volume_fraction_function(vg.volume_fraction_w)
+wn_interface.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 
 w_phase.set_rel_perm_function(vg.w_relative_permability)
 n_phase.set_rel_perm_function(vg.n_relative_permability)

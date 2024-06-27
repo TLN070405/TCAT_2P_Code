@@ -331,8 +331,8 @@ for n in range(len(e_w_range)):
     p_c_mpc_imb[n]  = wn_interface_imb.pc_function(e_w_range[n]) 
 
 
-
-plt.plot(e_w_hysteresis[0,0:model.counter_hysteresis],p_c_hysteresis[0,0:model.counter_hysteresis],label='scanning curves')
+node_hysteresis=1
+plt.plot(e_w_hysteresis[node_hysteresis,0:model.counter_hysteresis],p_c_hysteresis[node_hysteresis,0:model.counter_hysteresis],label='scanning curves')
 plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
 plt.xlabel('e_w')

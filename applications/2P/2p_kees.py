@@ -61,7 +61,7 @@ pw_ic= np.zeros([nodes] )
 pn_ic= np.zeros([nodes] )
 for i in range(0,nodes):
     pw_ic[i] = (-5- i *(5 / (nodes - 1.0)))*9.982e2*9.81
-    pn_ic[i] = 0.0  
+    pn_ic[i] = 0.0
 
 initial_conditions = {'p_w': pw_ic,
                       'p_n': pn_ic }
@@ -99,10 +99,10 @@ n_phase.set_volume_fraction_function(state_equations.volume_fraction,**n_en_para
 # Set w-n interphase properties
 wn_interface = TCAT2Phase.properties.interface.Interface()
 
-m =  0.7654784240150094 
+m =  0.7654784240150094
 n =   4.264e0
-alpha =0.0005585997711272747 
- 
+alpha =0.0005585997711272747
+
 vg = state_equations_interface.VanGenuchten(
     m = m,
     n = n,
@@ -114,7 +114,8 @@ vg = state_equations_interface.VanGenuchten(
 
 wn_interface.set_pc_function(vg.capillary_pressure)
 wn_interface.set_d_pc_function(vg.d_capillary_pressure)
-
+wn_interface.set_volume_fraction_function(vg.volume_fraction_w)
+wn_interface.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 
 w_phase.set_rel_perm_function(vg.w_relative_permability)
 n_phase.set_rel_perm_function(vg.n_relative_permability)
@@ -131,7 +132,7 @@ model.interface = wn_interface
 # Time
 time_interval = np.array([ 864.0,1728.0,2592.0,3456.0,6048.0])
 model.set_simulation_time(time_interval)
- 
+
 # Numerical Parameters
 OptDB = PETSc.Options()
 
@@ -149,24 +150,23 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options 
+# Preconditioner Options
 OptDB.setValue('ksp_type', 'gmres')
 OptDB.setValue('pc_type', 'lu')
- 
 
- 
+
 # Solve model and return model.solutions
 # which is a dictionary where
 # solutions[time][u_name] = np.array
 solutions = TCAT2Phase.numerics.solver.solver(model)
- 
+
 for time,variable in solutions.items():
     plt.plot(variable['p_w'],mesh.points,label=f't={time}')
     plt.xlabel("p_w")
     plt.ylabel("x(m) ")
     plt.title("Kees Solution")
     plt.legend()
-plt.show()  
+plt.show()
 
 
 for time,variable in solutions.items():
@@ -176,7 +176,6 @@ for time,variable in solutions.items():
     plt.ylabel('Pn')
     plt.title('Kees Solution')
     plt.legend()
-plt.show()    
-
+plt.show()
 
  

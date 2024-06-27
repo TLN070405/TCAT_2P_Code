@@ -10,7 +10,7 @@ class BaseModel:
     def __init__(self):
         self.name = None
         self.u_names = []
-        self.num_u = 0 
+        self.num_u = 0
 
 class ExtendedTwoPhase(BaseModel):
     """

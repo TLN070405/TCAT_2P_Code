@@ -14,7 +14,7 @@ def solver(model):
     # PETSc arrays and grid
 
     da, u = _get_da(model)
-    
+
     # PETSc time-stepper
     ts = _get_time_stepper(model,da)
 
@@ -26,7 +26,7 @@ def solver(model):
 
     # PETSc preconditioner
     pc = _get_preconditioner(ksp)
-    
+
     # Solve initial conditions (ic are not excplicitly expressed in terms of solution variabes e.g:Neumann BC)
     da_ic, u_ic=_solve_ic(model)
     U=da.getVecArray(u)
@@ -53,7 +53,7 @@ def _get_da(model):
         boundary_type = PETSc.DMDA.BoundaryType.NONE,
         stencil_type = None,
         stencil_width = 1,
-        comm = PETSc.COMM_WORLD 
+        comm = PETSc.COMM_WORLD
         )
 
     da.setUp()
@@ -112,7 +112,7 @@ def _solve_ic(model):
     da_ic, u_ic = _get_da(model)
     r_ic=u_ic.duplicate()
     snes_ic =PETSc.SNES().create(PETSc.COMM_WORLD)
-    snes_ic.setFunction(model.model.form_function,r_ic,args=[model]) 
+    snes_ic.setFunction(model.model.form_function,r_ic,args=[model])
     snes_ic.setDM(da_ic)
     # provide an initial estimation for the solution of initial conditions+ boundary conditions
     model.initial_conditions(snes_ic,u_ic)

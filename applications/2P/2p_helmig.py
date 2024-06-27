@@ -61,8 +61,8 @@ model.set_boundary_value(boundary_value = boundary_value)
 ew_ic= np.zeros([nodes] )
 pw_ic= np.zeros([nodes] )
 for i in range(0,nodes):
-    ew_ic[i] = 0.111 
-    pw_ic[i] = 1900 
+    ew_ic[i] = 0.111
+    pw_ic[i] = 1900
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic }
@@ -115,6 +115,8 @@ vg = state_equations_interface.VanGenuchten(
 
 wn_interface.set_pc_function(vg.capillary_pressure)
 wn_interface.set_d_pc_function(vg.d_capillary_pressure)
+wn_interface.set_volume_fraction_function(vg.volume_fraction_w)
+wn_interface.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 
 
 w_phase.set_rel_perm_function(vg.w_relative_permability)
