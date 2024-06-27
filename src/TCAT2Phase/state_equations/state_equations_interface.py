@@ -26,7 +26,7 @@ class BCdata:
     """
     pd: float
     lamda: float
-    
+
 class VanGenuchten:
     """
     VanGenuchten Class to hold functions and parameters
@@ -44,7 +44,7 @@ class VanGenuchten:
     def _invert_params(self):
         """
         Calculate the inverse of the parameters
-        """ 
+        """
         self.data.m_inv = 1./self.data.m
         self.data.n_inv = 1./self.data.n
         self.data.alpha_inv = 1./self.data.alpha
@@ -87,7 +87,7 @@ class VanGenuchten:
         else:
             e_w = self.porosity - self.e_nr
         return e_w
-    
+
     def d_volume_fraction_w(self,p_c):
         """
         Derivative of w phase volume fraction
@@ -170,13 +170,13 @@ class BrooksCorey:
         else:
             e_w =  self.porosity - self.e_nr
         return e_w
-    
+
     def d_volume_fraction_w(self,p_c):
         """
         Derivative of w phase volume fraction
         """
         if p_c > self.data.pd:
-            enr_wr  = (self.porosity - self.e_wr - self.e_nr)
+            enr_wr  = self.porosity - self.e_wr - self.e_nr
             drvt_ew = enr_wr*(  (-self.data.lamda/self.data.pd)*( (p_c/self.data.pd)**(-self.data.lamda-1) ))
         else:
             drvt_ew = 0
@@ -209,7 +209,7 @@ class BrooksCorey:
         else:
             k_nr = 0.0
         return k_nr
-    
+
 def effective_saturation(e_w,e_wr,e_nr,porosity):
     """
     Effective saturation

@@ -118,7 +118,8 @@ bc = state_equations_interface.BrooksCorey(
 
 wn_interface.set_pc_function(bc.capillary_pressure)
 wn_interface.set_d_pc_function(bc.d_capillary_pressure)
-
+wn_interface.set_volume_fraction_function(bc.volume_fraction_w)
+wn_interface.set_d_volume_fraction_function(bc.d_volume_fraction_w)
 
 w_phase.set_rel_perm_function(bc.w_relative_permability)
 n_phase.set_rel_perm_function(bc.n_relative_permability)

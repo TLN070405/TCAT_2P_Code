@@ -1,4 +1,3 @@
-
 import sys
 import petsc4py
 import numpy as np
@@ -38,9 +37,8 @@ def gradient(x,mesh):
             if mesh.faces[face].boundary or mesh.faces[face].owner != cell.ID:
                 continue
             gradient[face] = 1/dist*( x[neigh] - x[cell.ID] )
-    
-    return gradient 
-        
+
+    return gradient
 
 def interpolate(x,mesh):
     """
@@ -49,11 +47,11 @@ def interpolate(x,mesh):
     value = np.zeros(mesh.num_faces)
     for cell in mesh.cells:
         for face,neigh,dist in zip(cell.faces,cell.neighbors,cell.distance):
-            
+
             if mesh.faces[face].boundary or mesh.faces[face].owner != cell.ID:
                 continue
-            
+
             value[face] = x[cell.ID] + mesh.faces[face].distance/dist*(x[neigh] - x[cell.ID]  )
             #value[face] = 0.5*(x[cell.ID] + x[neigh])
- 
+
     return value

@@ -45,10 +45,14 @@ boundary_name = {'e_w': [['e_w', 'e_w']],
 model.set_boundary_name(boundary_name = boundary_name)
 
 # Set boundary values
-def ew0_bc(t): return 0.12096000000000001
-def ewL_bc(t): return 0.448
-def pw0_bc(t): return -10067.198963341432
-def pwL_bc(t): return -3450.0
+def ew0_bc(t):
+    return 0.12096000000000001
+def ewL_bc(t):
+    return 0.448
+def pw0_bc(t):
+    return -10067.198963341432
+def pwL_bc(t):
+    return -3450.0
 
 
 boundary_value = {'e_w': [[ ew0_bc, ewL_bc ]],
@@ -60,11 +64,11 @@ model.set_boundary_value(boundary_value = boundary_value)
 
 
 
-# Set initial conditions 
+# Set initial conditions
 ew_ic= np.zeros([nodes] )
 pw_ic= np.zeros([nodes] )
 for i in range(0,nodes):
-    ew_ic[i] = 0.448 
+    ew_ic[i] = 0.448
     pw_ic[i] = -3450.0
 
 initial_conditions = {'e_w': ew_ic,
@@ -104,7 +108,7 @@ n_phase.set_volume_fraction_function(state_equations.volume_fraction,**n_en_para
 # Set w-n interphase properties
 wn_interface = TCAT2Phase.properties.interface.Interface()
 
-pd= 3450  
+pd= 3450
 lamda =4.66
 bc = state_equations_interface.BrooksCorey(
     pd = pd,
@@ -116,7 +120,8 @@ bc = state_equations_interface.BrooksCorey(
 
 wn_interface.set_pc_function(bc.capillary_pressure)
 wn_interface.set_d_pc_function(bc.d_capillary_pressure)
-
+wn_interface.set_volume_fraction_function(bc.volume_fraction_w)
+wn_interface.set_d_volume_fraction_function(bc.d_volume_fraction_w)
 
 w_phase.set_rel_perm_function(bc.w_relative_permability)
 n_phase.set_rel_perm_function(bc.n_relative_permability)
@@ -133,7 +138,7 @@ model.interface = wn_interface
 # Time
 time_interval = np.array([1000])
 model.set_simulation_time(time_interval)
- 
+
 # Numerical Parameters
 OptDB = PETSc.Options()
 
@@ -153,10 +158,9 @@ OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
 # Preconditioner Options 
 OptDB.setValue('pc_type', 'sor')
- 
 
 
- 
+
 # Solve model
 # Solve model and return model.solutions
 # which is a dictionary where
@@ -169,7 +173,7 @@ for time,variable in solutions.items():
     plt.ylabel("e_w")
     plt.title("Fucik Solution")
     plt.legend()
-plt.show()  
+plt.show()
 
 
 for time,variable in solutions.items():
@@ -179,6 +183,4 @@ for time,variable in solutions.items():
     plt.ylabel('Pw')
     plt.title('Fucik Solution')
     plt.legend()
-plt.show()    
-
- 
+plt.show()

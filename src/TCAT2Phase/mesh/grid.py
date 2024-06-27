@@ -22,7 +22,7 @@ class Points:
                 domain_size[1],
                 self.num_points
                 )
-            
+
         return self.points,self.num_points
 
 
@@ -36,7 +36,8 @@ class Cell:
     boundary: bool
     faces: list[int] = dataclasses.field(default_factory=list)
     neighbors: list[int] = dataclasses.field(default_factory=list)
-    distance: list[float] = dataclasses.field(default_factory=list) # distance to neighbor cell centroid
+    # distance to neighbor cell centroid
+    distance: list[float] = dataclasses.field(default_factory=list)
     length: float = -1
 
 
@@ -60,14 +61,14 @@ class Cells:
                 _cell.neighbors = [n_p-1, n_p+1]
                 _cell.distance = [-1, self.points[n_p+1] - p ]
                 _cell.length = self.points[n_p+1] - self.points[n_p]
-            
+
             elif n_p == num_cells - 1:
                 _cell =  Cell( ID = n_p, point_ID = n_p, boundary = True)
                 _cell.faces = [n_p,n_p+1]
                 _cell.neighbors = [n_p-1, -1]
                 _cell.distance = [p - self.points[n_p-1], -1 ]
                 _cell.length = self.points[n_p] - self.points[n_p-1]
-            
+
             else:
                 _cell =  Cell( ID = n_p, point_ID = n_p, boundary = False)
                 _cell.faces = [n_p, n_p+1]
@@ -159,7 +160,7 @@ class Mesh:
         """
         _points = Points(domain,nodes)
         self.points,self.num_points = _points.gen_uniform_points()
-        
+
         _cells = Cells(self.points)
         self.cells,self.num_cells = _cells.gen_uniform_cells()
 
