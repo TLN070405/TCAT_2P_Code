@@ -71,7 +71,7 @@ pn_ic= np.zeros([nodes] )
 for i in range(0,nodes):
     ew_ic[i] = 0.008
     pw_ic[i] = -13706.965861446095
-    pn_ic[i] = 0.  
+    pn_ic[i] = 0.
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic,

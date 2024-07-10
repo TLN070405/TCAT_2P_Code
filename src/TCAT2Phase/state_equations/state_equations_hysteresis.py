@@ -236,6 +236,36 @@ class Hysteresis:
                         ew_reversal[n]     = model.interface.volume_fraction_function(-solution_now[n])
                         pc_endpoint[n]     = pc_reversal[n]
                         pc_reversal[n]     = -solution_now[n]
+            elif form == 'extended-richards-sp':
+                for n in range(0,nodes):
+                    model.data_hysteresis['state'] = "new"
+                    model.current_cell = n
+                    pc_old[n]          = model.interface.pc_function(solution_now[2*n])
+                    if solution_now[2*n]-ew_old[n]>hysteresis_tol:
+                        drainage_old[n] = drainage_new[n]
+                        drainage_new[n] = False
+                    else:
+                        drainage_old[n] = drainage_new[n]
+                        drainage_new[n] = True
+                    #
+                    ew_old[n]  = solution_now[2*n]
+                    #  store hysteresis ew and pc just for visualization
+                    ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
+                    pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
+                    # update reversal and endpoints (ew and pc)
+                    if drainage_new[n] != drainage_old[n]:
+                        model.data_hysteresis['state'] = "old"
+                        model.current_cell = n
+
+                        pc_reversal_old[n] = pc_reversal[n]
+                        pc_endpoint_old[n] = pc_endpoint[n]
+                        ew_endpoint_old[n] = ew_endpoint[n]
+                        ew_reversal_old[n] = ew_reversal[n]
+
+                        pc_endpoint[n]     = pc_reversal[n]
+                        pc_reversal[n]     = model.interface.pc_function(solution_now[2*n])
+                        ew_endpoint[n]     = ew_reversal[n]
+                        ew_reversal[n]     = solution_now[2*n]
 
             model.counter_hysteresis += 1
 

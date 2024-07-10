@@ -10,6 +10,7 @@ model_options = [
         'two_phase',
         'extended_two_phase',
         'Richards',
+        'extended_Richards',
         'cgp-TCAT'
                 ]
 
@@ -20,6 +21,8 @@ form_options = {
                       'sp': model_types.TwoPhase('sp')
                       },
         'Richards' : {'pr': model_types.Richards('pr')
+                      },
+        'extended_Richards' : {'sp': model_types.ExtendedRichards('sp')
                       }
                }
 
