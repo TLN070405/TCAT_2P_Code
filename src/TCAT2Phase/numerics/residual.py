@@ -35,7 +35,7 @@ def model_residual_internal(f,u,udot,model):
 
     # Constant Pameters
     k = model.solid.permeability
-    gravity =model.solid.gravity
+    gravity = model.solid.gravity
     mu_w = model.w_phase.viscosity
     mu_n = model.n_phase.viscosity
     porosity = model.solid.porosity
@@ -72,8 +72,7 @@ def model_residual_internal(f,u,udot,model):
                    rho_n_face,
                    gravity)
 
-    num_u = model.model.num_u
-
+    mod_id = model.model.identifier
     for cell in mesh.cells:
         if cell.boundary:
             continue
@@ -87,8 +86,7 @@ def model_residual_internal(f,u,udot,model):
         # Time derivative matrix
         A = model_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n],n,model)
         # residuals
-        f[n] = np.dot(A, udot[n]) -  od[ int(num_u*(-0.5*num_u+1.5)):int(num_u*(-0.5*num_u+2.5))]
-
+        f[n] = np.dot(A, udot[n]) - od[int(mod_id*(-0.5*mod_id+1.5)):int(mod_id*(mod_id*(1/3*mod_id-1.5)+7/6)+3)]
 
 
 def model_primary_variables(u,model):
@@ -145,6 +143,17 @@ def model_primary_variables(u,model):
             model.current_cell=n
             p_c[n] = - p_w[n]
             e_w[n] = model.interface.volume_fraction_function(p_c[n])
+    elif form == 'extended-richards-sp':
+        # Solution Variables
+        e_w= u[:,0]
+        p_w= u[:,1]
+        # Primary Variables
+        p_c = np.zeros_like(p_w)
+        p_n = np.zeros_like(p_w)
+
+        for n in range(0,nodes):
+            model.current_cell=n
+            p_c[n] = model.interface.pc_function(e_w[n])
     else:
         print('Error Model Form is unknown')
 
@@ -161,6 +170,7 @@ def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,cell_id,model):
 
     d_p_c_e_w   = model.interface.d_pc_function(e_w)
     d_e_w_p_c   = model.interface.d_volume_fraction_function(p_c)
+    d_e_w_p_w   = model.interface.d_volume_fraction_function(-p_w)
     d_rho_n_p_n = model.n_phase.d_density_function(p_n)
     d_rho_w_p_w = model.w_phase.d_density_function(p_w)
 
@@ -186,6 +196,9 @@ def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,cell_id,model):
         A[1,1] = -rho_n*d_e_w_p_c + e_n*d_rho_n_p_n
     elif form == 'richards-pr':
         A[0,0] = -rho_w*d_e_w_p_c + e_w*d_rho_w_p_w
+    elif form == 'extended-richards-sp':
+        A[0,0] = model.solid.dynamic_capillary_pressure_parameter/model.solid.porosity
+        A[1,1] = -rho_w*d_e_w_p_w + e_w*d_rho_w_p_w
     else:
         print('Error Model Form is unknown')
 

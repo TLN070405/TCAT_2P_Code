@@ -142,12 +142,12 @@ drainage_old         = np.full((nodes), True)
 
 p_c_reversal         = np.full((nodes), 0.0)
 p_c_endpoint         = np.full((nodes), 0.0)
-e_w_reversal         = np.full((nodes), 0.0) 
+e_w_reversal         = np.full((nodes), 0.0)
 e_w_endpoint         = np.full((nodes), 0.0)
 
 p_c_reversal_old     = np.full((nodes), 0.0)
 p_c_endpoint_old     = np.full((nodes), 0.0)
-e_w_reversal_old     = np.full((nodes), 0.0) 
+e_w_reversal_old     = np.full((nodes), 0.0)
 e_w_endpoint_old     = np.full((nodes), 0.0)
 
 e_w_old              = np.full((nodes), 0.0) 
@@ -236,32 +236,31 @@ model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
 
-def pw0_bc(t): 
+def pw0_bc(t):
     Pw_t0 = -346.73
     Pw_t1 = -7000
     Pw_t2 = -2000
     Pw_t3 = -4000
     Pw_t4 = -3000
     if(t>=0 and t<=500):
-      aa=(Pw_t1-Pw_t0)/(500-0)
-      bb=Pw_t0-aa*0
-      P_w0=aa*t+bb
-    elif(t>500 and t<=1000): 
-      aa=(Pw_t2-Pw_t1)/(1000-500)
-      bb=Pw_t1-aa*500
-      P_w0=aa*t+bb
-    elif(t>1000 and t<=1500):  
-      aa=(Pw_t3-Pw_t2)/(1500-1000)
-      bb=Pw_t2-aa*1000
-      P_w0=aa*t+bb
-    elif(t>1500 and t<=2000):  
-      aa=(Pw_t4-Pw_t3)/(2000-1500)
-      bb=Pw_t3-aa*1500
-      P_w0=aa*t+bb  
+        aa=(Pw_t1-Pw_t0)/(500-0)
+        bb=Pw_t0-aa*0
+        P_w0=aa*t+bb
+    elif(t>500 and t<=1000):
+        aa=(Pw_t2-Pw_t1)/(1000-500)
+        bb=Pw_t1-aa*500
+        P_w0=aa*t+bb
+    elif(t>1000 and t<=1500):
+        aa=(Pw_t3-Pw_t2)/(1500-1000)
+        bb=Pw_t2-aa*1000
+        P_w0=aa*t+bb
+    elif(t>1500 and t<=2000):
+        aa=(Pw_t4-Pw_t3)/(2000-1500)
+        bb=Pw_t3-aa*1500
+        P_w0=aa*t+bb
     return P_w0
 
-def ew0_bc(t): 
- 
+def ew0_bc(t):
     model.data_hysteresis['state'] = "new"
     model.current_cell = 0
     e_w_bc = model.interface.volume_fraction_function(-pw0_bc(t))
@@ -282,7 +281,7 @@ model.set_boundary_value(boundary_value = boundary_value)
 time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
 
 model.set_simulation_time(time_interval)
- 
+
 # Numerical Parameters
 OptDB = PETSc.Options()
 
@@ -300,11 +299,10 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options 
+# Preconditioner Options
 OptDB.setValue('pc_type', 'sor')
- 
 
- 
+
 # Solve model and return model.solutions
 # which is a dictionary where
 # solutions[time][u_name] = np.array

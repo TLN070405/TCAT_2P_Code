@@ -55,7 +55,7 @@ for i in range(0,nodes-1):
 
 
 
-initial_conditions = {'p_w': pw_ic  }
+initial_conditions = {'p_w': pw_ic }
 model.set_initial_conditions(initial_conditions)
 
 # Set solid phase properties
@@ -92,10 +92,10 @@ n_phase.set_volume_fraction_function(state_equations.volume_fraction,**n_en_para
 # Set w-n interphase properties
 wn_interface = TCAT2Phase.properties.interface.Interface()
 
-m =  0.7654784240150094 
+m =  0.7654784240150094
 n =   4.264e0
-alpha =0.0005585997711272747 
- 
+alpha =0.0005585997711272747
+
 vg = state_equations_interface.VanGenuchten(
     m = m,
     n = n,
@@ -125,7 +125,7 @@ model.interface = wn_interface
 # Time
 time_interval = np.array([ 1000.,2000.])
 model.set_simulation_time(time_interval)
- 
+
 # Numerical Parameters
 OptDB = PETSc.Options()
 
@@ -143,12 +143,11 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options 
+# Preconditioner Options
 OptDB.setValue('pc_type', 'lu')
- 
 
 
- 
+
 # Solve model
 solutions = TCAT2Phase.numerics.solver.solver(model)
 
@@ -159,4 +158,4 @@ for time,variable in solutions.items():
     plt.ylabel('Pw')
     plt.title('Richards Solution')
     plt.legend()
-plt.show()    
+plt.show()
