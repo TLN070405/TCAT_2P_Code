@@ -133,7 +133,7 @@ model.n_phase = n_phase
 model.interface = wn_interface
 
 # Time
-time_interval = np.array([2,5,10,100,1000])
+time_interval = np.array([20000.])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
