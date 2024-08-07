@@ -36,6 +36,7 @@ boundary_type = {'e_w': [[0, 0]],
                  'p_w': [[0, 0]]}
 
 model.set_boundary_type(boundary_type = boundary_type)
+
 # Set boundary names
 
 boundary_name = {'e_w': [['e_w', 'e_w']],
@@ -54,7 +55,9 @@ boundary_value = {'e_w': [[ ew0_bc, ewL_bc ]],
                   'p_w': [[ pw0_bc, pwL_bc  ]]}
 
 
+
 model.set_boundary_value(boundary_value = boundary_value)
+
 
 
 # Set initial conditions
@@ -66,6 +69,7 @@ for i in range(0,nodes):
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic }
+
 
 model.set_initial_conditions(initial_conditions)
 

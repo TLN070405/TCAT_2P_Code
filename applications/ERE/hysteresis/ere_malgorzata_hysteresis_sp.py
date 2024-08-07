@@ -314,6 +314,7 @@ for n in range(len(e_w_range)):
 
 
 
+
 plt.plot(e_w_hysteresis[20,1:model.counter_hysteresis],p_c_hysteresis[20,1:model.counter_hysteresis],label='scanning curves')
 plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")

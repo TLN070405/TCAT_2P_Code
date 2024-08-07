@@ -161,16 +161,18 @@ def model_primary_variables(u,model):
 
     return e_w,p_w,p_n,p_c
 
-def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,model):
+def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,cell_id,model):
     """
     A matrix components for each formulation
     """
 
     if model.hysteresis is True:
+        model.current_cell             = cell_id
         model.data_hysteresis['state'] = "new"
 
     d_p_c_e_w   = model.interface.d_pc_function(e_w)
     d_e_w_p_c   = model.interface.d_volume_fraction_function(p_c)
+    d_e_w_p_w   = model.interface.d_volume_fraction_function(-p_w)
     d_rho_n_p_n = model.n_phase.d_density_function(p_n)
     d_rho_w_p_w = model.w_phase.d_density_function(p_w)
 

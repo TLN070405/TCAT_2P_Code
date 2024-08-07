@@ -6,6 +6,8 @@ from TCAT2Phase.numerics import utils
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
+import math
+
 # Domain
 domain_size = np.array([[0.0,0.8]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -32,12 +34,12 @@ model = TCAT2Phase.numerics.model.initialize_model(
 
 # Set boundary types: 0 - Dirchlet
 #                     1 - Neumann (but not supported yet)
+
 boundary_type = {'e_w': [[0, 1]],
                  'p_w': [[0, 1]]}
 
+
 model.set_boundary_type(boundary_type = boundary_type)
-
-
 
 # Set boundary names
 boundary_name = {'e_w': [['e_w', 'q_w']],
@@ -55,11 +57,13 @@ boundary_value = {'e_w': [[ ew0_bc, qwL_bc ]],
                  'p_w': [[ pw0_bc , qnL_bc  ]]}
 
 
+
 model.set_boundary_value(boundary_value = boundary_value)
 
 # Set initial conditions: Only set up for constant values!
 ew_ic= np.zeros([nodes] )
 pw_ic= np.zeros([nodes] )
+
 pw_ic[0] = -1049.67 
 ew_ic[0] =  0.27 
 for i in range(1,nodes):
