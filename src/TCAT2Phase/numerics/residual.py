@@ -73,6 +73,7 @@ def model_residual_internal(f,u,udot,model):
                    gravity)
 
     mod_id = model.model.identifier
+    
     for cell in mesh.cells:
         if cell.boundary:
             continue
@@ -82,9 +83,10 @@ def model_residual_internal(f,u,udot,model):
         od_n  = 1./cell.length*(q_n[n+1] - q_n[n])
         od_dp = p_w[n]-p_n[n]+ p_c[n]
         od    = [od_dp,od_w[0],od_n[0]]
-
+        
         # Time derivative matrix
-        A = model_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n],n,model)
+        model.current_cell = n
+        A = model_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n],model)
         # residuals
         f[n] = np.dot(A, udot[n]) - od[int(mod_id*(-0.5*mod_id+1.5)):int(mod_id*(mod_id*(1/3*mod_id-1.5)+7/6)+3)]
 
@@ -198,7 +200,8 @@ def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,cell_id,model):
         A[0,0] = -rho_w*d_e_w_p_c + e_w*d_rho_w_p_w
     elif form == 'extended-richards-sp':
         A[0,0] = model.solid.dynamic_capillary_pressure_parameter/model.solid.porosity
-        A[1,1] = -rho_w*d_e_w_p_w + e_w*d_rho_w_p_w
+        A[1,0] = rho_w
+        A[1,1] = e_w*d_rho_w_p_w
     else:
         print('Error Model Form is unknown')
 

@@ -51,9 +51,9 @@ model.set_boundary_name(boundary_name = boundary_name)
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s')
 s_phase.set_porosity(0.4)
-s_phase.set_dynamic_capillary_pressure_parameter(0.4*1e7)
+s_phase.set_dynamic_capillary_pressure_parameter(1e7)
 s_phase.set_permeability(1e-10)
-s_phase.set_gravity(9.086)
+s_phase.set_gravity(9.8066)
 
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
@@ -314,7 +314,8 @@ for n in range(len(e_w_range)):
 
 
 
-plt.plot(e_w_hysteresis[44,1:model.counter_hysteresis],p_c_hysteresis[44,1:model.counter_hysteresis],label='scanning curves')
+
+plt.plot(e_w_hysteresis[20,1:model.counter_hysteresis],p_c_hysteresis[20,1:model.counter_hysteresis],label='scanning curves')
 plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
 plt.xlabel('e_w')

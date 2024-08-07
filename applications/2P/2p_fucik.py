@@ -63,7 +63,6 @@ boundary_value = {'e_w': [[ ew0_bc, ewL_bc ]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 
-
 # Set initial conditions
 ew_ic= np.zeros([nodes] )
 pw_ic= np.zeros([nodes] )

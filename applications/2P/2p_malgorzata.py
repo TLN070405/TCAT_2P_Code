@@ -136,7 +136,7 @@ model.interface = wn_interface
 
 # Time
 
-time_interval = np.array([2,5,10,100,1000])
+time_interval = np.array([20000.])
 
 model.set_simulation_time(time_interval)
 
@@ -159,7 +159,10 @@ OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
 # Preconditioner Options
 OptDB.setValue('pc_type', 'sor')
- 
+
+
+
+
 # Solve model and return model.solutions
 # which is a dictionary where
 # solutions[time][u_name] = np.array
@@ -181,4 +184,6 @@ for time,variable in solutions.items():
     plt.ylabel('Pn')
     plt.title('Malgorzata Solution')
     plt.legend()
-plt.show()    
+
+plt.show()
+

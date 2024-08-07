@@ -150,21 +150,23 @@ p_c_endpoint_old     = np.full((nodes), 0.0)
 e_w_reversal_old     = np.full((nodes), 0.0)
 e_w_endpoint_old     = np.full((nodes), 0.0)
 
-e_w_old              = np.full((nodes), 0.0) 
-p_c_old              = np.full((nodes), 0.0) 
 
-e_w_hysteresis       = np.full((nodes,100000), 0.0)  
-p_c_hysteresis       = np.full((nodes,100000), 0.0) 
+e_w_old              = np.full((nodes), 0.0)
+p_c_old              = np.full((nodes), 0.0)
+
+e_w_hysteresis       = np.full((nodes,100000), 0.0)
+p_c_hysteresis       = np.full((nodes,100000), 0.0)
 
 hysteresis_tol = 1e-6
- 
+
 for n in range(1,nodes-1):
     e_w_old[n]           = 0.397
-    p_c_old[n]           = 346.73  
+    p_c_old[n]           = 346.73
     e_w_reversal[n]      = 0.4
     e_w_endpoint[n]      = 0.003
-    p_c_reversal[n]      = wn_interface_dr.pc_function(e_w_reversal[n])    
-    p_c_endpoint[n]      = wn_interface_dr.pc_function(e_w_endpoint[n])      
+    p_c_reversal[n]      = wn_interface_dr.pc_function(e_w_reversal[n])
+    p_c_endpoint[n]      = wn_interface_dr.pc_function(e_w_endpoint[n])
+
 
     e_w_reversal_old[n]  = e_w_reversal[n]
     e_w_endpoint_old[n]  = e_w_endpoint[n]
@@ -175,12 +177,13 @@ for n in range(1,nodes-1):
     p_c_hysteresis[n][0] = p_c_old[n]
 
 #####    x=0
-e_w_old[0]           = 0.397 
-p_c_old[0]           = 346.73 
-e_w_reversal[0]      = 0.4 
+e_w_old[0]           = 0.397
+p_c_old[0]           = 346.73
+e_w_reversal[0]      = 0.4
 e_w_endpoint[0]      = 0.003
-p_c_reversal[0]      = wn_interface_dr.pc_function(e_w_reversal[0])     
-p_c_endpoint[0]      = wn_interface_dr.pc_function(e_w_endpoint[0])   
+p_c_reversal[0]      = wn_interface_dr.pc_function(e_w_reversal[0])
+p_c_endpoint[0]      = wn_interface_dr.pc_function(e_w_endpoint[0])
+
 e_w_reversal_old[0]  = e_w_reversal[0]
 e_w_endpoint_old[0]  = e_w_endpoint[0]
 p_c_reversal_old[0]  = p_c_reversal[0]
@@ -190,11 +193,13 @@ p_c_hysteresis[0][0] = p_c_old[0]
 
 #####    x=L
 e_w_old[nodes-1]           = 0.397
-p_c_old[nodes-1]           = 346.73 
-e_w_reversal[nodes-1]      = 0.4 
+
+p_c_old[nodes-1]           = 346.73
+e_w_reversal[nodes-1]      = 0.4
 e_w_endpoint[nodes-1]      = 0.003
-p_c_reversal[nodes-1]      = wn_interface_dr.pc_function(e_w_reversal[nodes-1])     
-p_c_endpoint[nodes-1]      = wn_interface_dr.pc_function(e_w_endpoint[nodes-1])  
+p_c_reversal[nodes-1]      = wn_interface_dr.pc_function(e_w_reversal[nodes-1])
+p_c_endpoint[nodes-1]      = wn_interface_dr.pc_function(e_w_endpoint[nodes-1])
+
 e_w_reversal_old[nodes-1]  = e_w_reversal[nodes-1]
 e_w_endpoint_old[nodes-1]  = e_w_endpoint[nodes-1]
 p_c_reversal_old[nodes-1]  = p_c_reversal[nodes-1]
@@ -226,7 +231,9 @@ model.set_data_hysteresis(data_hysteresis)
 # Set initial conditions
 ew_ic = np.full((nodes), 0.397)
 pw_ic = np.full((nodes), -346.73)
- 
+
+
+
 ew_ic[0]=wn_interface_dr.volume_fraction_function(346.73)
 
 initial_conditions = {'e_w': ew_ic,
@@ -307,14 +314,17 @@ OptDB.setValue('pc_type', 'sor')
 # which is a dictionary where
 # solutions[time][u_name] = np.array
 solutions = TCAT2Phase.numerics.solver.solver(model)
- 
+
+
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['e_w'],label=f't={time}')
     plt.xlabel("x (m)")
     plt.ylabel("e_w")
     plt.title("Malgorzata Solution")
     plt.legend()
-plt.show()  
+
+plt.show()
+
 
 
 for time,variable in solutions.items():
@@ -324,12 +334,14 @@ for time,variable in solutions.items():
     plt.ylabel('p_w')
     plt.title('Malgorzata Solution')
     plt.legend()
-plt.show()    
+
+plt.show()
 
 # Hysteresis visualization
 e_w_range    = np.linspace(0.05, s_phase.porosity, 1000)
-p_c_mpc_dr   = np.zeros([len(e_w_range)], dtype=np.double) 
-p_c_mpc_imb  = np.zeros([len(e_w_range)], dtype=np.double) 
+p_c_mpc_dr   = np.zeros([len(e_w_range)], dtype=np.double)
+p_c_mpc_imb  = np.zeros([len(e_w_range)], dtype=np.double)
+
 
 for n in range(len(e_w_range)):
     p_c_mpc_dr[n]   = wn_interface_dr.pc_function(e_w_range[n])
@@ -344,4 +356,6 @@ plt.xlabel('e_w')
 plt.ylabel('p_c')
 plt.title('Hysteresis pc-ew curves')
 plt.legend()
-plt.show()   
+
+plt.show()
+

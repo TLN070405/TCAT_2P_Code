@@ -86,7 +86,7 @@ model_test.interface = state_equations_hysteresis.Hysteresis(model_test,wn_inter
 
 
 # Set hysteresis data
- 
+
 model_test.hysteresis = True
 
 
@@ -95,23 +95,23 @@ time    = np.linspace(1, 500,1000 )
 drainage_new       = np.full((1), False)
 drainage_old       = np.full((1), False)
 
-e_w_reversal       = np.full((1), 0.00003) 
+e_w_reversal       = np.full((1), 0.00003)
 e_w_endpoint       = np.full((1), model_test.solid.porosity)
 p_c_reversal       = np.full((1), wn_interface_imb.pc_function(e_w_reversal[0]) )
 p_c_endpoint       = np.full((1), wn_interface_imb.pc_function(e_w_endpoint[0]))
 
-e_w_reversal_old   = np.full((1), 0.00003) 
+e_w_reversal_old   = np.full((1), 0.00003)
 e_w_endpoint_old   = np.full((1), model_test.solid.porosity)
 p_c_reversal_old   = np.full((1), wn_interface_dr.pc_function(e_w_reversal[0]) )
 p_c_endpoint_old   = np.full((1), wn_interface_dr.pc_function(e_w_endpoint[0]))
 
-e_w_old              = np.full((1),  0.01) 
-p_c_old              = np.full((1), wn_interface_imb.pc_function(e_w_old[0] ) ) 
+e_w_old              = np.full((1),  0.01)
+p_c_old              = np.full((1), wn_interface_imb.pc_function(e_w_old[0] ) )
 
-e_w_hysteresis       = np.full(([len(time)]), 0.01) 
+e_w_hysteresis       = np.full(([len(time)]), 0.01)
 p_c_hysteresis       = np.full(([len(time)]), wn_interface_imb.pc_function(e_w_hysteresis[0] )  )
 
-hysteresis_tol    = 1e-6
+hysteresis_tol       = 1e-6
 
 
 data_hysteresis = {'drainage_old'         : drainage_old,
@@ -135,38 +135,32 @@ model_test.set_data_hysteresis(data_hysteresis)
 
 
 
- 
-
-
-
-
-
-
 # Ew(t) needs to increase and decrease to simulate hysteresis
-def  ew_func_time( t):
-   if(t>0 and t<=100): 
-      a=(s_phase.porosity-0.01)/(100-0)
-      b=0.01-a*0
-      ew=a*t+b
-   elif(t>100 and t<=200): 
-      a=(0.1-s_phase.porosity)/(200-100)
-      b=0.4-a*100
-      ew=a*t+b
-   elif(t>200 and t<=300):  
-      a=(0.3-0.1)/(300-200)
-      b=0.1-a*200
-      ew=a*t+b
-   elif(t>300 and t<=400): 
-      a=(0.2-0.3)/(400-300)
-      b=0.3-a*300
-      ew=a*t+b
-   elif(t>400 and t<=500): 
-      a=(0.3-0.2)/(500-400)
-      b=0.2-a*400
-      ew=a*t+b
-   return ew
- 
-
+def ew_func_time(t):
+    """
+    Time dependant volume fraction to simulate hysteresis
+    """
+    if(t>0 and t<=100):
+        a=(s_phase.porosity-0.01)/(100-0)
+        b=0.01-a*0
+        ew=a*t+b
+    elif(t>100 and t<=200):
+        a=(0.1-s_phase.porosity)/(200-100)
+        b=0.4-a*100
+        ew=a*t+b
+    elif(t>200 and t<=300):
+        a=(0.3-0.1)/(300-200)
+        b=0.1-a*200
+        ew=a*t+b
+    elif(t>300 and t<=400):
+        a=(0.2-0.3)/(400-300)
+        b=0.3-a*300
+        ew=a*t+b
+    elif(t>400 and t<=500):
+        a=(0.3-0.2)/(500-400)
+        b=0.2-a*400
+        ew=a*t+b
+    return ew
 
 
 drainage_old    = model_test.data_hysteresis['drainage_old']
@@ -190,53 +184,49 @@ hysteresis_tol  = model_test.data_hysteresis['hysteresis_tol']
 
 
 for i in range(1,len(time)):
-   solution_now =ew_func_time(time[i])
-   model_test.data_hysteresis['state'] = "new"
-   model_test.current_cell = 0
-   pc_old[0]          = model_test.interface.pc_function(solution_now)
-   if(solution_now-ew_old[0]>hysteresis_tol):
-         drainage_old[0] = drainage_new[0]
-         drainage_new[0] = False
-   else:      
-         drainage_old[0] = drainage_new[0]
-         drainage_new[0] = True
-   #  
-   ew_old[0]  = solution_now
-   #  store hysteresis ew and pc just for visualization
-   ew_hysteresis[i] = ew_old[0]
-   pc_hysteresis[i] = pc_old[0]
-   # update reversal and endpoints (ew and pc)
-   if(drainage_new[0] != drainage_old[0]): 
-         model_test.data_hysteresis['state'] = "old"
-         model_test.current_cell = 0
-         
-         pc_reversal_old[0] = pc_reversal[0]
-         pc_endpoint_old[0] = pc_endpoint[0]
-         ew_endpoint_old[0] = ew_endpoint[0]
-         ew_reversal_old[0] = ew_reversal[0]
+    solution_now = ew_func_time(time[i])
+    model_test.data_hysteresis['state'] = "new"
+    model_test.current_cell = 0
+    pc_old[0]          = model_test.interface.pc_function(solution_now)
+    if solution_now-ew_old[0]>hysteresis_tol:
+        drainage_old[0] = drainage_new[0]
+        drainage_new[0] = False
+    else:
+        drainage_old[0] = drainage_new[0]
+        drainage_new[0] = True
 
-         pc_endpoint[0]     = pc_reversal[0]
-         pc_reversal[0]     = model_test.interface.pc_function(solution_now)
-         ew_endpoint[0]     = ew_reversal[0]
-         ew_reversal[0]     = solution_now
+    ew_old[0]  = solution_now
+    #  store hysteresis ew and pc just for visualization
+    ew_hysteresis[i] = ew_old[0]
+    pc_hysteresis[i] = pc_old[0]
+    # update reversal and endpoints (ew and pc)
+    if drainage_new[0] != drainage_old[0]:
+        model_test.data_hysteresis['state'] = "old"
+        model_test.current_cell = 0
 
+        pc_reversal_old[0] = pc_reversal[0]
+        pc_endpoint_old[0] = pc_endpoint[0]
+        ew_endpoint_old[0] = ew_endpoint[0]
+        ew_reversal_old[0] = ew_reversal[0]
+
+        pc_endpoint[0]     = pc_reversal[0]
+        pc_reversal[0]     = model_test.interface.pc_function(solution_now)
+        ew_endpoint[0]     = ew_reversal[0]
+        ew_reversal[0]     = solution_now
 
 # Plot results.
 e_w_mpc = np.linspace(0.003, s_phase.porosity, 1000)
-p_c_imb = np.zeros([len(e_w_mpc)], dtype=np.double) 
-p_c_dr  = np.zeros([len(e_w_mpc)], dtype=np.double) 
+p_c_imb = np.zeros([len(e_w_mpc)], dtype=np.double)
+p_c_dr  = np.zeros([len(e_w_mpc)], dtype=np.double)
 
 for i in range(len(e_w_mpc)):
-   p_c_dr[i] = wn_interface_dr.pc_function(e_w_mpc[i])
-   p_c_imb[i]= wn_interface_imb.pc_function(e_w_mpc[i]) 
+    p_c_dr[i] = wn_interface_dr.pc_function(e_w_mpc[i])
+    p_c_imb[i]= wn_interface_imb.pc_function(e_w_mpc[i]) 
 
 plt.plot(e_w_mpc,p_c_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_mpc,p_c_dr,label="PDC VG",linestyle="dashed")
 plt.plot(ew_hysteresis,pc_hysteresis,color='k',label="Scanning curves")
 plt.legend()
 plt.xlabel("e_w")
-plt.ylabel("p_c") 
+plt.ylabel("p_c")
 plt.show()
-    
-
- 

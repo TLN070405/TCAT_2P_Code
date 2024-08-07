@@ -1,4 +1,10 @@
-from setuptools import setup
+# setup.py
 
-if __name__ == "__main__":
-    setup()
+from setuptools import setup, find_packages
+
+setup(
+    name='TCAT2Phase',
+    version='0.1',
+    packages=find_packages(where='src'),
+    package_dir={'': 'src'},
+)

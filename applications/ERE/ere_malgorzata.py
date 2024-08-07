@@ -46,7 +46,7 @@ model.set_boundary_name(boundary_name = boundary_name)
 # Set boundary values
 def ew0_bc(t): return 0.12
 def ewL_bc(t): return 0.008
-def pw0_bc(t): return -2113.152788450121,
+def pw0_bc(t): return -2113.152788450121
 def pwL_bc(t): return -13706.965861446095
 
 boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
@@ -71,7 +71,7 @@ model.set_initial_conditions(initial_conditions)
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s')
 s_phase.set_porosity(0.4)
-s_phase.set_dynamic_capillary_pressure_parameter(0.4*1e6)
+s_phase.set_dynamic_capillary_pressure_parameter(1e7)
 s_phase.set_permeability(1e-10)
 s_phase.set_gravity(9.8066)
 
@@ -102,7 +102,7 @@ wn_interface = TCAT2Phase.properties.interface.Interface()
 
 m = 0.5990376904570971
 n = 2.494
-alpha =  9e-4 #1.e-3 
+alpha = 1.e-3
 
 vg = state_equations_interface.VanGenuchten(
     m = m,
@@ -131,7 +131,7 @@ model.n_phase = n_phase
 model.interface = wn_interface
 
 # Time
-time_interval = np.array([5000.])
+time_interval = np.array([20000.])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters

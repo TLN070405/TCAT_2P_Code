@@ -14,7 +14,7 @@ class BaseModel:
 
 class ExtendedTwoPhase(BaseModel):
     """
-    Standard two phase model formulation
+    Extended two phase model formulation
     """
     def __init__(self,form):
         self.identifier    = 0
@@ -60,7 +60,7 @@ class Richards(BaseModel):
 
 class ExtendedRichards(BaseModel):
     """
-    Richards model formulation
+    Extended Richards model formulation
     """
     def __init__(self,form):
         self.identifier    = 3

@@ -68,7 +68,6 @@ for i in range(0,nodes):
     pw_ic[i] = (-5- i *(5 / (nodes - 1.0)))*9.982e2*9.81
     pn_ic[i] = 0.0
 
-
 # Set initial conditions
 initial_conditions = {'p_w': pw_ic,
                       'p_n': pn_ic }
@@ -158,13 +157,10 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options 
 
+# Preconditioner Options
 OptDB.setValue('ksp_type', 'gmres')
 OptDB.setValue('pc_type', 'lu')
-
- 
-
 
 # Solve model and return model.solutions
 # which is a dictionary where
