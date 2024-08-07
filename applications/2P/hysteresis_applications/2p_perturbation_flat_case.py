@@ -238,14 +238,11 @@ model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
 
-
 def pw0_bc(t):
-
     Pw_t0 = -346.73
     Pw_t1 = -2000
     Pw_t2 = -1000
     if(0<=t<=500):
-
         p_w0= Pw_t0
     elif(500<t<=1000):
         aa=(Pw_t1-Pw_t0)/(1000-500)
@@ -262,21 +259,19 @@ def pw0_bc(t):
     return p_w0
 
 def ew0_bc(t):
+
     model.data_hysteresis['state'] = "new"
     model.current_cell = 0
     e_w_bc = model.interface.volume_fraction_function(-pw0_bc(t))
     return  e_w_bc
 
-
 def pwL_bc(t):
-
     Pw_t0 = -346.73
     Pw_t1 = -2000
     Pw_t2 = -1000
     Pw_t3 = -3000
     Pw_t4 = -1500
     if(0<=t<=500):
-
         p_wL= Pw_t0
     elif(500<t<=1000):
         aa=(Pw_t1-Pw_t0)/(1000-500)
@@ -313,7 +308,6 @@ time_interval = np.array([100.0,200,500,600,700,800,900,1000,1100,1200,1300,1400
 
 model.set_simulation_time(time_interval)
 
-
 # Numerical Parameters
 OptDB = PETSc.Options()
 
@@ -331,10 +325,8 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-
 # Preconditioner Options
 OptDB.setValue('pc_type', 'sor')
-
 
 
 
@@ -343,17 +335,13 @@ OptDB.setValue('pc_type', 'sor')
 # solutions[time][u_name] = np.array
 solutions = TCAT2Phase.numerics.solver.solver(model)
 
-
-
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['e_w'],label=f't={time}')
     plt.xlabel("x (m)")
     plt.ylabel("e_w")
     plt.title("equilibrium perturbation case solution")
     plt.legend()
-
 plt.show()
-
 
 
 for time,variable in solutions.items():
@@ -363,7 +351,6 @@ for time,variable in solutions.items():
     plt.ylabel('p_w')
     plt.title('equilibrium perturbation case solution')
     plt.legend()
-
 plt.show()
 
 # Hysteresis visualization
@@ -371,22 +358,17 @@ e_w_range    = np.linspace(0.05, s_phase.porosity, 1000)
 p_c_mpc_dr   = np.zeros([len(e_w_range)], dtype=np.double)
 p_c_mpc_imb  = np.zeros([len(e_w_range)], dtype=np.double)
 
-
 for n in range(len(e_w_range)):
     p_c_mpc_dr[n]   = wn_interface_dr.pc_function(e_w_range[n])
     p_c_mpc_imb[n]  = wn_interface_imb.pc_function(e_w_range[n]) 
 
 
 
-
 plt.plot(e_w_hysteresis[50,0:model.counter_hysteresis],p_c_hysteresis[50,0:model.counter_hysteresis],label='scanning curves')
-
 plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
 plt.xlabel('e_w')
 plt.ylabel('p_c')
 plt.title('Hysteresis pc-ew curves')
 plt.legend()
-
 plt.show()
-

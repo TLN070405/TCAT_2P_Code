@@ -18,7 +18,6 @@ class Hysteresis:
         """
         drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = get_data_hysteresis(self.model)
 
-
         if drain:
             interface = self.drainage
         else:

@@ -214,6 +214,7 @@ for i in range(1,len(time)):
         ew_endpoint[0]     = ew_reversal[0]
         ew_reversal[0]     = solution_now
 
+
 # Plot results.
 e_w_mpc = np.linspace(0.003, s_phase.porosity, 1000)
 p_c_imb = np.zeros([len(e_w_mpc)], dtype=np.double)
