@@ -251,7 +251,7 @@ class Hysteresis:
                     ew_old[n]  = solution_now[2*n]
                     #  store hysteresis ew and pc just for visualization
                     ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
-                    pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
+                    pc_hysteresis[n,model.counter_hysteresis] = -solution_now[2*n+1]
                     # update reversal and endpoints (ew and pc)
                     if drainage_new[n] != drainage_old[n]:
                         model.data_hysteresis['state'] = "old"
