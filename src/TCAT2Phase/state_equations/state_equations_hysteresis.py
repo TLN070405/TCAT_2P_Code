@@ -1,14 +1,69 @@
-"""hysteresis.py"""
-class Hysteresis:
+"""hysteresis models.py"""
+import dataclasses
+from dataclasses import field
+import numpy as np
+
+@dataclasses.dataclass
+class ParkerLenharddata:
+    """
+    Parker Lenhard hysteresis model necessary arrays and data
+    """
+    drainage_new: np.ndarray
+    pc_reversal: np.ndarray
+    pc_endpoint: np.ndarray
+    ew_reversal: np.ndarray
+    ew_endpoint: np.ndarray
+    pc_old: np.ndarray
+    ew_old: np.ndarray
+    hysteresis_tol: float
+
+    drainage_old: np.ndarray = field(default_factory=lambda: np.array([]))
+    pc_reversal_old: np.ndarray =field(default_factory=lambda: np.array([]))
+    pc_endpoint_old: np.ndarray =field(default_factory=lambda: np.array([]))
+    ew_reversal_old: np.ndarray =field(default_factory=lambda: np.array([]))
+    ew_endpoint_old: np.ndarray =field(default_factory=lambda: np.array([]))
+    ew_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
+    pc_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
+
+    state: str ="old"
+    counter_hysteresis: int = 1
+
+class ParkerLenhard:
     """
     Hysteresis Class to hold functions and parameters
     """
-    def __init__(self,model,imb_pc,dr_pc):
+    def __init__(self,model,imb_interface,dr_interface,
+            drainage_new,
+            pc_reversal,
+            pc_endpoint,
+            ew_reversal,
+            ew_endpoint,
+            pc_old,
+            ew_old,
+            hysteresis_tol):
         """
         Initialize the imbibition and drainage interfaces
         """
-        self.imbibition    = imb_pc
-        self.drainage      = dr_pc
+        self.data = ParkerLenharddata(
+            drainage_new,
+            pc_reversal,
+            pc_endpoint,
+            ew_reversal,
+            ew_endpoint,
+            pc_old,
+            ew_old,
+            hysteresis_tol
+            )
+        self.data.drainage_old    = np.array(drainage_new)
+        self.data.pc_reversal_old = np.array(pc_reversal)
+        self.data.pc_endpoint_old = np.array(pc_endpoint)
+        self.data.ew_reversal_old = np.array(ew_reversal)
+        self.data.ew_endpoint_old = np.array(ew_endpoint)
+        self.data.ew_hysteresis   = np.tile(ew_old[:, np.newaxis], (1, 100000))
+        self.data.pc_hysteresis   = np.tile(pc_old[:, np.newaxis], (1, 100000))
+
+        self.imbibition    = imb_interface
+        self.drainage      = dr_interface
         self.model         = model
 
     def pc_function(self,ew):
@@ -16,7 +71,7 @@ class Hysteresis:
         Hysteretic capillary pressure
         mpc  : main primary curve (drainage or imbibition)
         """
-        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = get_data_hysteresis(self.model)
+        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
         if drain:
             interface = self.drainage
@@ -34,7 +89,7 @@ class Hysteresis:
         """
         Derivative of hysteretic capillary pressure over the w-phase folume fraction
         """
-        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = get_data_hysteresis(self.model)
+        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
         if drain:
             interface = self.drainage
@@ -53,7 +108,7 @@ class Hysteresis:
         """
         Hysteretic volume fraction of w phase  
         """
-        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = get_data_hysteresis(self.model)
+        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
         if drain:
             interface = self.drainage
@@ -63,7 +118,7 @@ class Hysteresis:
         ew_reversal_mpc = interface.volume_fraction_function(pc_reversal)
         ew_endpoint_mpc = interface.volume_fraction_function(pc_endpoint)
         ew              = interface.volume_fraction_function(pc)
-        ew_hystereric   =((ew-ew_endpoint_mpc)/(ew_reversal_mpc-ew_endpoint_mpc))*(ew_reversal-ew_endpoint) + ew_endpoint 
+        ew_hystereric   =((ew-ew_endpoint_mpc)/(ew_reversal_mpc-ew_endpoint_mpc))*(ew_reversal-ew_endpoint) + ew_endpoint
 
         return ew_hystereric
 
@@ -71,7 +126,7 @@ class Hysteresis:
         """
         Hysteretic derivative volume fraction of w phase  
         """
-        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = get_data_hysteresis(self.model)
+        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
         if drain:
             interface = self.drainage
@@ -85,215 +140,148 @@ class Hysteresis:
 
         return dew_hystereric
 
-    def update_hysteresis_parameters(self,ts):
+    def get_data_hysteresis(self):
         """
-        Hysteresis function
+        function to get the hysetresis data.
+        """
+        n= self.model.current_cell
+
+        if self.data.state=="new":
+            drain       = self.data.drainage_new[n]
+            pc_reversal = self.data.pc_reversal[n]
+            pc_endpoint = self.data.pc_endpoint[n]
+            ew_reversal = self.data.ew_reversal[n]
+            ew_endpoint = self.data.ew_endpoint[n]
+
+        elif self.data.state=="old":
+            drain       = self.data.drainage_old[n]
+            pc_reversal = self.data.pc_reversal_old[n]
+            pc_endpoint = self.data.pc_endpoint_old[n]
+            ew_reversal = self.data.ew_reversal_old[n]
+            ew_endpoint = self.data.ew_endpoint_old[n]
+
+        else:
+            raise ValueError("state can only took two values -new- or -old-")
+
+        return drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint
+
+    def update_process(self,switch_condition):
+        """
+        function to update the process even drainage or imbibition
+        """
+        n=self.model.current_cell
+        if switch_condition > self.data.hysteresis_tol:
+            self.data.drainage_old[n] = self.data.drainage_new[n]
+            self.data.drainage_new[n] = False
+        else:
+            self.data.drainage_old[n] = self.data.drainage_new[n]
+            self.data.drainage_new[n] = True
+
+    def update_hysteresis_capillary_pressure(self,ew_new,pc_new):
+        """
+        function to update hysteresis parameters when solution is in terms of capillary pressure
         """
         model = self.model
+        self.data.state = "new"
+        n = model.current_cell
 
-        drainage_old    = model.data_hysteresis['drainage_old']
-        drainage_new    = model.data_hysteresis['drainage_new']
-        pc_reversal     = model.data_hysteresis['p_c_reversal']
-        pc_endpoint     = model.data_hysteresis['p_c_endpoint']
-        ew_reversal     = model.data_hysteresis['e_w_reversal']
-        ew_endpoint     = model.data_hysteresis['e_w_endpoint']
-        pc_reversal_old = model.data_hysteresis['p_c_reversal_old']
-        pc_endpoint_old = model.data_hysteresis['p_c_endpoint_old']
-        ew_reversal_old = model.data_hysteresis['e_w_reversal_old']
-        ew_endpoint_old = model.data_hysteresis['e_w_endpoint_old']
-        pc_old          = model.data_hysteresis['p_c_old']
-        ew_old          = model.data_hysteresis['e_w_old']
+        # Store hysteretic ew and pc for visualization
+        self.data.ew_hysteresis[n,self.data.counter_hysteresis] = ew_new
+        self.data.pc_hysteresis[n,self.data.counter_hysteresis] = pc_new
 
-        ew_hysteresis   = model.data_hysteresis['e_w_hysteresis']
-        pc_hysteresis   = model.data_hysteresis['p_c_hysteresis']
-        hysteresis_tol  = model.data_hysteresis['hysteresis_tol']
+        # Update the process even drainage or imbibition
+        self.update_process(self.data.pc_old[n]-pc_new)
 
+        # Update old capillary pressure
+        self.data.pc_old[n] = pc_new
+
+        # Update reversal and endpoints (ew and pc)
+        if self.data.drainage_new[n] != self.data.drainage_old[n]:
+
+            self.data.pc_reversal_old[n] = self.data.pc_reversal[n]
+            self.data.pc_endpoint_old[n] = self.data.pc_endpoint[n]
+            self.data.ew_endpoint_old[n] = self.data.ew_endpoint[n]
+            self.data.ew_reversal_old[n] = self.data.ew_reversal[n]
+
+            self.data.state = "old"
+            self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
+            self.data.ew_reversal[n]     = model.interface.volume_fraction_function(pc_new)
+            self.data.pc_endpoint[n]     = self.data.pc_reversal[n]
+            self.data.pc_reversal[n]     = pc_new
+
+    def update_hysteresis_volume_fraction(self,ew_new,pc_new):
+        """
+        function to update hysteresis parameters when solution is in terms of volume fraction
+        """
+        model = self.model
+        self.data.state = "new"
+        n = model.current_cell
+
+        # Store hysteretic ew and pc for visualization
+        self.data.ew_hysteresis[n,self.data.counter_hysteresis] = ew_new
+        self.data.pc_hysteresis[n,self.data.counter_hysteresis] = pc_new
+
+        # Update the process even drainage or imbibition
+        self.update_process(ew_new-self.data.ew_old[n])
+
+        # Update old volume fraction
+        self.data.ew_old[n] = ew_new
+
+        # Update reversal and endpoints (ew and pc)
+        if self.data.drainage_new[n] != self.data.drainage_old[n]:
+
+            self.data.pc_reversal_old[n] = self.data.pc_reversal[n]
+            self.data.pc_endpoint_old[n] = self.data.pc_endpoint[n]
+            self.data.ew_endpoint_old[n] = self.data.ew_endpoint[n]
+            self.data.ew_reversal_old[n] = self.data.ew_reversal[n]
+
+            self.data.state ="old"
+            self.data.pc_endpoint[n]     = self.data.pc_reversal[n]
+            self.data.pc_reversal[n]     = model.interface.pc_function(ew_new)
+            self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
+            self.data.ew_reversal[n]     = ew_new
+
+    def model_update_hysteresis(self,step_number,solution_now):
+        """
+        function to update hysteresis parameters depending on model and formulation.
+        """
+        model = self.model
         nodes = model.nodes
-        form = model.model.name
+        form  = model.model.name
+        num_u = model.model.num_u
 
-        if ts.getStepNumber()==model.counter_hysteresis:
-            solution_now = ts.getSolution()
-
-            if form == 'extended-two-phase-spp':
+        if step_number==self.data.counter_hysteresis:
+            if form =='extended-two-phase-spp':
                 for n in range(0,nodes):
-                    model.data_hysteresis['state'] = "new"
                     model.current_cell = n
-                    pc_old[n]          = model.interface.pc_function(solution_now[3*n])
-                    if solution_now[3*n]-ew_old[n]>hysteresis_tol:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = False
-                    else:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = True
-                    #
-                    ew_old[n]  = solution_now[3*n]
-                    # store hysteresis ew and pc just for visualization
-                    ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
-                    pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
-                    # update reversal and endpoints (ew and pc)
-                    if drainage_new[n] != drainage_old[n]:
-                        model.data_hysteresis['state'] = "old"
-                        model.current_cell = n
-
-                        pc_reversal_old[n] = pc_reversal[n]
-                        pc_endpoint_old[n] = pc_endpoint[n]
-                        ew_endpoint_old[n] = ew_endpoint[n]
-                        ew_reversal_old[n] = ew_reversal[n]
-
-                        pc_endpoint[n]     = pc_reversal[n]
-                        pc_reversal[n]     = model.interface.pc_function(solution_now[3*n])
-                        ew_endpoint[n]     = ew_reversal[n]
-                        ew_reversal[n]     = solution_now[3*n]
+                    ew_new = solution_now[num_u*n]
+                    pc_new = solution_now[num_u*n+2]-solution_now[num_u*n+1]
+                    self.update_hysteresis_volume_fraction(ew_new, pc_new)
             elif form == 'two-phase-sp':
                 for n in range(0,nodes):
-                    model.data_hysteresis['state'] = "new"
                     model.current_cell = n
-                    pc_old[n]          = model.interface.pc_function(solution_now[2*n])
-                    if solution_now[2*n]-ew_old[n]>hysteresis_tol:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = False
-                    else:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = True
-                    #
-                    ew_old[n]  = solution_now[2*n]
-                    #  store hysteresis ew and pc just for visualization
-                    ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
-                    pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
-                    # update reversal and endpoints (ew and pc)
-                    if drainage_new[n] != drainage_old[n]:
-                        model.data_hysteresis['state'] = "old"
-                        model.current_cell = n
-
-                        pc_reversal_old[n] = pc_reversal[n]
-                        pc_endpoint_old[n] = pc_endpoint[n]
-                        ew_endpoint_old[n] = ew_endpoint[n]
-                        ew_reversal_old[n] = ew_reversal[n]
-
-                        pc_endpoint[n]     = pc_reversal[n]
-                        pc_reversal[n]     = model.interface.pc_function(solution_now[2*n])
-                        ew_endpoint[n]     = ew_reversal[n]
-                        ew_reversal[n]     = solution_now[2*n]
-
-            elif form == 'two-phase-pp':
-                for n in range(0,nodes):
-                    model.data_hysteresis['state'] = "new"
-                    model.current_cell = n
-                    ew_old[n]  = model.interface.volume_fraction_function(solution_now[2*n+1]-solution_now[2*n])
-                    if pc_old[n]-(solution_now[2*n+1]-solution_now[2*n])>hysteresis_tol:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = False
-                    else:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = True
-                    #
-                    pc_old[n]         = solution_now[2*n+1]-solution_now[2*n]
-                    #  store hysteresis ew and pc just for visualization
-                    ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
-                    pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
-                    # update reversal and endpoints (ew and pc)
-                    if drainage_new[n] != drainage_old[n]:
-                        model.data_hysteresis['state'] = "old"
-                        model.current_cell = n
-
-                        pc_reversal_old[n] = pc_reversal[n]
-                        pc_endpoint_old[n] = pc_endpoint[n]
-                        ew_endpoint_old[n] = ew_endpoint[n]
-                        ew_reversal_old[n] = ew_reversal[n]
-
-                        ew_endpoint[n]     = ew_reversal[n]
-                        ew_reversal[n]     = model.interface.volume_fraction_function(solution_now[2*n+1]-solution_now[2*n])
-                        pc_endpoint[n]     = pc_reversal[n]
-                        pc_reversal[n]     = solution_now[2*n+1]-solution_now[2*n]
-
-            elif form == 'richards-pr':
-                for n in range(0,nodes):
-                    model.data_hysteresis['state'] = "new"
-                    model.current_cell = n
-                    ew_old[n]  = model.interface.volume_fraction_function(-solution_now[n])
-                    if pc_old[n]-(-solution_now[n])>hysteresis_tol:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = False
-                    else:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = True
-                    #
-                    pc_old[n]           = -solution_now[n]
-                    #  store hysteresis ew and pc just for visualization
-                    ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
-                    pc_hysteresis[n,model.counter_hysteresis] = pc_old[n]
-                    # update reversal and endpoints (ew and pc)
-                    if drainage_new[n] != drainage_old[n]:
-                        model.data_hysteresis['state'] = "old"
-                        model.current_cell = n
-
-                        pc_reversal_old[n] = pc_reversal[n]
-                        pc_endpoint_old[n] = pc_endpoint[n]
-                        ew_endpoint_old[n] = ew_endpoint[n]
-                        ew_reversal_old[n] = ew_reversal[n]
-
-                        ew_endpoint[n]     = ew_reversal[n]
-                        ew_reversal[n]     = model.interface.volume_fraction_function(-solution_now[n])
-                        pc_endpoint[n]     = pc_reversal[n]
-                        pc_reversal[n]     = -solution_now[n]
+                    ew_new = solution_now[num_u*n]
+                    pc_new = model.interface.pc_function(ew_new)
+                    self.update_hysteresis_volume_fraction(ew_new, pc_new)
             elif form == 'extended-richards-sp':
                 for n in range(0,nodes):
-                    model.data_hysteresis['state'] = "new"
                     model.current_cell = n
-                    pc_old[n]          = model.interface.pc_function(solution_now[2*n])
-                    if solution_now[2*n]-ew_old[n]>hysteresis_tol:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = False
-                    else:
-                        drainage_old[n] = drainage_new[n]
-                        drainage_new[n] = True
-                    #
-                    ew_old[n]  = solution_now[2*n]
-                    #  store hysteresis ew and pc just for visualization
-                    ew_hysteresis[n,model.counter_hysteresis] = ew_old[n]
-                    pc_hysteresis[n,model.counter_hysteresis] = -solution_now[2*n+1]
-                    # update reversal and endpoints (ew and pc)
-                    if drainage_new[n] != drainage_old[n]:
-                        model.data_hysteresis['state'] = "old"
-                        model.current_cell = n
+                    ew_new = solution_now[num_u*n]
+                    pc_new = -solution_now[num_u*n+1]
+                    self.update_hysteresis_volume_fraction(ew_new, pc_new)
+            elif form == 'two-phase-pp':
+                for n in range(0,nodes):
+                    model.current_cell = n
+                    pc_new = solution_now[num_u*n+1]-solution_now[num_u*n]
+                    ew_new = model.interface.volume_fraction_function(pc_new)
+                    self.update_hysteresis_capillary_pressure(ew_new,pc_new)
+            elif form == 'richards-pr':
+                for n in range(0,nodes):
+                    model.current_cell = n
+                    pc_new = -solution_now[n]
+                    ew_new = model.interface.volume_fraction_function(pc_new)
+                    self.update_hysteresis_capillary_pressure(ew_new,pc_new)
+            else:
+                raise ValueError(f"Unsupported form: {form}")
 
-                        pc_reversal_old[n] = pc_reversal[n]
-                        pc_endpoint_old[n] = pc_endpoint[n]
-                        ew_endpoint_old[n] = ew_endpoint[n]
-                        ew_reversal_old[n] = ew_reversal[n]
-
-                        pc_endpoint[n]     = pc_reversal[n]
-                        pc_reversal[n]     = model.interface.pc_function(solution_now[2*n])
-                        ew_endpoint[n]     = ew_reversal[n]
-                        ew_reversal[n]     = solution_now[2*n]
-
-            model.counter_hysteresis += 1
-
-
-
-def get_data_hysteresis(model):
-    """
-    function to get the hysetresis data from model.
-    """
-
-    current_cell= model.current_cell
-    state       = model.data_hysteresis['state']
-
-    if state=="new":
-        drain       = model.data_hysteresis['drainage_new'][current_cell]
-        pc_reversal = model.data_hysteresis['p_c_reversal'][current_cell]
-        pc_endpoint = model.data_hysteresis['p_c_endpoint'][current_cell]
-        ew_reversal = model.data_hysteresis['e_w_reversal'][current_cell]
-        ew_endpoint = model.data_hysteresis['e_w_endpoint'][current_cell]
-
-    elif state=="old":
-        drain       = model.data_hysteresis['drainage_old'][current_cell]
-        pc_reversal = model.data_hysteresis['p_c_reversal_old'][current_cell]
-        pc_endpoint = model.data_hysteresis['p_c_endpoint_old'][current_cell]
-        ew_reversal = model.data_hysteresis['e_w_reversal_old'][current_cell]
-        ew_endpoint = model.data_hysteresis['e_w_endpoint_old'][current_cell]
-
-    else:
-        print("state can only took two values -new- or -old-")
-
-    return drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint
+            self.data.counter_hysteresis += 1

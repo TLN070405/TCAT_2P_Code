@@ -17,7 +17,6 @@ class ExtendedTwoPhase(BaseModel):
     Extended two phase model formulation
     """
     def __init__(self,form):
-        self.identifier    = 0
         if form == 'spp':
             self.name = 'extended-two-phase-spp'
             self.u_names = ['e_w','p_w','p_n']
@@ -30,7 +29,6 @@ class TwoPhase(BaseModel):
     Standard two phase model formulation
     """
     def __init__(self,form):
-        self.identifier    = 1
         if form == 'sp':
             self.name = 'two-phase-sp'
             self.u_names = ['e_w','p_w']
@@ -50,7 +48,6 @@ class Richards(BaseModel):
     Richards model formulation
     """
     def __init__(self,form):
-        self.identifier    = 2
         if form == 'pr':
             self.name = 'richards-pr'
             self.u_names = ['p_w']
@@ -63,7 +60,6 @@ class ExtendedRichards(BaseModel):
     Extended Richards model formulation
     """
     def __init__(self,form):
-        self.identifier    = 3
         if form == 'sp':
             self.name = 'extended-richards-sp'
             self.u_names = ['e_w','p_w']

@@ -19,4 +19,3 @@ for f in mesh.faces:
 for c in mesh.cells:
     print(c)
 
- 

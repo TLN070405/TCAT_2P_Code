@@ -17,10 +17,10 @@ mesh.uniform_mesh_1d(domain,nodes)
 allowable_error = 1.e-12
 
 # create y(x)=x^2, derivative and interpolation
-y=np.zeros([nodes])
-dy=np.zeros([nodes-2])
-y_face=np.zeros([nodes-2])
-dx=1./(nodes-1)
+y = np.zeros([nodes])
+dy = np.zeros([nodes-2])
+y_face = np.zeros([nodes-2])
+dx = 1./(nodes-1)
 
 for i in range(0,nodes):
     y[i]=(i*dx)**2
@@ -48,4 +48,3 @@ def test_interpolate_function():
 
 test_gradient_function()
 test_interpolate_function()
-print(utils.gradient(y,mesh))

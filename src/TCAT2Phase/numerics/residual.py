@@ -20,7 +20,7 @@ def model_residual(ts,t,U,Udot,F,model):
     model_residual_internal(f,u,udot,model)
     model_residual_boundary(t,f,u,model)
     if model.hysteresis is True:
-        model.interface.update_hysteresis_parameters(ts)
+        model.interface.model_update_hysteresis(ts.getStepNumber(), ts.getSolution())
 
 
 def model_residual_internal(f,u,udot,model):
@@ -28,8 +28,7 @@ def model_residual_internal(f,u,udot,model):
     residual at internal nodes.
     """
 
-    # Collect hysteresis data arrays
-
+    # Create primary variables
     e_w,p_w,p_n,p_c = model_primary_variables(u,model)
     mesh = model.mesh
 
@@ -72,8 +71,6 @@ def model_residual_internal(f,u,udot,model):
                    rho_n_face,
                    gravity)
 
-    mod_id = model.model.identifier
-    
     for cell in mesh.cells:
         if cell.boundary:
             continue
@@ -83,12 +80,13 @@ def model_residual_internal(f,u,udot,model):
         od_n  = 1./cell.length*(q_n[n+1] - q_n[n])
         od_dp = p_w[n]-p_n[n]+ p_c[n]
         od    = [od_dp,od_w[0],od_n[0]]
-        
+
         # Time derivative matrix
         model.current_cell = n
-        A = model_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n],model)
-        # residuals
-        f[n] = np.dot(A, udot[n]) - od[int(mod_id*(-0.5*mod_id+1.5)):int(mod_id*(mod_id*(1/3*mod_id-1.5)+7/6)+3)]
+        A    = model_A_matrix(e_w[n],p_w[n],p_n[n],p_c[n],rho_w[n],rho_n[n],e_n[n],model)
+
+        # Residuals at interior points
+        f[n] = model_residual_equations(A,udot,od,model)
 
 
 def model_primary_variables(u,model):
@@ -96,7 +94,7 @@ def model_primary_variables(u,model):
     primary variables for each formulation
     """
     if model.hysteresis is True:
-        model.data_hysteresis['state']="new"
+        model.interface.data.state="new"
 
 
     nodes = model.nodes
@@ -167,7 +165,7 @@ def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,model):
     """
 
     if model.hysteresis is True:
-        model.data_hysteresis['state'] = "new"
+        model.interface.data.state = "new"
 
     d_p_c_e_w   = model.interface.d_pc_function(e_w)
     d_e_w_p_c   = model.interface.d_volume_fraction_function(p_c)
@@ -204,6 +202,24 @@ def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,model):
         print('Error Model Form is unknown')
 
     return A
+
+def model_residual_equations(A,udot,od,model):
+    """
+    Residual equations
+    """
+    form = model.model.name
+    n    = model.current_cell
+    if form == 'extended-two-phase-spp':
+        f=  np.dot(A, udot[n]) - od[0:3]
+    elif form in ('two-phase-sp', 'two-phase-pp') :
+        f=  np.dot(A, udot[n]) - od[1:3]
+    elif form == 'richards-pr':
+        f=  np.dot(A, udot[n]) - od[1:2]
+    elif form == 'extended-richards-sp':
+        f=  np.dot(A, udot[n]) - od[0:2]
+    else:
+        print('Error Model Form is unknown')
+    return f
 
 def model_residual_boundary(t,f,u,model):
     """

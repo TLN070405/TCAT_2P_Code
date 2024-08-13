@@ -60,9 +60,6 @@ class Model:
         self.n_phase = None
         self.interface = None
         self.hysteresis = False
-        self.data_hysteresis = {}
-        self.counter_hysteresis = 1
-
 
     def select_model(self, model_type, form):
         """
@@ -156,11 +153,6 @@ class Model:
         for n_u,u_name in enumerate(self.model.u_names):
             self.solution[time][u_name] = np.copy(solution[n_u::self.model.num_u])
 
-    def set_data_hysteresis(self,data_hysteresis):
-        """
-        Set the hysteresis arrays
-        """
-        self.data_hysteresis = data_hysteresis
 
 def initialize_model(model_type,form,domain,nodes,mesh):
     """

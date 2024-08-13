@@ -125,7 +125,7 @@ model.interface = wn_interface
 # Time
 time_interval = np.array([17280.])
 model.set_simulation_time(time_interval)
- 
+
 # Numerical Parameters
 OptDB = PETSc.Options()
 
@@ -143,12 +143,12 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options 
+# Preconditioner Options
 OptDB.setValue('pc_type', 'sor')
- 
 
 
- 
+
+
 # Solve model
 solutions = TCAT2Phase.numerics.solver.solver(model)
 
@@ -159,4 +159,4 @@ for time,variable in solutions.items():
     plt.ylabel('Pw')
     plt.title('Richards Solution')
     plt.legend()
-plt.show()    
+plt.show()
