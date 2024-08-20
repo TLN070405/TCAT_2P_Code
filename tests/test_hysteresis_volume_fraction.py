@@ -1,26 +1,26 @@
 import numpy as np
 from TCAT2Phase.state_equations import state_equations_hysteresis
 import matplotlib.pyplot as plt
-import model_utilities
+import conftest as ct
 
 def set_model():
     """
     Set up model and interfaces
     """
-    model = model_utilities.initialize_model(domain_size=np.array([[0.0,1.0]]),
+    model = ct.initialize_model(domain_size=np.array([[0.0,1.0]]),
                                 dims = 1,
                                 nodes = 3,
                                 model_type = 'two_phase',
                                 form = 'sp')
 
-    s_phase = model_utilities.set_solid_phase(porosity=0.4, permeability=0, gravity=0 )
-    w_phase = model_utilities.set_wet_phase(ewr=0, viscosity=0)
-    n_phase = model_utilities.set_nonwet_phase(enr=0, viscosity=0)
-    model_utilities.setup_phases(model, s_phase, w_phase, n_phase)
-    vg_imb = model_utilities.create_vg_model(s_phase, w_phase, n_phase, m=1-1/6, n=6, alpha=9e-4)
-    vg_dr  = model_utilities.create_vg_model(s_phase, w_phase, n_phase, m=1-1/9, n=9, alpha=6e-4)
-    wn_interface_imb = model_utilities.setup_interface(vg_imb)
-    wn_interface_dr  = model_utilities.setup_interface(vg_dr )
+    s_phase = ct.set_solid_phase(porosity=0.4, permeability=0, gravity=0 )
+    w_phase = ct.set_wet_phase(ewr=0, viscosity=0)
+    n_phase = ct.set_nonwet_phase(enr=0, viscosity=0)
+    ct.setup_phases(model, s_phase, w_phase, n_phase)
+    vg_imb = ct.create_vg_model(s_phase, w_phase, n_phase, m=1-1/6, n=6, alpha=9e-4)
+    vg_dr  = ct.create_vg_model(s_phase, w_phase, n_phase, m=1-1/9, n=9, alpha=6e-4)
+    wn_interface_imb = ct.setup_interface(vg_imb)
+    wn_interface_dr  = ct.setup_interface(vg_dr )
 
     return model,wn_interface_imb,wn_interface_dr
 
@@ -72,21 +72,23 @@ def ew_func_time(t):
         ew=a*t+b
     return ew
 
-def test_hysteresis_parkerlenhard(time,model):
+def test_hysteresis_parkerlenhard():
     """
     Test function for Parker Lenhard hysteresis model
     """
     for n, value in enumerate(time):
         model.current_cell = 0
+        model.interface.data.state = 1
         ew_new = ew_func_time(value)
         pc_new = model.interface.pc_function(ew_new)
         model.interface.update_hysteresis_volume_fraction(ew_new, pc_new)
         model.interface.data.counter_hysteresis += 1
 
+model,wn_interface_imb,wn_interface_dr = set_model()
+time=np.linspace(1, 300,3000 )
+setup_hysteresis(model,wn_interface_imb,wn_interface_dr)
 
-model_test,wn_interface_imb,wn_interface_dr = set_model()
-setup_hysteresis(model_test,wn_interface_imb,wn_interface_dr)
-test_hysteresis_parkerlenhard(np.linspace(1, 300,900 ),model_test)
+test_hysteresis_parkerlenhard()
 
 # Plot results.
 e_w_mpc = np.linspace(0.003, 0.4, 1000)
@@ -97,14 +99,14 @@ for n, value in enumerate(e_w_mpc):
     p_c_dr[n]   = wn_interface_dr.pc_function(value)
     p_c_imb[n]  = wn_interface_imb.pc_function(value)
 
-
-counter_hysteresis = model_test.interface.data.counter_hysteresis
+counter_hysteresis = model.interface.data.counter_hysteresis
 plt.plot(e_w_mpc,p_c_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_mpc,p_c_dr,label="PDC VG",linestyle="dashed")
-plt.plot(model_test.interface.data.ew_hysteresis[0,0:counter_hysteresis],
-         model_test.interface.data.pc_hysteresis[0,0:counter_hysteresis],
+plt.plot(model.interface.data.ew_hysteresis[0,0:counter_hysteresis],
+         model.interface.data.pc_hysteresis[0,0:counter_hysteresis],
          label='scanning curves')
 plt.legend()
 plt.xlabel("e_w")
 plt.ylabel("p_c")
+plt.title('Hysteresis pc-ew curves')
 plt.show()

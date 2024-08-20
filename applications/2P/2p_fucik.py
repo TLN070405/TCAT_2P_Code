@@ -152,7 +152,7 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options 
+# Preconditioner Options
 OptDB.setValue('pc_type', 'sor')
 
 

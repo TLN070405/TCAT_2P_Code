@@ -86,7 +86,7 @@ wn_interface_imb = TCAT2Phase.properties.interface.Interface()
 n = 2.494
 m = 1.0 - (1.0 / n)
 alpha = 1e-3
- 
+
 vg_imb = state_equations_interface.VanGenuchten(
     m = m,
     n = n,
@@ -106,7 +106,7 @@ wn_interface_dr = TCAT2Phase.properties.interface.Interface()
 
 n = 2.494
 m = 1.0 - (1.0 / n)
-alpha = 5e-4 
+alpha = 5e-4
 
 vg_dr = state_equations_interface.VanGenuchten(
     m = m,
@@ -123,9 +123,6 @@ wn_interface_dr.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 
 w_phase.set_rel_perm_function(vg_dr.w_relative_permability)
 n_phase.set_rel_perm_function(vg_dr.n_relative_permability)
-
-w_phase.set_volume_fraction_function(vg_dr.volume_fraction_w)
-w_phase.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 
 
 # Set hysteresis data and model
@@ -196,6 +193,9 @@ model.set_initial_conditions(initial_conditions)
 # Set boundary values
 
 def pw0_bc(t):
+    """
+    Boundary wetting phase pressure
+    """
     pw_t0 = -346.73
     pw_t1 = -7000
     pw_t2 = -2000
@@ -217,23 +217,36 @@ def pw0_bc(t):
         aa=(pw_t4-pw_t3)/(2000-1500)
         bb=pw_t3-aa*1500
         p_w0=aa*t+bb
+
     return p_w0
 
 def ew0_bc(t):
-    model.interface.data.state = "new"
+    """
+    Boundary volume fraction
+    """
+    model.interface.data.state = 1
     model.current_cell = 0
     e_w_bc = model.interface.volume_fraction_function(-pw0_bc(t))
+
     return  e_w_bc
 
-def ewL_bc(t): return  0.397
-def pwL_bc(t): return  -346.73
+def ewL_bc(t):
+    """
+    Boundary volume fraction
+    """
+    return  0.397
+
+def pwL_bc(t):
+    """
+    Boundary wetting phase pressure
+    """
+    return  -346.73
 
 
 boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
                   'p_w': [[ pw0_bc,pwL_bc  ]]}
 
 model.set_boundary_value(boundary_value = boundary_value)
-
 
 # Time
 #time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600,700,800,900.0,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000])

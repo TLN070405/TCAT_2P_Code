@@ -25,7 +25,7 @@ class ParkerLenharddata:
     ew_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
     pc_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
 
-    state: str ="old"
+    state: int = 0
     counter_hysteresis: int = 1
 
 class ParkerLenhard:
@@ -146,22 +146,19 @@ class ParkerLenhard:
         """
         n= self.model.current_cell
 
-        if self.data.state=="new":
+        if self.data.state == 1:
             drain       = self.data.drainage_new[n]
             pc_reversal = self.data.pc_reversal[n]
             pc_endpoint = self.data.pc_endpoint[n]
             ew_reversal = self.data.ew_reversal[n]
             ew_endpoint = self.data.ew_endpoint[n]
 
-        elif self.data.state=="old":
+        else:
             drain       = self.data.drainage_old[n]
             pc_reversal = self.data.pc_reversal_old[n]
             pc_endpoint = self.data.pc_endpoint_old[n]
             ew_reversal = self.data.ew_reversal_old[n]
             ew_endpoint = self.data.ew_endpoint_old[n]
-
-        else:
-            raise ValueError("state can only took two values -new- or -old-")
 
         return drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint
 
@@ -182,7 +179,7 @@ class ParkerLenhard:
         function to update hysteresis parameters when solution is in terms of capillary pressure
         """
         model = self.model
-        self.data.state = "new"
+        self.data.state = 1
         n = model.current_cell
 
         # Store hysteretic ew and pc for visualization
@@ -203,7 +200,7 @@ class ParkerLenhard:
             self.data.ew_endpoint_old[n] = self.data.ew_endpoint[n]
             self.data.ew_reversal_old[n] = self.data.ew_reversal[n]
 
-            self.data.state = "old"
+            self.data.state = 0
             self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
             self.data.ew_reversal[n]     = model.interface.volume_fraction_function(pc_new)
             self.data.pc_endpoint[n]     = self.data.pc_reversal[n]
@@ -214,7 +211,7 @@ class ParkerLenhard:
         function to update hysteresis parameters when solution is in terms of volume fraction
         """
         model = self.model
-        self.data.state = "new"
+        self.data.state = 1
         n = model.current_cell
 
         # Store hysteretic ew and pc for visualization
@@ -235,13 +232,13 @@ class ParkerLenhard:
             self.data.ew_endpoint_old[n] = self.data.ew_endpoint[n]
             self.data.ew_reversal_old[n] = self.data.ew_reversal[n]
 
-            self.data.state ="old"
+            self.data.state = 0
             self.data.pc_endpoint[n]     = self.data.pc_reversal[n]
             self.data.pc_reversal[n]     = model.interface.pc_function(ew_new)
             self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
             self.data.ew_reversal[n]     = ew_new
 
-    def model_update_hysteresis(self,step_number,solution_now):
+    def model_update_hysteresis(self,solution_now):
         """
         function to update hysteresis parameters depending on model and formulation.
         """
@@ -250,38 +247,40 @@ class ParkerLenhard:
         form  = model.model.name
         num_u = model.model.num_u
 
-        if step_number==self.data.counter_hysteresis:
-            if form =='extended-two-phase-spp':
-                for n in range(0,nodes):
-                    model.current_cell = n
-                    ew_new = solution_now[num_u*n]
-                    pc_new = solution_now[num_u*n+2]-solution_now[num_u*n+1]
-                    self.update_hysteresis_volume_fraction(ew_new, pc_new)
-            elif form == 'two-phase-sp':
-                for n in range(0,nodes):
-                    model.current_cell = n
-                    ew_new = solution_now[num_u*n]
-                    pc_new = model.interface.pc_function(ew_new)
-                    self.update_hysteresis_volume_fraction(ew_new, pc_new)
-            elif form == 'extended-richards-sp':
-                for n in range(0,nodes):
-                    model.current_cell = n
-                    ew_new = solution_now[num_u*n]
-                    pc_new = -solution_now[num_u*n+1]
-                    self.update_hysteresis_volume_fraction(ew_new, pc_new)
-            elif form == 'two-phase-pp':
-                for n in range(0,nodes):
-                    model.current_cell = n
-                    pc_new = solution_now[num_u*n+1]-solution_now[num_u*n]
-                    ew_new = model.interface.volume_fraction_function(pc_new)
-                    self.update_hysteresis_capillary_pressure(ew_new,pc_new)
-            elif form == 'richards-pr':
-                for n in range(0,nodes):
-                    model.current_cell = n
-                    pc_new = -solution_now[n]
-                    ew_new = model.interface.volume_fraction_function(pc_new)
-                    self.update_hysteresis_capillary_pressure(ew_new,pc_new)
-            else:
-                raise ValueError(f"Unsupported form: {form}")
+        if form =='extended-two-phase-spp':
+            for n in range(0,nodes):
+                model.current_cell = n
+                ew_new = solution_now[num_u*n]
+                pc_new = solution_now[num_u*n+2]-solution_now[num_u*n+1]
+                self.update_hysteresis_volume_fraction(ew_new, pc_new)
+        elif form == 'two-phase-sp':
+            for n in range(0,nodes):
+                model.current_cell = n
+                ew_new = solution_now[num_u*n]
+                self.data.state = 1
+                pc_new = model.interface.pc_function(ew_new)
+                self.update_hysteresis_volume_fraction(ew_new, pc_new)
+        elif form == 'extended-richards-sp':
+            for n in range(0,nodes):
+                model.current_cell = n
+                ew_new = solution_now[num_u*n]
+                pc_new = -solution_now[num_u*n+1]
+                self.update_hysteresis_volume_fraction(ew_new, pc_new)
+        elif form == 'two-phase-pp':
+            for n in range(0,nodes):
+                model.current_cell = n
+                pc_new = solution_now[num_u*n+1]-solution_now[num_u*n]
+                self.data.state = 1
+                ew_new = model.interface.volume_fraction_function(pc_new)
+                self.update_hysteresis_capillary_pressure(ew_new,pc_new)
+        elif form == 'richards-pr':
+            for n in range(0,nodes):
+                model.current_cell = n
+                pc_new = -solution_now[n]
+                self.data.state = 1
+                ew_new = model.interface.volume_fraction_function(pc_new)
+                self.update_hysteresis_capillary_pressure(ew_new,pc_new)
+        else:
+            raise ValueError(f"Unsupported form: {form}")
 
-            self.data.counter_hysteresis += 1
+        self.data.counter_hysteresis += 1

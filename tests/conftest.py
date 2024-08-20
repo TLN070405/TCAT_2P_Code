@@ -10,8 +10,6 @@ def initialize_model(domain_size,dims,nodes,model_type,form):
                                 domain_size = domain_size,
                                 )
 
-    # Discretization
-    nodes = 3
 
     # Mesh
     mesh = TCAT2Phase.mesh.grid.Mesh()

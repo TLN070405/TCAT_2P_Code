@@ -273,8 +273,8 @@ plt.show()
 
 # Hysteresis visualization
 e_w_range    = np.linspace(0.05, s_phase.porosity, 1000)
-p_c_mpc_dr   = np.zeros([len(e_w_range)], dtype=np.double) 
-p_c_mpc_imb  = np.zeros([len(e_w_range)], dtype=np.double) 
+p_c_mpc_dr   = np.zeros([len(e_w_range)], dtype=np.double)
+p_c_mpc_imb  = np.zeros([len(e_w_range)], dtype=np.double)
 
 for n, value in enumerate(e_w_range):
     p_c_mpc_dr[n]   = wn_interface_dr.pc_function(value)
@@ -292,4 +292,3 @@ plt.ylabel('p_c')
 plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()
-

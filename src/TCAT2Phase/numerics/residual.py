@@ -20,7 +20,8 @@ def model_residual(ts,t,U,Udot,F,model):
     model_residual_internal(f,u,udot,model)
     model_residual_boundary(t,f,u,model)
     if model.hysteresis is True:
-        model.interface.model_update_hysteresis(ts.getStepNumber(), ts.getSolution())
+        if ts.getStepNumber() == model.interface.data.counter_hysteresis:
+            model.interface.model_update_hysteresis(ts.getSolution())
 
 
 def model_residual_internal(f,u,udot,model):
@@ -94,7 +95,7 @@ def model_primary_variables(u,model):
     primary variables for each formulation
     """
     if model.hysteresis is True:
-        model.interface.data.state="new"
+        model.interface.data.state = 1
 
 
     nodes = model.nodes
@@ -165,7 +166,7 @@ def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,model):
     """
 
     if model.hysteresis is True:
-        model.interface.data.state = "new"
+        model.interface.data.state = 1
 
     d_p_c_e_w   = model.interface.d_pc_function(e_w)
     d_e_w_p_c   = model.interface.d_volume_fraction_function(p_c)
@@ -316,7 +317,7 @@ def model_residual_boundary(t,f,u,model):
 
 def darcy_velocity(mesh,k,k_r,mu,del_p,rho,g):
     """
-    Calaculate the Darcy velocity as:
+    Calculate the Darcy velocity as:
         q^a = -k*k_r^a/mu^a(\grad p^a - rho^a*g)
     """
     q = np.zeros(mesh.num_faces)
