@@ -16,21 +16,22 @@ def model_residual(ts,t,U,Udot,F,model):
     u = da.getVecArray(localU)
     udot = da.getVecArray(Udot)
     f = da.getVecArray(F)
-
     model_residual_internal(f,u,udot,model)
     model_residual_boundary(t,f,u,model)
-    if model.hysteresis is True:
-        if ts.getStepNumber() == model.interface.data.counter_hysteresis:
-            model.interface.model_update_hysteresis(ts.getSolution())
+
 
 
 def model_residual_internal(f,u,udot,model):
     """
     residual at internal nodes.
     """
-
     # Create primary variables
     e_w,p_w,p_n,p_c = model_primary_variables(u,model)
+
+    model.interface.e_w = e_w
+    model.interface.p_w = p_w
+    model.interface.p_n = p_n
+    model.interface.p_c = p_c
     mesh = model.mesh
 
     # Constant Pameters
@@ -88,15 +89,12 @@ def model_residual_internal(f,u,udot,model):
 
         # Residuals at interior points
         f[n] = model_residual_equations(A,udot,od,model)
-
+    return e_w,p_w,p_n,p_c
 
 def model_primary_variables(u,model):
     """
     primary variables for each formulation
     """
-    if model.hysteresis is True:
-        model.interface.data.state = 1
-
 
     nodes = model.nodes
     form  = model.model.name
@@ -164,9 +162,6 @@ def model_A_matrix(e_w,p_w,p_n,p_c,rho_w,rho_n,e_n,model):
     """
     A matrix components for each formulation
     """
-
-    if model.hysteresis is True:
-        model.interface.data.state = 1
 
     d_p_c_e_w   = model.interface.d_pc_function(e_w)
     d_e_w_p_c   = model.interface.d_volume_fraction_function(p_c)
@@ -313,6 +308,7 @@ def model_residual_boundary(t,f,u,model):
                 f[nodes-1][n]= flux_bc[boundary_name[n][0][1]][1] - boundary_value[n][0][1](t)
             else:
                 print('Boundary type non supported')
+
 
 
 def darcy_velocity(mesh,k,k_r,mu,del_p,rho,g):

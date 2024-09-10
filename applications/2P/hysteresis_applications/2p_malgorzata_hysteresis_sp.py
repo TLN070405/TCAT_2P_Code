@@ -135,30 +135,30 @@ p_c_endpoint         = np.full((nodes), 0.0)
 e_w_reversal         = np.full((nodes), 0.0)
 e_w_endpoint         = np.full((nodes), 0.0)
 
-e_w_old              = np.full((nodes), 0.0)
-p_c_old              = np.full((nodes), 0.0)
+ew_hysteresis        = np.full((nodes,100000), 0.0)
+pc_hysteresis        = np.full((nodes,100000), 0.0)
 
 hysteresis_tol = 1e-6
 
 for n in range(1,nodes-1):
-    e_w_old[n]           = 0.397
-    p_c_old[n]           = 346.73
+    ew_hysteresis[n][0]  = 0.397
+    pc_hysteresis[n][0]  = 346.73
     e_w_reversal[n]      = 0.4
     e_w_endpoint[n]      = 0.003
     p_c_reversal[n]      = wn_interface_dr.pc_function(e_w_reversal[n])
     p_c_endpoint[n]      = wn_interface_dr.pc_function(e_w_endpoint[n])
 
 #####    x=0
-e_w_old[0]           = 0.397
-p_c_old[0]           = 346.73
+ew_hysteresis[0][0]  = 0.397
+pc_hysteresis[0][0]  = 346.73
 e_w_reversal[0]      = 0.4
 e_w_endpoint[0]      = 0.003
 p_c_reversal[0]      = wn_interface_dr.pc_function(e_w_reversal[0])
 p_c_endpoint[0]      = wn_interface_dr.pc_function(e_w_endpoint[0])
 
 #####    x=L
-e_w_old[nodes-1]           = 0.397
-p_c_old[nodes-1]           = 346.73
+ew_hysteresis[nodes-1][0]  = 0.397
+pc_hysteresis[nodes-1][0]  = 346.73
 e_w_reversal[nodes-1]      = 0.4
 e_w_endpoint[nodes-1]      = 0.003
 p_c_reversal[nodes-1]      = wn_interface_dr.pc_function(e_w_reversal[nodes-1])
@@ -174,8 +174,8 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     p_c_endpoint,
     e_w_reversal,
     e_w_endpoint,
-    p_c_old,
-    e_w_old,
+    ew_hysteresis,
+    pc_hysteresis,
     hysteresis_tol
     )
 
@@ -224,7 +224,6 @@ def ew0_bc(t):
     """
     Boundary volume fraction
     """
-    model.interface.data.state = 1
     model.current_cell = 0
     e_w_bc = model.interface.volume_fraction_function(-pw0_bc(t))
 
@@ -249,8 +248,8 @@ boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 # Time
-#time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600,700,800,900.0,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000])
-time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
+time_interval = np.array([2000])
+#time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
 
 model.set_simulation_time(time_interval)
 
@@ -312,6 +311,28 @@ counter_hysteresis=model.interface.data.counter_hysteresis
 
 plt.plot(model.interface.data.ew_hysteresis[0,0:counter_hysteresis],
          model.interface.data.pc_hysteresis[0,0:counter_hysteresis],
+         label='scanning curves')
+plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
+plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
+plt.xlabel('e_w')
+plt.ylabel('p_c')
+plt.title('Hysteresis pc-ew curves')
+plt.legend()
+plt.show()
+
+plt.plot(model.interface.data.ew_hysteresis[1,0:counter_hysteresis],
+         model.interface.data.pc_hysteresis[1,0:counter_hysteresis],
+         label='scanning curves')
+plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
+plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
+plt.xlabel('e_w')
+plt.ylabel('p_c')
+plt.title('Hysteresis pc-ew curves')
+plt.legend()
+plt.show()
+
+plt.plot(model.interface.data.ew_hysteresis[2,0:counter_hysteresis],
+         model.interface.data.pc_hysteresis[2,0:counter_hysteresis],
          label='scanning curves')
 plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")

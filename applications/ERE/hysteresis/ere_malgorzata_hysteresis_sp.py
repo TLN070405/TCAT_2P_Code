@@ -136,14 +136,14 @@ p_c_reversal         = np.full((nodes), 0.0)
 p_c_endpoint         = np.full((nodes), 0.0)
 e_w_reversal         = np.full((nodes), 0.0)
 e_w_endpoint         = np.full((nodes), 0.0)
-e_w_old              = np.full((nodes), 0.0)
-p_c_old              = np.full((nodes), 0.0)
+ew_hysteresis        = np.full((nodes,100000), 0.0)
+pc_hysteresis        = np.full((nodes,100000), 0.0)
 
 hysteresis_tol = 1e-6
 
 for n in range(1,nodes-1):
-    e_w_old[n]           =  0.008
-    p_c_old[n]           =  13706.965861446095
+    ew_hysteresis[n]     =  0.008
+    pc_hysteresis[n]     =  13706.965861446095
     e_w_reversal[n]      = 0.003
     e_w_endpoint[n]      =  0.4
     p_c_reversal[n]      = wn_interface_imb.pc_function(e_w_reversal[n])
@@ -152,16 +152,16 @@ for n in range(1,nodes-1):
 
 
 #####    x=0
-e_w_old[0]           = 0.12
-p_c_old[0]           = 2113.152788450121
+ew_hysteresis[0]     = 0.12
+pc_hysteresis[0]     = 2113.152788450121
 e_w_reversal[0]      = 0.003
 e_w_endpoint[0]      = 0.4
 p_c_reversal[0]      = wn_interface_imb.pc_function(e_w_reversal[0])
 p_c_endpoint[0]      = wn_interface_imb.pc_function(e_w_endpoint[0])
 
 #####    x=L
-e_w_old[nodes-1]           = 0.008
-p_c_old[nodes-1]           = 13706.965861446095
+ew_hysteresis[nodes-1]     = 0.008
+pc_hysteresis[nodes-1]     = 13706.965861446095
 e_w_reversal[nodes-1]      = 0.003
 e_w_endpoint[nodes-1]      = 0.4
 p_c_reversal[nodes-1]      = wn_interface_imb.pc_function(e_w_reversal[nodes-1])
@@ -177,8 +177,8 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     p_c_endpoint,
     e_w_reversal,
     e_w_endpoint,
-    p_c_old,
-    e_w_old,
+    ew_hysteresis,
+    pc_hysteresis,
     hysteresis_tol
     )
 

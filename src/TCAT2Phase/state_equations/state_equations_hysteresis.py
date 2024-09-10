@@ -13,19 +13,13 @@ class ParkerLenharddata:
     pc_endpoint: np.ndarray
     ew_reversal: np.ndarray
     ew_endpoint: np.ndarray
-    pc_old: np.ndarray
-    ew_old: np.ndarray
+    ew_hysteresis: np.ndarray
+    pc_hysteresis: np.ndarray
     hysteresis_tol: float
 
     drainage_old: np.ndarray = field(default_factory=lambda: np.array([]))
-    pc_reversal_old: np.ndarray =field(default_factory=lambda: np.array([]))
-    pc_endpoint_old: np.ndarray =field(default_factory=lambda: np.array([]))
-    ew_reversal_old: np.ndarray =field(default_factory=lambda: np.array([]))
-    ew_endpoint_old: np.ndarray =field(default_factory=lambda: np.array([]))
-    ew_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
-    pc_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
-
-    state: int = 0
+    ew_endpoint_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
+    pc_endpoint_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
     counter_hysteresis: int = 1
 
 class ParkerLenhard:
@@ -38,8 +32,8 @@ class ParkerLenhard:
             pc_endpoint,
             ew_reversal,
             ew_endpoint,
-            pc_old,
-            ew_old,
+            ew_hysteresis,
+            pc_hysteresis,
             hysteresis_tol):
         """
         Initialize the imbibition and drainage interfaces
@@ -50,18 +44,17 @@ class ParkerLenhard:
             pc_endpoint,
             ew_reversal,
             ew_endpoint,
-            pc_old,
-            ew_old,
-            hysteresis_tol
-            )
-        self.data.drainage_old    = np.array(drainage_new)
-        self.data.pc_reversal_old = np.array(pc_reversal)
-        self.data.pc_endpoint_old = np.array(pc_endpoint)
-        self.data.ew_reversal_old = np.array(ew_reversal)
-        self.data.ew_endpoint_old = np.array(ew_endpoint)
-        self.data.ew_hysteresis   = np.tile(ew_old[:, np.newaxis], (1, 100000))
-        self.data.pc_hysteresis   = np.tile(pc_old[:, np.newaxis], (1, 100000))
+            ew_hysteresis,
+            pc_hysteresis,
+            hysteresis_tol)
 
+        self.data.drainage_old    = np.array(drainage_new)
+        self.data.ew_endpoint_hysteresis   = np.tile(ew_endpoint[:, np.newaxis], (1, 100000))
+        self.data.pc_endpoint_hysteresis   = np.tile(pc_endpoint[:, np.newaxis], (1, 100000))
+        self.e_w           = np.zeros_like(model.nodes)
+        self.p_w           = np.zeros_like(model.nodes)
+        self.p_n           = np.zeros_like(model.nodes)
+        self.p_c           = np.zeros_like(model.nodes)
         self.imbibition    = imb_interface
         self.drainage      = dr_interface
         self.model         = model
@@ -71,9 +64,9 @@ class ParkerLenhard:
         Hysteretic capillary pressure
         mpc  : main primary curve (drainage or imbibition)
         """
-        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
+        drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
-        if drain:
+        if drainage:
             interface = self.drainage
         else:
             interface = self.imbibition
@@ -89,9 +82,9 @@ class ParkerLenhard:
         """
         Derivative of hysteretic capillary pressure over the w-phase folume fraction
         """
-        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
+        drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
-        if drain:
+        if drainage:
             interface = self.drainage
         else:
             interface = self.imbibition
@@ -108,9 +101,9 @@ class ParkerLenhard:
         """
         Hysteretic volume fraction of w phase  
         """
-        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
+        drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
-        if drain:
+        if drainage:
             interface = self.drainage
         else:
             interface = self.imbibition
@@ -126,9 +119,9 @@ class ParkerLenhard:
         """
         Hysteretic derivative volume fraction of w phase  
         """
-        drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
+        drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
-        if drain:
+        if drainage:
             interface = self.drainage
         else:
             interface = self.imbibition
@@ -142,145 +135,69 @@ class ParkerLenhard:
 
     def get_data_hysteresis(self):
         """
-        function to get the hysetresis data.
+        function to get the hysetresis reversal and endpoints at current time.
         """
         n= self.model.current_cell
 
-        if self.data.state == 1:
-            drain       = self.data.drainage_new[n]
-            pc_reversal = self.data.pc_reversal[n]
-            pc_endpoint = self.data.pc_endpoint[n]
-            ew_reversal = self.data.ew_reversal[n]
-            ew_endpoint = self.data.ew_endpoint[n]
+        drainage    = self.data.drainage_new[n]
+        pc_reversal = self.data.pc_reversal[n]
+        pc_endpoint = self.data.pc_endpoint[n]
+        ew_reversal = self.data.ew_reversal[n]
+        ew_endpoint = self.data.ew_endpoint[n]
 
-        else:
-            drain       = self.data.drainage_old[n]
-            pc_reversal = self.data.pc_reversal_old[n]
-            pc_endpoint = self.data.pc_endpoint_old[n]
-            ew_reversal = self.data.ew_reversal_old[n]
-            ew_endpoint = self.data.ew_endpoint_old[n]
-
-        return drain,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint
+        return drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint
 
     def update_process(self,switch_condition):
         """
         function to update the process even drainage or imbibition
         """
         n=self.model.current_cell
+
         if switch_condition > self.data.hysteresis_tol:
             self.data.drainage_old[n] = self.data.drainage_new[n]
             self.data.drainage_new[n] = False
-        else:
+        elif switch_condition < self.data.hysteresis_tol:
             self.data.drainage_old[n] = self.data.drainage_new[n]
             self.data.drainage_new[n] = True
 
-    def update_hysteresis_capillary_pressure(self,ew_new,pc_new):
+    def update_scaling_points(self,ew,pc):
         """
-        function to update hysteresis parameters when solution is in terms of capillary pressure
+        function to update hysteresis  reversal and end points
         """
-        model = self.model
-        self.data.state = 1
-        n = model.current_cell
-
-        # Store hysteretic ew and pc for visualization
-        self.data.ew_hysteresis[n,self.data.counter_hysteresis] = ew_new
-        self.data.pc_hysteresis[n,self.data.counter_hysteresis] = pc_new
-
-        # Update the process even drainage or imbibition
-        self.update_process(self.data.pc_old[n]-pc_new)
-
-        # Update old capillary pressure
-        self.data.pc_old[n] = pc_new
+        n = self.model.current_cell
 
         # Update reversal and endpoints (ew and pc)
         if self.data.drainage_new[n] != self.data.drainage_old[n]:
 
-            self.data.pc_reversal_old[n] = self.data.pc_reversal[n]
-            self.data.pc_endpoint_old[n] = self.data.pc_endpoint[n]
-            self.data.ew_endpoint_old[n] = self.data.ew_endpoint[n]
-            self.data.ew_reversal_old[n] = self.data.ew_reversal[n]
-
-            self.data.state = 0
-            self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
-            self.data.ew_reversal[n]     = model.interface.volume_fraction_function(pc_new)
             self.data.pc_endpoint[n]     = self.data.pc_reversal[n]
-            self.data.pc_reversal[n]     = pc_new
+            self.data.pc_reversal[n]     = pc
+            self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
+            self.data.ew_reversal[n]     = ew
 
-    def update_hysteresis_volume_fraction(self,ew_new,pc_new):
+    def store_hysteresis_results(self,ew,pc):
         """
-        function to update hysteresis parameters when solution is in terms of volume fraction
+        function to store hysteresis results of ew and pc.
         """
-        model = self.model
-        self.data.state = 1
-        n = model.current_cell
+        n = self.model.current_cell
 
         # Store hysteretic ew and pc for visualization
-        self.data.ew_hysteresis[n,self.data.counter_hysteresis] = ew_new
-        self.data.pc_hysteresis[n,self.data.counter_hysteresis] = pc_new
+        self.data.ew_hysteresis[n,self.data.counter_hysteresis] = ew
+        self.data.pc_hysteresis[n,self.data.counter_hysteresis] = pc
+        self.data.ew_endpoint_hysteresis[n,self.data.counter_hysteresis] = self.data.ew_endpoint[n]
+        self.data.pc_endpoint_hysteresis[n,self.data.counter_hysteresis] = self.data.pc_endpoint[n]
 
-        # Update the process even drainage or imbibition
-        self.update_process(ew_new-self.data.ew_old[n])
-
-        # Update old volume fraction
-        self.data.ew_old[n] = ew_new
-
-        # Update reversal and endpoints (ew and pc)
-        if self.data.drainage_new[n] != self.data.drainage_old[n]:
-
-            self.data.pc_reversal_old[n] = self.data.pc_reversal[n]
-            self.data.pc_endpoint_old[n] = self.data.pc_endpoint[n]
-            self.data.ew_endpoint_old[n] = self.data.ew_endpoint[n]
-            self.data.ew_reversal_old[n] = self.data.ew_reversal[n]
-
-            self.data.state = 0
-            self.data.pc_endpoint[n]     = self.data.pc_reversal[n]
-            self.data.pc_reversal[n]     = model.interface.pc_function(ew_new)
-            self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
-            self.data.ew_reversal[n]     = ew_new
-
-    def model_update_hysteresis(self,solution_now):
+    def model_update_hysteresis(self,ts):
         """
-        function to update hysteresis parameters depending on model and formulation.
+        main function to update process, updtae scaling points and store results.
         """
-        model = self.model
-        nodes = model.nodes
-        form  = model.model.name
-        num_u = model.model.num_u
-
-        if form =='extended-two-phase-spp':
-            for n in range(0,nodes):
-                model.current_cell = n
-                ew_new = solution_now[num_u*n]
-                pc_new = solution_now[num_u*n+2]-solution_now[num_u*n+1]
-                self.update_hysteresis_volume_fraction(ew_new, pc_new)
-        elif form == 'two-phase-sp':
-            for n in range(0,nodes):
-                model.current_cell = n
-                ew_new = solution_now[num_u*n]
-                self.data.state = 1
-                pc_new = model.interface.pc_function(ew_new)
-                self.update_hysteresis_volume_fraction(ew_new, pc_new)
-        elif form == 'extended-richards-sp':
-            for n in range(0,nodes):
-                model.current_cell = n
-                ew_new = solution_now[num_u*n]
-                pc_new = -solution_now[num_u*n+1]
-                self.update_hysteresis_volume_fraction(ew_new, pc_new)
-        elif form == 'two-phase-pp':
-            for n in range(0,nodes):
-                model.current_cell = n
-                pc_new = solution_now[num_u*n+1]-solution_now[num_u*n]
-                self.data.state = 1
-                ew_new = model.interface.volume_fraction_function(pc_new)
-                self.update_hysteresis_capillary_pressure(ew_new,pc_new)
-        elif form == 'richards-pr':
-            for n in range(0,nodes):
-                model.current_cell = n
-                pc_new = -solution_now[n]
-                self.data.state = 1
-                ew_new = model.interface.volume_fraction_function(pc_new)
-                self.update_hysteresis_capillary_pressure(ew_new,pc_new)
-        else:
-            raise ValueError(f"Unsupported form: {form}")
+        nodes = self.model.nodes
+        counter  = self.data.counter_hysteresis
+        ew_hysteresis = self.data.ew_hysteresis
+        pc_hysteresis = self.data.pc_hysteresis
+        for n in range(0,nodes):
+            self.model.current_cell = n
+            self.update_process(self.e_w[n]-ew_hysteresis[n,counter-1]+pc_hysteresis[n,counter-1]-self.p_c[n])
+            self.update_scaling_points(self.e_w[n], self.p_c[n])
+            self.store_hysteresis_results(self.e_w[n], self.p_n[n]-self.p_w[n])
 
         self.data.counter_hysteresis += 1
