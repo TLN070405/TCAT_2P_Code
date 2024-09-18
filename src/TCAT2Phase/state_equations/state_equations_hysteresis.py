@@ -136,6 +136,8 @@ class ParkerLenhard:
     def get_data_hysteresis(self):
         """
         function to get the hysetresis reversal and endpoints at current time.
+        This function is only used by the hysteretic volume_fraction, d_volume_fraction, pc_function and d_pc_function.
+
         """
         n= self.model.current_cell
 
@@ -147,9 +149,13 @@ class ParkerLenhard:
 
         return drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint
 
-    def update_process(self,switch_condition):
+    def determine_hysteresis_state(self,switch_condition):
         """
-        function to update the process even drainage or imbibition
+        function to update the current process at each node (drainage or imbibition ) based on 
+        the switch condition (which is different for each node). 
+        If the switch condition is greater than than some user defined tolerance (hysteresis_tol), 
+        an imbibition process will take place. Else, the current process is a drainage. 
+        The theoretical value of  "hysteresis_tol" is zero, but to avoid oscillations in the solution a bigger value is preferred.
         """
         n=self.model.current_cell
 
@@ -160,23 +166,27 @@ class ParkerLenhard:
             self.data.drainage_old[n] = self.data.drainage_new[n]
             self.data.drainage_new[n] = True
 
+        if self.data.drainage_new[n] != self.data.drainage_old[n]:
+            self.update_scaling_points(self.e_w[n], self.p_c[n])
+     
     def update_scaling_points(self,ew,pc):
         """
-        function to update hysteresis  reversal and end points
+        function to update hysteresis  reversal and end points. each node has 2 reversal points 
+        and 2 endpoints, which means 4 scaling points for each node.
+
         """
         n = self.model.current_cell
 
         # Update reversal and endpoints (ew and pc)
-        if self.data.drainage_new[n] != self.data.drainage_old[n]:
-
-            self.data.pc_endpoint[n]     = self.data.pc_reversal[n]
-            self.data.pc_reversal[n]     = pc
-            self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
-            self.data.ew_reversal[n]     = ew
+        self.data.pc_endpoint[n]     = self.data.pc_reversal[n]
+        self.data.pc_reversal[n]     = pc
+        self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
+        self.data.ew_reversal[n]     = ew
 
     def store_hysteresis_results(self,ew,pc):
         """
-        function to store hysteresis results of ew and pc.
+        function to store hysteresis results of ew and pc. These results are used as old values (for switching condition)
+        and for visualization purposes.
         """
         n = self.model.current_cell
 
@@ -188,7 +198,7 @@ class ParkerLenhard:
 
     def model_update_hysteresis(self,ts):
         """
-        main function to update process, updtae scaling points and store results.
+        main function to update process, update scaling points and store results.
         """
         nodes = self.model.nodes
         counter  = self.data.counter_hysteresis
@@ -196,8 +206,8 @@ class ParkerLenhard:
         pc_hysteresis = self.data.pc_hysteresis
         for n in range(0,nodes):
             self.model.current_cell = n
-            self.update_process(self.e_w[n]-ew_hysteresis[n,counter-1]+pc_hysteresis[n,counter-1]-self.p_c[n])
-            self.update_scaling_points(self.e_w[n], self.p_c[n])
+            #self.determine_hysteresis_state(self.e_w[n]-ew_hysteresis[n,counter-1]+pc_hysteresis[n,counter-1]-self.p_c[n])
+            self.determine_hysteresis_state(self.e_w[n]-ew_hysteresis[n,counter-1])
             self.store_hysteresis_results(self.e_w[n], self.p_n[n]-self.p_w[n])
 
         self.data.counter_hysteresis += 1
