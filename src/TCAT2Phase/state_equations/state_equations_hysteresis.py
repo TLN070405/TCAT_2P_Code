@@ -8,16 +8,17 @@ class ParkerLenharddata:
     """
     Parker Lenhard hysteresis model necessary arrays and data
     """
-    drainage_new: np.ndarray
+    drainage_process_new: np.ndarray
     pc_reversal: np.ndarray
     pc_endpoint: np.ndarray
     ew_reversal: np.ndarray
     ew_endpoint: np.ndarray
     ew_hysteresis: np.ndarray
     pc_hysteresis: np.ndarray
+    switch_condition: str
     hysteresis_tol: float
 
-    drainage_old: np.ndarray = field(default_factory=lambda: np.array([]))
+    drainage_process_old: np.ndarray = field(default_factory=lambda: np.array([]))
     ew_endpoint_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
     pc_endpoint_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
     counter_hysteresis: int = 1
@@ -27,28 +28,30 @@ class ParkerLenhard:
     Hysteresis Class to hold functions and parameters
     """
     def __init__(self,model,imb_interface,dr_interface,
-            drainage_new,
+            drainage_process_new,
             pc_reversal,
             pc_endpoint,
             ew_reversal,
             ew_endpoint,
             ew_hysteresis,
             pc_hysteresis,
+            switch_condition,
             hysteresis_tol):
         """
         Initialize the imbibition and drainage interfaces
         """
         self.data = ParkerLenharddata(
-            drainage_new,
+            drainage_process_new,
             pc_reversal,
             pc_endpoint,
             ew_reversal,
             ew_endpoint,
             ew_hysteresis,
             pc_hysteresis,
+            switch_condition,
             hysteresis_tol)
 
-        self.data.drainage_old    = np.array(drainage_new)
+        self.data.drainage_process_old    = np.array(drainage_process_new)
         self.data.ew_endpoint_hysteresis   = np.tile(ew_endpoint[:, np.newaxis], (1, 100000))
         self.data.pc_endpoint_hysteresis   = np.tile(pc_endpoint[:, np.newaxis], (1, 100000))
         self.e_w           = np.zeros_like(model.nodes)
@@ -59,14 +62,15 @@ class ParkerLenhard:
         self.drainage      = dr_interface
         self.model         = model
 
+
     def pc_function(self,ew):
         """
         Hysteretic capillary pressure
         mpc  : main primary curve (drainage or imbibition)
         """
-        drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
+        drainage_process,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
-        if drainage:
+        if drainage_process:
             interface = self.drainage
         else:
             interface = self.imbibition
@@ -82,9 +86,9 @@ class ParkerLenhard:
         """
         Derivative of hysteretic capillary pressure over the w-phase folume fraction
         """
-        drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
+        drainage_process,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
-        if drainage:
+        if drainage_process:
             interface = self.drainage
         else:
             interface = self.imbibition
@@ -101,9 +105,9 @@ class ParkerLenhard:
         """
         Hysteretic volume fraction of w phase  
         """
-        drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
+        drainage_process,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
-        if drainage:
+        if drainage_process:
             interface = self.drainage
         else:
             interface = self.imbibition
@@ -119,9 +123,9 @@ class ParkerLenhard:
         """
         Hysteretic derivative volume fraction of w phase  
         """
-        drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
+        drainage_process,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint = self.get_data_hysteresis()
 
-        if drainage:
+        if drainage_process:
             interface = self.drainage
         else:
             interface = self.imbibition
@@ -141,13 +145,13 @@ class ParkerLenhard:
         """
         n= self.model.current_cell
 
-        drainage    = self.data.drainage_new[n]
+        drainage_process    = self.data.drainage_process_new[n]
         pc_reversal = self.data.pc_reversal[n]
         pc_endpoint = self.data.pc_endpoint[n]
         ew_reversal = self.data.ew_reversal[n]
         ew_endpoint = self.data.ew_endpoint[n]
 
-        return drainage,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint
+        return drainage_process,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint
 
     def determine_hysteresis_state(self,switch_condition):
         """
@@ -155,18 +159,19 @@ class ParkerLenhard:
         the switch condition (which is different for each node). 
         If the switch condition is greater than than some user defined tolerance (hysteresis_tol), 
         an imbibition process will take place. Else, the current process is a drainage. 
-        The theoretical value of  "hysteresis_tol" is zero, but to avoid oscillations in the solution a bigger value is preferred.
+        The theoretical value of  "hysteresis_tol" is zero, but to avoid oscillations 
+        in the solution a bigger value is preferred.
         """
         n=self.model.current_cell
 
         if switch_condition > self.data.hysteresis_tol:
-            self.data.drainage_old[n] = self.data.drainage_new[n]
-            self.data.drainage_new[n] = False
+            self.data.drainage_process_old[n] = self.data.drainage_process_new[n]
+            self.data.drainage_process_new[n] = False
         elif switch_condition < self.data.hysteresis_tol:
-            self.data.drainage_old[n] = self.data.drainage_new[n]
-            self.data.drainage_new[n] = True
+            self.data.drainage_process_old[n] = self.data.drainage_process_new[n]
+            self.data.drainage_process_new[n] = True
 
-        if self.data.drainage_new[n] != self.data.drainage_old[n]:
+        if self.data.drainage_process_new[n] != self.data.drainage_process_old[n]:
             self.update_scaling_points(self.e_w[n], self.p_c[n])
      
     def update_scaling_points(self,ew,pc):
@@ -202,12 +207,17 @@ class ParkerLenhard:
         """
         nodes = self.model.nodes
         counter  = self.data.counter_hysteresis
-        ew_hysteresis = self.data.ew_hysteresis
-        pc_hysteresis = self.data.pc_hysteresis
+
+        if self.data.switch_condition == 'p_c':
+            switch_condition = self.data.pc_hysteresis[:,counter-1] - self.p_c
+        elif self.data.switch_condition == 'e_w':
+            switch_condition = self.e_w - self.data.ew_hysteresis[:,counter-1]
+        else:
+            print('switch_condition should be either e_w or p_c')
+
         for n in range(0,nodes):
             self.model.current_cell = n
-            #self.determine_hysteresis_state(self.e_w[n]-ew_hysteresis[n,counter-1]+pc_hysteresis[n,counter-1]-self.p_c[n])
-            self.determine_hysteresis_state(self.e_w[n]-ew_hysteresis[n,counter-1])
+            self.determine_hysteresis_state(switch_condition[n])
             self.store_hysteresis_results(self.e_w[n], self.p_n[n]-self.p_w[n])
 
         self.data.counter_hysteresis += 1

@@ -128,7 +128,7 @@ n_phase.set_rel_perm_function(vg_dr.n_relative_permability)
 # Set hysteresis data
 model.hysteresis = True
 
-drainage_new         = np.full((nodes), True)
+drainage_process_new = np.full((nodes), True)
 p_c_reversal         = np.full((nodes), 0.0)
 p_c_endpoint         = np.full((nodes), 0.0)
 e_w_reversal         = np.full((nodes), 0.0)
@@ -137,6 +137,7 @@ ew_hysteresis        = np.full((nodes,100000), 0.0)
 pc_hysteresis        = np.full((nodes,100000), 0.0)
 
 hysteresis_tol = 1e-6
+switch_condition ='e_w'
 
 for n in range(1,nodes-1):
     ew_hysteresis[n][0]   = 0.37
@@ -165,13 +166,14 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     model,
     wn_interface_imb,
     wn_interface_dr,
-    drainage_new,
+    drainage_process_new,
     p_c_reversal,
     p_c_endpoint,
     e_w_reversal,
     e_w_endpoint,
     ew_hysteresis,
     pc_hysteresis,
+    switch_condition,
     hysteresis_tol
     )
 
@@ -191,8 +193,6 @@ initial_conditions = {'e_w': ew_ic,
 model.set_initial_conditions(initial_conditions)
 
 
-
- 
 # Set boundary values
  
 def ew0_bc(t):
@@ -204,9 +204,9 @@ def ew0_bc(t):
     ew_t2 = 0.3
     t1=4000
     t2=t1+1000
-    t3=t2+4000
+    t3=t2+6000
     t4=t3+1000
-    t5=t4+4000
+    t5=t4+6000
 
     if 0<=t<=t1:
         e_w0= ew_t0
@@ -220,10 +220,9 @@ def ew0_bc(t):
         aa=(ew_t2-ew_t1)/(t4-t3)
         bb=ew_t1-aa*t3
         e_w0=aa*t+bb
-    elif t4<t<=t5:
+    else:
         e_w0=ew_t2
     return  e_w0
-    
 
 def pw0_bc(t):
     """
@@ -244,9 +243,9 @@ def ewL_bc(t):
     ew_t2 = 0.3
     t1=4000
     t2=t1+1000
-    t3=t2+4000
+    t3=t2+6000
     t4=t3+1000
-    t5=t4+4000
+    t5=t4+6000
 
     if 0<=t<=t1:
         e_w0= ew_t0
@@ -260,7 +259,7 @@ def ewL_bc(t):
         aa=(ew_t2-ew_t1)/(t4-t3)
         bb=ew_t1-aa*t3
         e_w0=aa*t+bb
-    elif t4<t<=t5:
+    else:
         e_w0=ew_t2
     return  e_w0
 
@@ -279,8 +278,7 @@ boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 # Time
-#time_interval = np.array([500,5000,9500])
-time_interval = np.array([3000,4000,4500,5000,8000,9000,10000,13000,14000])
+time_interval = np.array([4000,11000,20000])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters

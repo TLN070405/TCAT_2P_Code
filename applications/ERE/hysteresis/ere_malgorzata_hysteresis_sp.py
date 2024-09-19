@@ -131,7 +131,7 @@ w_phase.set_d_volume_fraction_function(vg_imb.d_volume_fraction_w)
 # Set hysteresis data and model
 model.hysteresis = True
 
-drainage_new         = np.full((nodes), False)
+drainage_process_new         = np.full((nodes), False)
 p_c_reversal         = np.full((nodes), 0.0)
 p_c_endpoint         = np.full((nodes), 0.0)
 e_w_reversal         = np.full((nodes), 0.0)
@@ -140,10 +140,11 @@ ew_hysteresis        = np.full((nodes,100000), 0.0)
 pc_hysteresis        = np.full((nodes,100000), 0.0)
 
 hysteresis_tol = 1e-6
+switch_condition ='e_w'
 
 for n in range(1,nodes-1):
-    ew_hysteresis[n]     =  0.008
-    pc_hysteresis[n]     =  13706.965861446095
+    ew_hysteresis[n][0]     =  0.008
+    pc_hysteresis[n][0]     =  13706.965861446095
     e_w_reversal[n]      = 0.003
     e_w_endpoint[n]      =  0.4
     p_c_reversal[n]      = wn_interface_imb.pc_function(e_w_reversal[n])
@@ -152,16 +153,16 @@ for n in range(1,nodes-1):
 
 
 #####    x=0
-ew_hysteresis[0]     = 0.12
-pc_hysteresis[0]     = 2113.152788450121
+ew_hysteresis[0][0]     = 0.12
+pc_hysteresis[0][0]     = 2113.152788450121
 e_w_reversal[0]      = 0.003
 e_w_endpoint[0]      = 0.4
 p_c_reversal[0]      = wn_interface_imb.pc_function(e_w_reversal[0])
 p_c_endpoint[0]      = wn_interface_imb.pc_function(e_w_endpoint[0])
 
 #####    x=L
-ew_hysteresis[nodes-1]     = 0.008
-pc_hysteresis[nodes-1]     = 13706.965861446095
+ew_hysteresis[nodes-1][0]     = 0.008
+pc_hysteresis[nodes-1][0]     = 13706.965861446095
 e_w_reversal[nodes-1]      = 0.003
 e_w_endpoint[nodes-1]      = 0.4
 p_c_reversal[nodes-1]      = wn_interface_imb.pc_function(e_w_reversal[nodes-1])
@@ -172,23 +173,20 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     model,
     wn_interface_imb,
     wn_interface_dr,
-    drainage_new,
+    drainage_process_new,
     p_c_reversal,
     p_c_endpoint,
     e_w_reversal,
     e_w_endpoint,
     ew_hysteresis,
     pc_hysteresis,
+    switch_condition,
     hysteresis_tol
     )
 
 # Set initial conditions
-ew_ic= np.zeros([nodes] )
-pw_ic= np.zeros([nodes] )
-
-for i in range(0,nodes):
-    ew_ic[i] =  0.008
-    pw_ic[i] = -13706.965861446095
+ew_ic= np.full((nodes), 0.008)
+pw_ic= np.full((nodes), -13706.965861446095)
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic}

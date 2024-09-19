@@ -131,49 +131,52 @@ w_phase.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 # Set hysteresis data
 model.hysteresis = True
 
-drainage_new         = np.full((nodes), True)
+drainage_process_new         = np.full((nodes), True)
 p_c_reversal         = np.full((nodes), 0.0)
 p_c_endpoint         = np.full((nodes), 0.0)
 e_w_reversal         = np.full((nodes), 0.0)
 e_w_endpoint         = np.full((nodes), 0.0)
-e_w_old              = np.full((nodes), 0.0)
-p_c_old              = np.full((nodes), 0.0)
+ew_hysteresis        = np.full((nodes,100000), 0.0)
+pc_hysteresis        = np.full((nodes,100000), 0.0)
+
 hysteresis_tol = 1e-6
+switch_condition ='e_w'
 
 for n in range(1,nodes-1):
-    e_w_old[n]            = 0.397
-    p_c_old[n]            = wn_interface_dr.pc_function(e_w_old[n])
+    ew_hysteresis[n][0]   = 0.397
+    pc_hysteresis[n][0]   = wn_interface_dr.pc_function(ew_hysteresis[n][0] )
     e_w_reversal[n]       = 0.4
     e_w_endpoint[n]       = 0.003
     p_c_reversal[n]       = wn_interface_dr.pc_function(e_w_reversal[n])
     p_c_endpoint[n]       = wn_interface_dr.pc_function(e_w_endpoint[n])
 
 #####    x=0
-e_w_old[0]           = wn_interface_dr.volume_fraction_function(346.73)
-p_c_old[0]           = 346.73
+ew_hysteresis[0][0]  = wn_interface_dr.volume_fraction_function(346.73)
+pc_hysteresis[0][0]  = 346.73
 e_w_reversal[0]      = 0.4
 e_w_endpoint[0]      = 0.003
 p_c_reversal[0]      = wn_interface_dr.pc_function(e_w_reversal[0] )
 p_c_endpoint[0]      = wn_interface_dr.pc_function(e_w_endpoint[0] )
 #####    x=L
-e_w_old[nodes-1] = 0.397
-p_c_old[nodes-1] = 346.73
-e_w_reversal[nodes-1] = 0.4
-e_w_endpoint[nodes-1] = 0.003
-p_c_reversal[nodes-1] = wn_interface_dr.pc_function(e_w_reversal[nodes-1] )
-p_c_endpoint[nodes-1] = wn_interface_dr.pc_function(e_w_endpoint[nodes-1] )
+ew_hysteresis[nodes-1][0]  = 0.397
+pc_hysteresis[nodes-1][0]  = 346.73
+e_w_reversal[nodes-1]      = 0.4
+e_w_endpoint[nodes-1]      = 0.003
+p_c_reversal[nodes-1]      = wn_interface_dr.pc_function(e_w_reversal[nodes-1] )
+p_c_endpoint[nodes-1]      = wn_interface_dr.pc_function(e_w_endpoint[nodes-1] )
 
 model.interface = state_equations_hysteresis.ParkerLenhard(
     model,
     wn_interface_imb,
     wn_interface_dr,
-    drainage_new,
+    drainage_process_new,
     p_c_reversal,
     p_c_endpoint,
     e_w_reversal,
     e_w_endpoint,
-    p_c_old,
-    e_w_old,
+    ew_hysteresis,
+    pc_hysteresis,
+    switch_condition,
     hysteresis_tol
     )
 

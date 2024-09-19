@@ -39,6 +39,7 @@ def setup_hysteresis(model,wn_interface_imb,wn_interface_dr):
     ew_hysteresis  = np.full((nodes,5000),  0.01)
     pc_hysteresis  = np.full((nodes,5000), wn_interface_imb.pc_function(ew_hysteresis[0][0] ) )
     hysteresis_tol = 0.
+    switch_condition='e_w'
 
     model.interface = state_equations_hysteresis.ParkerLenhard(
         model,
@@ -51,6 +52,7 @@ def setup_hysteresis(model,wn_interface_imb,wn_interface_dr):
         e_w_endpoint,
         ew_hysteresis,
         pc_hysteresis,
+        switch_condition,
         hysteresis_tol
         )
 

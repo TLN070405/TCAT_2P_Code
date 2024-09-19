@@ -128,7 +128,7 @@ n_phase.set_rel_perm_function(vg_dr.n_relative_permability)
 # Set hysteresis data and model
 model.hysteresis = True
 
-drainage_new         = np.full((nodes), True)
+drainage_process_new         = np.full((nodes), True)
 p_c_reversal         = np.full((nodes), 0.0)
 p_c_endpoint         = np.full((nodes), 0.0)
 e_w_reversal         = np.full((nodes), 0.0)
@@ -137,6 +137,7 @@ ew_hysteresis        = np.full((nodes,100000), 0.0)
 pc_hysteresis        = np.full((nodes,100000), 0.0)
 
 hysteresis_tol = 1e-6
+switch_condition ='e_w'
 
 for n in range(0,nodes):
     ew_hysteresis[n][0]  = 0.397
@@ -151,13 +152,14 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     model,
     wn_interface_imb,
     wn_interface_dr,
-    drainage_new,
+    drainage_process_new,
     p_c_reversal,
     p_c_endpoint,
     e_w_reversal,
     e_w_endpoint,
     ew_hysteresis,
     pc_hysteresis,
+    switch_condition,
     hysteresis_tol
     )
 

@@ -177,5 +177,3 @@ for time,variable in solutions.items():
     plt.title('Kees Solution')
     plt.legend()
 plt.show()
-
- 
