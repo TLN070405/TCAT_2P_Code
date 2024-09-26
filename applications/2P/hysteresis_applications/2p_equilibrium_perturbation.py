@@ -127,40 +127,24 @@ n_phase.set_rel_perm_function(vg_dr.n_relative_permability)
 
 # Set hysteresis data
 model.hysteresis = True
-
+max_reversal_points = 8
 drainage_process_new = np.full((nodes), True)
-p_c_reversal         = np.full((nodes), 0.0)
-p_c_endpoint         = np.full((nodes), 0.0)
-e_w_reversal         = np.full((nodes), 0.0)
-e_w_endpoint         = np.full((nodes), 0.0)
+
+
+e_w_reversal         = np.full((nodes,max_reversal_points),  0.4)
+e_w_endpoint         = np.full((nodes,max_reversal_points), 0.003)
+p_c_reversal         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_reversal[0][0]))
+p_c_endpoint         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_endpoint[0][0]))
 ew_hysteresis        = np.full((nodes,100000), 0.0)
 pc_hysteresis        = np.full((nodes,100000), 0.0)
 
-hysteresis_tol = 1e-6
+hysteresis_tol   = 1e-6
 switch_condition ='e_w'
 
 for n in range(1,nodes-1):
-    ew_hysteresis[n][0]   = 0.37
+    ew_hysteresis[n][0]   = 0.35
     pc_hysteresis[n][0]   = wn_interface_dr.pc_function(ew_hysteresis[n][0])
-    e_w_reversal[n]       = 0.4
-    e_w_endpoint[n]       = 0.003
-    p_c_reversal[n]       = wn_interface_dr.pc_function(e_w_reversal[n])
-    p_c_endpoint[n]       = wn_interface_dr.pc_function(e_w_endpoint[n])
 
-#####    x=0
-ew_hysteresis[0][0]  = 0.35
-pc_hysteresis[0][0]  = wn_interface_dr.pc_function(ew_hysteresis[0][0])
-e_w_reversal[0]      = 0.4
-e_w_endpoint[0]      = 0.003
-p_c_reversal[0]      = wn_interface_dr.pc_function(e_w_reversal[0] )
-p_c_endpoint[0]      = wn_interface_dr.pc_function(e_w_endpoint[0] )
-#####    x=L
-ew_hysteresis[nodes-1][0] = 0.35
-pc_hysteresis[nodes-1][0] = wn_interface_dr.pc_function(ew_hysteresis[nodes-1][0])
-e_w_reversal[nodes-1] = 0.4
-e_w_endpoint[nodes-1] = 0.003
-p_c_reversal[nodes-1] = wn_interface_dr.pc_function(e_w_reversal[nodes-1] )
-p_c_endpoint[nodes-1] = wn_interface_dr.pc_function(e_w_endpoint[nodes-1] )
 
 model.interface = state_equations_hysteresis.ParkerLenhard(
     model,
@@ -174,18 +158,14 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     ew_hysteresis,
     pc_hysteresis,
     switch_condition,
-    hysteresis_tol
+    hysteresis_tol,
+    max_reversal_points = 8
     )
 
 # Set initial conditions
-ew_ic = np.full((nodes), 0.37)
-pw_ic = np.full((nodes), wn_interface_dr.pc_function(0.37))
+ew_ic = np.full((nodes), 0.35)
+pw_ic = np.full((nodes), -wn_interface_dr.pc_function(0.35))
 
-ew_ic[0]= 0.35
-pw_ic[0]= wn_interface_dr.pc_function(ew_ic[0])
-
-ew_ic[nodes-1]= 0.35
-pw_ic[nodes-1]= wn_interface_dr.pc_function(ew_ic[nodes-1])
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic}
@@ -194,35 +174,35 @@ model.set_initial_conditions(initial_conditions)
 
 
 # Set boundary values
- 
+index0 = 0
+indexL = 0
+
 def ew0_bc(t):
     """
     Boundary volume fraction
     """
-    ew_t0 = 0.35
-    ew_t1 = 0.25
-    ew_t2 = 0.3
-    t1=4000
-    t2=t1+1000
-    t3=t2+6000
-    t4=t3+1000
-    t5=t4+6000
+    global index0
+    ew   = [0.35, 0.348,0.346,0.345,0.343,0.341]
+    gap  = abs(model.interface.e_w-ew[index0])
+    e_w0 = ew[index0]
 
-    if 0<=t<=t1:
-        e_w0= ew_t0
-    elif t1<t<=t2:
-        aa=(ew_t1-ew_t0)/(t2-t1)
-        bb=ew_t0-aa*t1
-        e_w0=aa*t+bb
-    elif t2<t<=t3:
-        e_w0=ew_t1
-    elif t3<t<=t4:
-        aa=(ew_t2-ew_t1)/(t4-t3)
-        bb=ew_t1-aa*t3
-        e_w0=aa*t+bb
-    else:
-        e_w0=ew_t2
+    if t>0 and np.all(gap<=1e-6):
+        index0 = index0 + 1
     return  e_w0
+
+def ewL_bc(t):
+    """
+    Boundary volume fraction
+    """
+    global indexL
+    ew   = [0.35, 0.348,0.346,0.345,0.343,0.341]
+    gap  = abs(model.interface.e_w-ew[indexL])
+    e_w0 = ew[indexL]
+
+    if t>0 and np.all(gap<=1e-6):
+        indexL = indexL + 1
+    return  e_w0
+
 
 def pw0_bc(t):
     """
@@ -230,45 +210,15 @@ def pw0_bc(t):
     """
 
     model.current_cell = 0
-    p_w0 = model.interface.pc_function(ew0_bc(t))
+    p_w0 = -model.interface.pc_function(ew0_bc(t))
     return p_w0
-
- 
-def ewL_bc(t):
-    """
-    Boundary volume fraction
-    """
-    ew_t0 = 0.35
-    ew_t1 = 0.25
-    ew_t2 = 0.3
-    t1=4000
-    t2=t1+1000
-    t3=t2+6000
-    t4=t3+1000
-    t5=t4+6000
-
-    if 0<=t<=t1:
-        e_w0= ew_t0
-    elif t1<t<=t2:
-        aa=(ew_t1-ew_t0)/(t2-t1)
-        bb=ew_t0-aa*t1
-        e_w0=aa*t+bb
-    elif t2<t<=t3:
-        e_w0=ew_t1
-    elif t3<t<=t4:
-        aa=(ew_t2-ew_t1)/(t4-t3)
-        bb=ew_t1-aa*t3
-        e_w0=aa*t+bb
-    else:
-        e_w0=ew_t2
-    return  e_w0
 
 def pwL_bc(t):
     """
     Boundary wetting phase pressure
     """
     model.current_cell = nodes-1
-    p_w0 = model.interface.pc_function(ewL_bc(t))
+    p_w0 = -model.interface.pc_function(ewL_bc(t))
     return p_w0
 
 
@@ -278,7 +228,7 @@ boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 # Time
-time_interval = np.array([4000,11000,20000])
+time_interval = np.array([2276,4677, 6798,9293,11848])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
@@ -324,7 +274,7 @@ for time,variable in solutions.items():
 plt.show()
 
 # Hysteresis visualization
-e_w_range    = np.linspace(0.05, s_phase.porosity, 1000)
+e_w_range    = np.linspace(0.26, s_phase.porosity, 1000)
 p_c_mpc_dr   = np.zeros([len(e_w_range)], dtype=np.double)
 p_c_mpc_imb  = np.zeros([len(e_w_range)], dtype=np.double)
 

@@ -17,10 +17,9 @@ class ParkerLenharddata:
     pc_hysteresis: np.ndarray
     switch_condition: str
     hysteresis_tol: float
+    max_reversal_points: int
 
     drainage_process_old: np.ndarray = field(default_factory=lambda: np.array([]))
-    ew_endpoint_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
-    pc_endpoint_hysteresis: np.ndarray = field(default_factory=lambda: np.array([]))
     counter_hysteresis: int = 1
 
 class ParkerLenhard:
@@ -36,7 +35,8 @@ class ParkerLenhard:
             ew_hysteresis,
             pc_hysteresis,
             switch_condition,
-            hysteresis_tol):
+            hysteresis_tol,
+            max_reversal_points):
         """
         Initialize the imbibition and drainage interfaces
         """
@@ -49,11 +49,10 @@ class ParkerLenhard:
             ew_hysteresis,
             pc_hysteresis,
             switch_condition,
-            hysteresis_tol)
+            hysteresis_tol,
+            max_reversal_points)
 
-        self.data.drainage_process_old    = np.array(drainage_process_new)
-        self.data.ew_endpoint_hysteresis   = np.tile(ew_endpoint[:, np.newaxis], (1, 100000))
-        self.data.pc_endpoint_hysteresis   = np.tile(pc_endpoint[:, np.newaxis], (1, 100000))
+        self.data.drainage_process_old     = np.array(drainage_process_new)
         self.e_w           = np.zeros_like(model.nodes)
         self.p_w           = np.zeros_like(model.nodes)
         self.p_n           = np.zeros_like(model.nodes)
@@ -145,11 +144,11 @@ class ParkerLenhard:
         """
         n= self.model.current_cell
 
-        drainage_process    = self.data.drainage_process_new[n]
-        pc_reversal = self.data.pc_reversal[n]
-        pc_endpoint = self.data.pc_endpoint[n]
-        ew_reversal = self.data.ew_reversal[n]
-        ew_endpoint = self.data.ew_endpoint[n]
+        drainage_process = self.data.drainage_process_new[n]
+        pc_reversal = self.data.pc_reversal[n][0]
+        pc_endpoint = self.data.pc_endpoint[n][0]
+        ew_reversal = self.data.ew_reversal[n][0]
+        ew_endpoint = self.data.ew_endpoint[n][0]
 
         return drainage_process,ew_reversal,ew_endpoint,pc_reversal,pc_endpoint
 
@@ -173,7 +172,15 @@ class ParkerLenhard:
 
         if self.data.drainage_process_new[n] != self.data.drainage_process_old[n]:
             self.update_scaling_points(self.e_w[n], self.p_c[n])
-     
+
+        if (self.data.drainage_process_new[n]==True and self.e_w[n] < self.data.ew_endpoint[n][0]) or (self.data.drainage_process_new[n]==False and self.e_w[n] > self.data.ew_endpoint[n][0]):
+            for i in range( 0, int(0.5*(self.data.max_reversal_points-1)-1) ):
+                self.data.pc_endpoint[n][i]  = self.data.pc_endpoint[n][2*(i+1)]
+                self.data.pc_reversal[n][i]  = self.data.pc_reversal[n][2*(i+1)]
+                self.data.ew_endpoint[n][i]  = self.data.ew_endpoint[n][2*(i+1)]
+                self.data.ew_reversal[n][i]  = self.data.ew_reversal[n][2*(i+1)]
+
+
     def update_scaling_points(self,ew,pc):
         """
         function to update hysteresis  reversal and end points. each node has 2 reversal points 
@@ -181,12 +188,16 @@ class ParkerLenhard:
 
         """
         n = self.model.current_cell
-
+        for i in range(self.data.max_reversal_points-1, 0, -1):
+            self.data.pc_endpoint[n][i]  = self.data.pc_endpoint[n][i-1]
+            self.data.pc_reversal[n][i]  = self.data.pc_reversal[n][i-1]
+            self.data.ew_endpoint[n][i]  = self.data.ew_endpoint[n][i-1]
+            self.data.ew_reversal[n][i]  = self.data.ew_reversal[n][i-1]
         # Update reversal and endpoints (ew and pc)
-        self.data.pc_endpoint[n]     = self.data.pc_reversal[n]
-        self.data.pc_reversal[n]     = pc
-        self.data.ew_endpoint[n]     = self.data.ew_reversal[n]
-        self.data.ew_reversal[n]     = ew
+        self.data.pc_endpoint[n][0]     = self.data.pc_reversal[n][0]
+        self.data.pc_reversal[n][0]     = pc
+        self.data.ew_endpoint[n][0]     = self.data.ew_reversal[n][0]
+        self.data.ew_reversal[n][0]     = ew
 
     def store_hysteresis_results(self,ew,pc):
         """
@@ -198,8 +209,6 @@ class ParkerLenhard:
         # Store hysteretic ew and pc for visualization
         self.data.ew_hysteresis[n,self.data.counter_hysteresis] = ew
         self.data.pc_hysteresis[n,self.data.counter_hysteresis] = pc
-        self.data.ew_endpoint_hysteresis[n,self.data.counter_hysteresis] = self.data.ew_endpoint[n]
-        self.data.pc_endpoint_hysteresis[n,self.data.counter_hysteresis] = self.data.pc_endpoint[n]
 
     def model_update_hysteresis(self,ts):
         """

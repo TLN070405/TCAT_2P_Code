@@ -31,11 +31,12 @@ def setup_hysteresis(model,wn_interface_imb,wn_interface_dr):
 
     model.hysteresis = True
     nodes = model.nodes
+    max_reversal_points = 8
     drainage_new   = np.full((nodes), False)
-    e_w_reversal   = np.full((nodes), 0.0003)
-    e_w_endpoint   = np.full((nodes), model.solid.porosity)
-    p_c_reversal   = np.full((nodes), wn_interface_imb.pc_function(e_w_reversal[0]))
-    p_c_endpoint   = np.full((nodes), wn_interface_imb.pc_function(e_w_endpoint[0]))
+    e_w_reversal   = np.full((nodes,max_reversal_points), 0.0003)
+    e_w_endpoint   = np.full((nodes,max_reversal_points), model.solid.porosity)
+    p_c_reversal   = np.full((nodes,max_reversal_points), wn_interface_imb.pc_function(e_w_reversal[0][0]))
+    p_c_endpoint   = np.full((nodes,max_reversal_points), wn_interface_imb.pc_function(e_w_endpoint[0][0]))
     ew_hysteresis  = np.full((nodes,5000),  0.01)
     pc_hysteresis  = np.full((nodes,5000), wn_interface_imb.pc_function(ew_hysteresis[0][0] ) )
     hysteresis_tol = 0.
@@ -53,7 +54,8 @@ def setup_hysteresis(model,wn_interface_imb,wn_interface_dr):
         ew_hysteresis,
         pc_hysteresis,
         switch_condition,
-        hysteresis_tol
+        hysteresis_tol,
+        max_reversal_points
         )
 
 def ew_func_time(t):
@@ -74,19 +76,18 @@ def ew_func_time(t):
         ew=a*t+b
     return ew
 
-def test_hysteresis_parkerlenhard():
+def test_hysteresis_parkerlenhard(model):
     """
     Test function for Parker Lenhard hysteresis model
     """
     for n, value in enumerate(time):
         counter=model.interface.data.counter_hysteresis
         model.current_cell = 0
-        ew = ew_func_time(value)
-        pc = model.interface.pc_function(ew)
-        switch_condition = ew-model.interface.data.ew_hysteresis[0,counter-1]
-        model.interface.update_process(switch_condition)
-        model.interface.update_scaling_points(ew, pc)
-        model.interface.store_hysteresis_results(ew, pc)
+        model.interface.e_w = [ew_func_time(value),0]
+        model.interface.p_c = [model.interface.pc_function(ew_func_time(value)),0]
+        switch_condition = model.interface.e_w[0]- model.interface.data.ew_hysteresis[0,counter-1]
+        model.interface.determine_hysteresis_state(switch_condition)
+        model.interface.store_hysteresis_results(model.interface.e_w[0], model.interface.p_c[0])
         model.interface.data.counter_hysteresis += 1
 
 
@@ -97,8 +98,8 @@ model,wn_interface_imb,wn_interface_dr = set_model()
 time=np.linspace(1, 300,3000)
 setup_hysteresis(model,wn_interface_imb,wn_interface_dr)
 
-#call hysteresis test function 
-test_hysteresis_parkerlenhard()
+#call hysteresis test function
+test_hysteresis_parkerlenhard(model)
 
 # Plot main imb and dr curves besides scanning curves.
 e_w_mpc = np.linspace(0.003, 0.4, 1000)
@@ -119,12 +120,4 @@ plt.legend()
 plt.xlabel("e_w")
 plt.ylabel("p_c")
 plt.title('Hysteresis pc-ew curves')
-plt.show()
-
-# plot ew endpoint versus number of time steps 
-number_dt   = np.linspace(0, counter_hysteresis, counter_hysteresis)
-plt.plot(number_dt,model.interface.data.ew_endpoint_hysteresis[0,0:counter_hysteresis])
-plt.xlabel('time step number')
-plt.ylabel('ew endpoint')
-plt.title('ew endpoint vs time step number at node 0')
 plt.show()

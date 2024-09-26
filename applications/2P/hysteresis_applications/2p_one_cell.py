@@ -127,25 +127,24 @@ n_phase.set_rel_perm_function(vg_dr.n_relative_permability)
 
 # Set hysteresis data and model
 model.hysteresis = True
+max_reversal_points = 8
 
 drainage_process_new         = np.full((nodes), True)
-p_c_reversal         = np.full((nodes), 0.0)
-p_c_endpoint         = np.full((nodes), 0.0)
-e_w_reversal         = np.full((nodes), 0.0)
-e_w_endpoint         = np.full((nodes), 0.0)
+
+e_w_reversal         = np.full((nodes,max_reversal_points), 0.4)
+e_w_endpoint         = np.full((nodes,max_reversal_points), 0.003)
+p_c_reversal         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_reversal[0][0]))
+p_c_endpoint         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_endpoint[0][0]))
 ew_hysteresis        = np.full((nodes,100000), 0.0)
 pc_hysteresis        = np.full((nodes,100000), 0.0)
 
-hysteresis_tol = 1e-6
+hysteresis_tol = 1e-8
 switch_condition ='e_w'
 
 for n in range(0,nodes):
-    ew_hysteresis[n][0]  = 0.397
-    pc_hysteresis[n][0]  = 346.73
-    e_w_reversal[n]      = 0.4
-    e_w_endpoint[n]      = 0.003
-    p_c_reversal[n]      = wn_interface_dr.pc_function(e_w_reversal[n])
-    p_c_endpoint[n]      = wn_interface_dr.pc_function(e_w_endpoint[n])
+    ew_hysteresis[n][0]     = 0.397
+    pc_hysteresis[n][0]     = 346.73
+
 
 
 model.interface = state_equations_hysteresis.ParkerLenhard(
@@ -160,7 +159,8 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     ew_hysteresis,
     pc_hysteresis,
     switch_condition,
-    hysteresis_tol
+    hysteresis_tol,
+    max_reversal_points
     )
 
 # Set initial conditions
@@ -174,36 +174,46 @@ model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
 
-def pw0_bc(t):
-    """
-    Boundary wetting phase pressure
-    """
-    pw_t0 = -346.73
-    pw_t1 = -7000
-    pw_t2 = -2000
-    pw_t3 = -4000
-    if 0<=t<=500:
-        aa=(pw_t1-pw_t0)/(500-0)
-        bb=pw_t0-aa*0
-        p_w0=aa*t+bb
-    elif 500<=t<=1000:
-        aa=(pw_t2-pw_t1)/(1000-500)
-        bb=pw_t1-aa*500
-        p_w0=aa*t+bb
-    elif 1000<=t<=1500:
-        aa=(pw_t3-pw_t2)/(1500-1000)
-        bb=pw_t2-aa*1000
-        p_w0=aa*t+bb
-    return p_w0
-
 def ew0_bc(t):
     """
     Boundary volume fraction
     """
-    model.current_cell = 0
-    e_w_bc = model.interface.volume_fraction_function(-pw0_bc(t))
+    ew_t = [0.397,   0.2, 0.25,   0.3,     0.17, 0.35, 0.3 ]
+    time = [0. ,    4000, 8000,  12000,   16000, 20000, 24000 ]
 
-    return  e_w_bc
+    if time[0]<=t<=time[1]:
+        a   = (ew_t[1] - ew_t[0])/(time[1] - time[0])
+        b   = ew_t[0] - a * time[0]
+        e_w =  a * t + b
+    elif time[1]<t<=time[2]:
+        a   = (ew_t[2] - ew_t[1])/(time[2] - time[1])
+        b   = ew_t[1] - a * time[1]
+        e_w = a * t + b
+    elif time[2]<t<=time[3]:
+        a   = (ew_t[3] - ew_t[2])/(time[3] - time[2])
+        b   = ew_t[2] - a * time[2]
+        e_w =  a * t + b
+    elif time[3]<t<=time[4]:
+        a   = (ew_t[4]-ew_t[3])/(time[4] - time[3])
+        b   = ew_t[3] - a * time[3]
+        e_w = a * t + b
+    elif time[4]<t<=time[5]:
+        a   = (ew_t[5]-ew_t[4])/(time[5] - time[4])
+        b   = ew_t[4] - a * time[4]
+        e_w = a * t + b
+    elif time[5]<t<=time[6]:
+        a   = (ew_t[6]-ew_t[5])/(time[6] - time[5])
+        b   = ew_t[5] - a * time[5]
+        e_w = a * t + b
+    return  e_w
+
+def pw0_bc(t):
+    """
+    Boundary wetting phase pressure
+    """
+    model.current_cell = 0
+    p_w0 = -model.interface.pc_function(ew0_bc(t))
+    return p_w0
 
 def ewL_bc(t):
     """
@@ -224,7 +234,7 @@ boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 # Time
-time_interval = np.array([1500])
+time_interval = np.array([24000])
 
 model.set_simulation_time(time_interval)
 
@@ -294,6 +304,8 @@ plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()
 
+
+
 time_hysteresis    = np.linspace(0, counter_hysteresis, counter_hysteresis)
 
 plt.plot(time_hysteresis,model.interface.data.ew_hysteresis[0,0:counter_hysteresis])
@@ -306,10 +318,4 @@ plt.plot(time_hysteresis,model.interface.data.pc_hysteresis[0,0:counter_hysteres
 plt.xlabel('time step number')
 plt.ylabel('pc ')
 plt.title('pc vs time step number at node 0')
-plt.show()
-
-plt.plot(time_hysteresis,model.interface.data.ew_endpoint_hysteresis[0,0:counter_hysteresis])
-plt.xlabel('time step number')
-plt.ylabel('ew endpoint')
-plt.title('ew endpoint vs time step number at node 0')
 plt.show()

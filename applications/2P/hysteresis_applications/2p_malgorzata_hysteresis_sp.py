@@ -126,14 +126,14 @@ n_phase.set_rel_perm_function(vg_dr.n_relative_permability)
 
 
 # Set hysteresis data and model
-model.hysteresis = True
+model.hysteresis    = True
+max_reversal_points = 8
+drainage_process_new  = np.full((nodes), True)
 
-drainage_process_new         = np.full((nodes), True)
-
-p_c_reversal         = np.full((nodes), 0.0)
-p_c_endpoint         = np.full((nodes), 0.0)
-e_w_reversal         = np.full((nodes), 0.0)
-e_w_endpoint         = np.full((nodes), 0.0)
+e_w_reversal         = np.full((nodes,max_reversal_points), 0.4)
+e_w_endpoint         = np.full((nodes,max_reversal_points), 0.003)
+p_c_reversal         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_reversal[0][0]))
+p_c_endpoint         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_endpoint[0][0]))
 
 ew_hysteresis        = np.full((nodes,100000), 0.0)
 pc_hysteresis        = np.full((nodes,100000), 0.0)
@@ -144,26 +144,6 @@ switch_condition ='e_w'
 for n in range(1,nodes-1):
     ew_hysteresis[n][0]  = 0.397
     pc_hysteresis[n][0]  = 346.73
-    e_w_reversal[n]      = 0.4
-    e_w_endpoint[n]      = 0.003
-    p_c_reversal[n]      = wn_interface_dr.pc_function(e_w_reversal[n])
-    p_c_endpoint[n]      = wn_interface_dr.pc_function(e_w_endpoint[n])
-
-#####    x=0
-ew_hysteresis[0][0]  = 0.397
-pc_hysteresis[0][0]  = 346.73
-e_w_reversal[0]      = 0.4
-e_w_endpoint[0]      = 0.003
-p_c_reversal[0]      = wn_interface_dr.pc_function(e_w_reversal[0])
-p_c_endpoint[0]      = wn_interface_dr.pc_function(e_w_endpoint[0])
-
-#####    x=L
-ew_hysteresis[nodes-1][0]  = 0.397
-pc_hysteresis[nodes-1][0]  = 346.73
-e_w_reversal[nodes-1]      = 0.4
-e_w_endpoint[nodes-1]      = 0.003
-p_c_reversal[nodes-1]      = wn_interface_dr.pc_function(e_w_reversal[nodes-1])
-p_c_endpoint[nodes-1]      = wn_interface_dr.pc_function(e_w_endpoint[nodes-1])
 
 
 model.interface = state_equations_hysteresis.ParkerLenhard(
@@ -178,7 +158,8 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     ew_hysteresis,
     pc_hysteresis,
     switch_condition,
-    hysteresis_tol
+    hysteresis_tol,
+    max_reversal_points
     )
 
 # Set initial conditions
