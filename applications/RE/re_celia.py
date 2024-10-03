@@ -1,7 +1,10 @@
 import numpy as np
-from  numpy import linalg
+from numpy import linalg 
 from petsc4py import PETSc
 import TCAT2Phase
+from TCAT2Phase.numerics import utils
+from TCAT2Phase.state_equations import state_equations
+from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
 # Domain
 domain_size = np.array([[0. , 1.]])
@@ -18,7 +21,7 @@ mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain,nodes)
 
 # Boundaries
-model = TCAT2Phase.model.initialize_model(
+model = TCAT2Phase.numerics.model.initialize_model(
                                 model_type = 'Richards',
                                 form = 'pr',
                                 domain = domain,
@@ -34,7 +37,6 @@ model.set_boundary_type(boundary_type = boundary_type)
 # Set boundary names
 boundary_name = {'p_w': [['p_w', 'p_w']]}
 
-model.set_boundary_name(boundary_name = boundary_name)
 # Set boundary values
 def pw0_bc(t): return  -7357.5
 def pwL_bc(t): return  -98100.0 
@@ -63,8 +65,8 @@ w_phase.set_viscosity(1.e-3)
 w_den_params = {'rho0':1000,
                 'beta': 0. }
 #4.899999743999999e-10
-w_phase.set_density_function(TCAT2Phase.state_equations.density_exp_pressure,**w_den_params)
-w_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_exp_pressure,**w_den_params)
+w_phase.set_density_function(state_equations.density_exp_pressure,**w_den_params)
+w_phase.set_d_density_function(state_equations.d_density_exp_pressure,**w_den_params)
 
 
 
@@ -75,11 +77,11 @@ n_phase.set_viscosity(0.00018050541516245486 )
 n_den_params = {'rho0':1.205  ,
                 'alpha':1.189866e-5   
                 }
-n_phase.set_density_function(TCAT2Phase.state_equations.density_linear_pressure,**n_den_params)
-n_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_linear_pressure,**n_den_params)
+n_phase.set_density_function(state_equations.density_linear_pressure,**n_den_params)
+n_phase.set_d_density_function(state_equations.d_density_linear_pressure,**n_den_params)
 n_en_params = {'porosity':s_phase.porosity
                 }
-n_phase.set_volume_fraction_function(TCAT2Phase.state_equations.volume_fraction,**n_en_params)
+n_phase.set_volume_fraction_function(state_equations.volume_fraction,**n_en_params)
 
 # Set w-n interphase properties
 wn_interface = TCAT2Phase.properties.interface.Interface()
@@ -88,7 +90,7 @@ m =  0.5
 n =   2
 alpha = 0.0003414882772680938
  
-vg = TCAT2Phase.state_equations_interface.VanGenuchten(
+vg = state_equations_interface.VanGenuchten(
     m = m,
     n = n,
     alpha = alpha,
@@ -99,6 +101,8 @@ vg = TCAT2Phase.state_equations_interface.VanGenuchten(
 
 wn_interface.set_pc_function(vg.capillary_pressure)
 wn_interface.set_d_pc_function(vg.d_capillary_pressure)
+wn_interface.set_volume_fraction_function(vg.volume_fraction_w)
+wn_interface.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 
 w_phase.set_rel_perm_function(vg.w_relative_permability)
 n_phase.set_rel_perm_function(vg.n_relative_permability)
@@ -140,7 +144,7 @@ OptDB.setValue('pc_type', 'sor')
 
  
 # Solve model
-solutions = TCAT2Phase.numerics.solver(model)
+solutions = TCAT2Phase.numerics.solver.solver(model)
 
 
 for time,variable in solutions.items():

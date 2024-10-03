@@ -12,8 +12,9 @@ def solver(model):
     """
 
     # PETSc arrays and grid
+
     da, u = _get_da(model)
-    
+
     # PETSc time-stepper
     ts = _get_time_stepper(model,da)
 
@@ -25,13 +26,13 @@ def solver(model):
 
     # PETSc preconditioner
     pc = _get_preconditioner(ksp)
-    
-    # Set inital conditions
-    model.initial_conditions(ts,u)
 
-    # Set boundary conditions
-    model.boundary_conditions(ts,u)
+    # Solve initial conditions (ic are not excplicitly expressed in terms of solution variabes e.g:Neumann BC)
+    _solve_ic(da,u,model)
 
+    # set the hysteresis function to be called after each successful time step.
+    if model.hysteresis is True:
+        ts.setPostStep(model.interface.model_update_hysteresis)
     # Loop through time
     for t in model.time:
         ts.setMaxTime(t)
@@ -51,7 +52,7 @@ def _get_da(model):
         boundary_type = PETSc.DMDA.BoundaryType.NONE,
         stencil_type = None,
         stencil_width = 1,
-        comm = PETSc.COMM_WORLD 
+        comm = PETSc.COMM_WORLD
         )
 
     da.setUp()
@@ -101,3 +102,26 @@ def _get_preconditioner(ksp):
     pc.setFromOptions()
 
     return pc
+
+def _solve_ic(da,u,model):
+    """
+    Create nonlinear solver to solve initial and boundary conditions
+    """
+    # setup snes solver
+    da_ic, u_ic = _get_da(model)
+    r_ic = u_ic.duplicate()
+    snes_ic = PETSc.SNES().create(PETSc.COMM_WORLD)
+    snes_ic.setFunction(model.model.form_function,r_ic,args=[model])
+    snes_ic.setDM(da_ic)
+
+    # provide an initial estimation for the solution of initial conditions+ boundary conditions
+    model.initial_conditions(snes_ic,u_ic)
+
+    # solve the system to get initial conditions in terms of solution variables
+    snes_ic.solve(None,u_ic)
+
+    # copy solution to the ts array solution.
+    U = da.getVecArray(u)
+    U_ic = da_ic.getVecArray(u_ic)
+    for n in range(0,model.nodes):
+        U[n] = U_ic[n]

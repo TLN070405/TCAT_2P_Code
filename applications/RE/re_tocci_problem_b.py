@@ -1,7 +1,10 @@
 import numpy as np
-from  numpy import linalg
+from numpy import linalg 
 from petsc4py import PETSc
 import TCAT2Phase
+from TCAT2Phase.numerics import utils
+from TCAT2Phase.state_equations import state_equations
+from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
 # Domain
 domain_size = np.array([[0. , 10]])
@@ -18,7 +21,7 @@ mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain,nodes)
 
 # Boundaries
-model = TCAT2Phase.model.initialize_model(
+model = TCAT2Phase.numerics.model.initialize_model(
                                 model_type = 'Richards',
                                 form = 'pr',
                                 domain = domain,
@@ -68,8 +71,8 @@ w_phase.set_viscosity(1.e-3)
 w_den_params = {'rho0':1000,
                 'beta': 4.899999743999999e-10 }
 #4.899999743999999e-10
-w_phase.set_density_function(TCAT2Phase.state_equations.density_exp_pressure,**w_den_params)
-w_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_exp_pressure,**w_den_params)
+w_phase.set_density_function(state_equations.density_exp_pressure,**w_den_params)
+w_phase.set_d_density_function(state_equations.d_density_exp_pressure,**w_den_params)
 
 
 
@@ -80,11 +83,11 @@ n_phase.set_viscosity(0.00018050541516245486 )
 n_den_params = {'rho0':1.205  ,
                 'alpha':1.189866e-5   
                 }
-n_phase.set_density_function(TCAT2Phase.state_equations.density_linear_pressure,**n_den_params)
-n_phase.set_d_density_function(TCAT2Phase.state_equations.d_density_linear_pressure,**n_den_params)
+n_phase.set_density_function(state_equations.density_linear_pressure,**n_den_params)
+n_phase.set_d_density_function(state_equations.d_density_linear_pressure,**n_den_params)
 n_en_params = {'porosity':s_phase.porosity
                 }
-n_phase.set_volume_fraction_function(TCAT2Phase.state_equations.volume_fraction,**n_en_params)
+n_phase.set_volume_fraction_function(state_equations.volume_fraction,**n_en_params)
 
 # Set w-n interphase properties
 wn_interface = TCAT2Phase.properties.interface.Interface()
@@ -93,7 +96,7 @@ m =  0.7652582159624413
 n =   4.26
 alpha = 0.0005575942915392457
  
-vg = TCAT2Phase.state_equations_interface.VanGenuchten(
+vg = state_equations_interface.VanGenuchten(
     m = m,
     n = n,
     alpha = alpha,
@@ -104,6 +107,8 @@ vg = TCAT2Phase.state_equations_interface.VanGenuchten(
 
 wn_interface.set_pc_function(vg.capillary_pressure)
 wn_interface.set_d_pc_function(vg.d_capillary_pressure)
+wn_interface.set_volume_fraction_function(vg.volume_fraction_w)
+wn_interface.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 
 w_phase.set_rel_perm_function(vg.w_relative_permability)
 n_phase.set_rel_perm_function(vg.n_relative_permability)
@@ -120,7 +125,7 @@ model.interface = wn_interface
 # Time
 time_interval = np.array([17280.])
 model.set_simulation_time(time_interval)
- 
+
 # Numerical Parameters
 OptDB = PETSc.Options()
 
@@ -138,14 +143,14 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options 
+# Preconditioner Options
 OptDB.setValue('pc_type', 'sor')
- 
 
 
- 
+
+
 # Solve model
-solutions = TCAT2Phase.numerics.solver(model)
+solutions = TCAT2Phase.numerics.solver.solver(model)
 
 
 for time,variable in solutions.items():
@@ -154,4 +159,4 @@ for time,variable in solutions.items():
     plt.ylabel('Pw')
     plt.title('Richards Solution')
     plt.legend()
-plt.show()    
+plt.show()

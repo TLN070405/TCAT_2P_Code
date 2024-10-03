@@ -10,6 +10,7 @@ model_options = [
         'two_phase',
         'extended_two_phase',
         'Richards',
+        'extended_Richards',
         'cgp-TCAT'
                 ]
 
@@ -20,6 +21,8 @@ form_options = {
                       'sp': model_types.TwoPhase('sp')
                       },
         'Richards' : {'pr': model_types.Richards('pr')
+                      },
+        'extended_Richards' : {'sp': model_types.ExtendedRichards('sp')
                       }
                }
 
@@ -44,6 +47,7 @@ class Model:
         self.domain = domain
         self.nodes = nodes
         self.mesh = mesh
+        self.current_cell = 0
         self.res = np.zeros_like(self.nodes)
         self.boundary_type = {}
         self.boundary_value = {}
@@ -55,7 +59,7 @@ class Model:
         self.w_phase = None
         self.n_phase = None
         self.interface = None
-
+        self.hysteresis = False
 
     def select_model(self, model_type, form):
         """
@@ -113,10 +117,10 @@ class Model:
 
         for n_u,u_name in enumerate(self.model.u_names):
             if self.model.num_u==1:
-                for n in range(1,self.nodes-1): 
+                for n in range(0,self.nodes):
                     u[n] = self.initial_condition[u_name][n]
             else:
-                for n in range(1,self.nodes-1): 
+                for n in range(0,self.nodes):
                     u[n][n_u] = self.initial_condition[u_name][n]
 
     def boundary_conditions(self,ts,U):

@@ -27,7 +27,7 @@ class Domain:
 
     def get_domain_length(self):
         """
-        Calaculate the domain length
+        Calculate the domain length
         """
         self.domain_length = np.zeros(self.dims)
         for d in range(self.dims):

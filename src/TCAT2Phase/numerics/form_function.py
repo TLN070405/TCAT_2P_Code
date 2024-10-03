@@ -2,7 +2,6 @@ import numpy as np
 
 from TCAT2Phase.numerics import utils
 from TCAT2Phase.numerics import residual
- 
 
 def model_formfunction(snes,U,F,model):
     """
@@ -32,10 +31,10 @@ def model_formfunction_internal(f,u,model):
 
     for n_u,u_name in enumerate(model.model.u_names):
         if model.model.num_u==1:
-            for n in range(1,nodes-1): 
+            for n in range(1,nodes-1):
                 f[n]      = u[n]      - model.initial_condition[u_name][n]
         else:
-            for n in range(1,nodes-1): 
+            for n in range(1,nodes-1):
                 f[n][n_u] = u[n][n_u] - model.initial_condition[u_name][n]
 
 
@@ -93,42 +92,40 @@ def model_formfunction_boundary(t,f,u,model):
     boundary_name  = model.boundary_name
     boundary_value = model.boundary_value
 
-    
     if model.model.num_u == 1:
-    # boundary conditions for one variable formulations 
-      
-       #Residual at Boundary 1 
-       if(boundary_type[u_names[0]][0][0]==0):
-          f[0]    = u[0] - boundary_value[0][0][0](t)  
-       elif(boundary_type[u_names[0]][0][0]==1):
-          f[0]    = flux_bc[boundary_name[0][0][0]][0] - boundary_value[0][0][0](t)
-       else:
-          print('Boundary type non supported') 
+        # boundary conditions for one variable formulations
+        #Residual at Boundary 1
+        if boundary_type[u_names[0]][0][0]==0:
+            f[0]    = u[0] - boundary_value[0][0][0](t)
+        elif boundary_type[u_names[0]][0][0]==1:
+            f[0]    = flux_bc[boundary_name[0][0][0]][0] - boundary_value[0][0][0](t)
+        else:
+            print('Boundary type non supported')
 
-       # Residual at Boundary 2
-       if(boundary_type[u_names[0]][0][1]==0):
-          f[nodes-1] = u[nodes-1] - boundary_value[0][0][1](t)  
-       elif(boundary_type[u_names[0]][0][1]==1):
-          f[nodes-1] = flux_bc[boundary_name[0][0][1]][1] - boundary_value[0][0][1](t) 
-       else:
-          print('Boundary type non supported')   
-       
+        # Residual at Boundary 2
+        if boundary_type[u_names[0]][0][1]==0:
+            f[nodes-1] = u[nodes-1] - boundary_value[0][0][1](t)
+        elif boundary_type[u_names[0]][0][1]==1:
+            f[nodes-1] = flux_bc[boundary_name[0][0][1]][1] - boundary_value[0][0][1](t)
+        else:
+            print('Boundary type non supported')
+
     else:
-    # boundary conditions for two or more variables formulations    
-       for n in range(model.model.num_u):
-           
-           #Residual at Boundary 1 
-           if(boundary_type[u_names[n]][0][0]==0):
-              f[0][n] = u[0][n] - boundary_value[n][0][0](t)  
-           elif(boundary_type[u_names[n]][0][0]==1):
-              f[0][n] = flux_bc[boundary_name[n][0][0]][0] - boundary_value[n][0][0](t) 
-           else:
-               print('Boundary type non supported')   
+        # boundary conditions for two or more variables formulations
+        for n in range(model.model.num_u):
+
+           #Residual at Boundary 1
+            if boundary_type[u_names[n]][0][0]==0:
+                f[0][n] = u[0][n] - boundary_value[n][0][0](t)
+            elif boundary_type[u_names[n]][0][0]==1:
+                f[0][n] = flux_bc[boundary_name[n][0][0]][0] - boundary_value[n][0][0](t)
+            else:
+                print('Boundary type non supported')
 
            # Residual at Boundary 2
-           if(boundary_type[u_names[n]][0][1]==0):
-              f[nodes-1][n] = u[nodes-1][n] - boundary_value[n][0][1](t)  
-           elif(boundary_type[u_names[n]][0][1]==1):
-              f[nodes-1][n] =  flux_bc[boundary_name[n][0][1]][1] - boundary_value[n][0][1](t) 
-           else:
-               print('Boundary type non supported')   
+            if boundary_type[u_names[n]][0][1]==0:
+                f[nodes-1][n] = u[nodes-1][n] - boundary_value[n][0][1](t)
+            elif boundary_type[u_names[n]][0][1]==1:
+                f[nodes-1][n] =  flux_bc[boundary_name[n][0][1]][1] - boundary_value[n][0][1](t)
+            else:
+                print('Boundary type non supported')

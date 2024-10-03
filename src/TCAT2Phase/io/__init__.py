@@ -1,1 +1,1 @@
-from .input import  *
+import TCAT2Phase.io.input
