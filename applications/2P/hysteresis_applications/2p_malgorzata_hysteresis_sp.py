@@ -141,7 +141,7 @@ pc_hysteresis        = np.full((nodes,100000), 0.0)
 hysteresis_tol = 1e-6
 switch_condition ='e_w'
 
-for n in range(1,nodes-1):
+for n in range(0,nodes):
     ew_hysteresis[n][0]  = 0.397
     pc_hysteresis[n][0]  = 346.73
 

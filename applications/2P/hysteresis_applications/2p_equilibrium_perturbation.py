@@ -175,14 +175,13 @@ model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
 index0 = 0
-indexL = 0
 
 def ew0_bc(t):
     """
     Boundary volume fraction
     """
     global index0
-    ew   = [0.35, 0.348,0.346,0.345,0.343,0.341]
+    ew   = [0.35, 0.34,0.346,0.345,0.343,0.341]
     gap  = abs(model.interface.e_w-ew[index0])
     e_w0 = ew[index0]
 
@@ -190,19 +189,19 @@ def ew0_bc(t):
         index0 = index0 + 1
     return  e_w0
 
+indexL = 0
 def ewL_bc(t):
     """
     Boundary volume fraction
     """
     global indexL
-    ew   = [0.35, 0.348,0.346,0.345,0.343,0.341]
+    ew   = [0.35, 0.34,0.346,0.345,0.343,0.341]
     gap  = abs(model.interface.e_w-ew[indexL])
     e_w0 = ew[indexL]
 
     if t>0 and np.all(gap<=1e-6):
         indexL = indexL + 1
     return  e_w0
-
 
 def pw0_bc(t):
     """

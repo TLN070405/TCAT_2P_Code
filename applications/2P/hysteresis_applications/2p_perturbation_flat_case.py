@@ -106,7 +106,7 @@ wn_interface_dr = TCAT2Phase.properties.interface.Interface()
 
 n = 2.494
 m = 1.0 - (1.0 / n)
-alpha = 5e-4 
+alpha = 5e-4
 
 vg_dr = state_equations_interface.VanGenuchten(
     m = m,
@@ -130,40 +130,20 @@ w_phase.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 
 # Set hysteresis data
 model.hysteresis = True
+max_reversal_points = 8
+
 
 drainage_process_new         = np.full((nodes), True)
-p_c_reversal         = np.full((nodes), 0.0)
-p_c_endpoint         = np.full((nodes), 0.0)
-e_w_reversal         = np.full((nodes), 0.0)
-e_w_endpoint         = np.full((nodes), 0.0)
-ew_hysteresis        = np.full((nodes,100000), 0.0)
-pc_hysteresis        = np.full((nodes,100000), 0.0)
+e_w_reversal         = np.full((nodes,max_reversal_points), 0.4)
+e_w_endpoint         = np.full((nodes,max_reversal_points), 0.003)
+p_c_reversal         = np.full((nodes,max_reversal_points),wn_interface_dr.pc_function(e_w_reversal[0][0]))
+p_c_endpoint         = np.full((nodes,max_reversal_points),wn_interface_dr.pc_function(e_w_endpoint[0][0]))
+
+ew_hysteresis        = np.full((nodes,100000), 0.397)
+pc_hysteresis        = np.full((nodes,100000), 346.73)
 
 hysteresis_tol = 1e-6
 switch_condition ='e_w'
-
-for n in range(1,nodes-1):
-    ew_hysteresis[n][0]   = 0.397
-    pc_hysteresis[n][0]   = wn_interface_dr.pc_function(ew_hysteresis[n][0] )
-    e_w_reversal[n]       = 0.4
-    e_w_endpoint[n]       = 0.003
-    p_c_reversal[n]       = wn_interface_dr.pc_function(e_w_reversal[n])
-    p_c_endpoint[n]       = wn_interface_dr.pc_function(e_w_endpoint[n])
-
-#####    x=0
-ew_hysteresis[0][0]  = wn_interface_dr.volume_fraction_function(346.73)
-pc_hysteresis[0][0]  = 346.73
-e_w_reversal[0]      = 0.4
-e_w_endpoint[0]      = 0.003
-p_c_reversal[0]      = wn_interface_dr.pc_function(e_w_reversal[0] )
-p_c_endpoint[0]      = wn_interface_dr.pc_function(e_w_endpoint[0] )
-#####    x=L
-ew_hysteresis[nodes-1][0]  = 0.397
-pc_hysteresis[nodes-1][0]  = 346.73
-e_w_reversal[nodes-1]      = 0.4
-e_w_endpoint[nodes-1]      = 0.003
-p_c_reversal[nodes-1]      = wn_interface_dr.pc_function(e_w_reversal[nodes-1] )
-p_c_endpoint[nodes-1]      = wn_interface_dr.pc_function(e_w_endpoint[nodes-1] )
 
 model.interface = state_equations_hysteresis.ParkerLenhard(
     model,
@@ -177,14 +157,15 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     ew_hysteresis,
     pc_hysteresis,
     switch_condition,
-    hysteresis_tol
+    hysteresis_tol,
+    max_reversal_points
     )
 
 # Set initial conditions
 ew_ic = np.full((nodes), 0.397)
 pw_ic = np.full((nodes), -346.73)
 
-ew_ic[0] = wn_interface_dr.volume_fraction_function(346.73)
+#ew_ic[0] = wn_interface_dr.volume_fraction_function(346.73)
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic}

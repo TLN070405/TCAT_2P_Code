@@ -32,6 +32,7 @@ def model_residual_internal(f, u, udot, model):
     model.interface.p_w = p_w
     model.interface.p_n = p_n
     model.interface.p_c = p_c
+
     mesh = model.mesh
 
     # Constant Pameters

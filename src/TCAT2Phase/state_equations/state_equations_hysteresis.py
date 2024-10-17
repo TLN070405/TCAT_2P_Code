@@ -174,12 +174,11 @@ class ParkerLenhard:
             self.update_scaling_points(self.e_w[n], self.p_c[n])
 
         if (self.data.drainage_process_new[n]==True and self.e_w[n] < self.data.ew_endpoint[n][0]) or (self.data.drainage_process_new[n]==False and self.e_w[n] > self.data.ew_endpoint[n][0]):
-            for i in range( 0, int(0.5*(self.data.max_reversal_points-1)-1) ):
-                self.data.pc_endpoint[n][i]  = self.data.pc_endpoint[n][2*(i+1)]
-                self.data.pc_reversal[n][i]  = self.data.pc_reversal[n][2*(i+1)]
-                self.data.ew_endpoint[n][i]  = self.data.ew_endpoint[n][2*(i+1)]
-                self.data.ew_reversal[n][i]  = self.data.ew_reversal[n][2*(i+1)]
-
+            for i in range( 0, self.data.max_reversal_points-2):
+                self.data.pc_endpoint[n][i]  = self.data.pc_endpoint[n][i+2]
+                self.data.pc_reversal[n][i]  = self.data.pc_reversal[n][i+2]
+                self.data.ew_endpoint[n][i]  = self.data.ew_endpoint[n][i+2]
+                self.data.ew_reversal[n][i]  = self.data.ew_reversal[n][i+2]
 
     def update_scaling_points(self,ew,pc):
         """
