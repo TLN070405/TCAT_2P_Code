@@ -169,7 +169,6 @@ class ParkerLenhard:
         elif switch_condition < self.data.hysteresis_tol:
             self.data.drainage_process_old[n] = self.data.drainage_process_new[n]
             self.data.drainage_process_new[n] = True
-
         if self.data.drainage_process_new[n] != self.data.drainage_process_old[n]:
             self.update_scaling_points(self.e_w[n], self.p_c[n])
 

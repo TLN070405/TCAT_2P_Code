@@ -6,8 +6,19 @@ from petsc4py import PETSc
 
 __all__ = ["solver"]
 
+def solver(u,ts,model):
+    """
+    Collect all information and drive the simulation
+    """
+    # Loop through time
+    for t in model.time:
+        ts.setMaxTime(t)
+        ts.solve(u)
+        model.clean_solution(u.getArray(), t)
 
-def solver(model):
+    return model.solution
+
+def setup_solver(model):
     """
     Collect all information and drive the simulation
     """
@@ -35,27 +46,7 @@ def solver(model):
     if model.hysteresis is True:
         ts.setPostStep(model.interface.model_update_hysteresis)
 
-    # Loop through Error Tolerance (not time)
-    iteration = 1
-    max_steps = 100000
-    error_threshold = 1e-6
-    error = float("inf")
-    u_old = u.getArray().copy()
-
-    while error > error_threshold and ts.getStepNumber() < iteration < max_steps:
-        ts.setMaxSteps(iteration)
-        ts.solve(u)
-
-        u_new = u.getArray().copy()
-        error = np.linalg.norm( np.abs(u_new - u_old)/ts.getTimeStep())/len(u_new)
-        print(error)
-        u_old = u_new
-        iteration += 1
-
-    model.clean_solution(u.getArray(), ts.getTime())
-
-    return model.solution
-
+    return u, ts
 
 def _get_da(model):
     """

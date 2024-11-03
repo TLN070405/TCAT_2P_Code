@@ -104,17 +104,6 @@ model.w_phase = w_phase
 model.n_phase = n_phase
 model.interface = wn_interface
 
-# Set boundary values
-def ew0_bc(t): return 0.12 
-def pw0_bc(t): return  -model.interface.pc_function(0.12 )
-
-def ewL_bc(t): return 0.12 
-def pwL_bc(t): return -model.interface.pc_function(0.12 )
-
-boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
-                'p_w': [[ pw0_bc,pwL_bc  ]]}
-
-model.set_boundary_value(boundary_value = boundary_value)
 
 
 # Set initial conditions
@@ -168,8 +157,54 @@ OptDB.setValue('pc_type', 'sor')
 # Solve model and return model.solutions
 # which is a dictionary where
 # solutions[time][u_name] = np.array
+# Set boundary values
+ew_values=[0.12, 0.13, 0.14]
+i=0
+def ew0_bc(t): return ew_values[i] 
+def pw0_bc(t): return  -model.interface.pc_function(ew_values[i])
 
-solutions = TCAT2Phase.numerics.solver.solver(model)
+def ewL_bc(t): return 0.12 
+def pwL_bc(t): return -model.interface.pc_function(0.12 )
+
+boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
+                'p_w': [[ pw0_bc,pwL_bc  ]]}
+
+model.set_boundary_value(boundary_value = boundary_value)
+u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
+for i in range (0,3):
+    ew_values=[0.12, 0.13, 0.14]
+    def ew0_bc(t): return ew_values[i] 
+    def pw0_bc(t): return  -model.interface.pc_function(ew_values[i])
+
+    def ewL_bc(t): return 0.12 
+    def pwL_bc(t): return -model.interface.pc_function(0.12 )
+
+    boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
+                    'p_w': [[ pw0_bc,pwL_bc  ]]}
+
+    model.set_boundary_value(boundary_value = boundary_value)
+    solutions = TCAT2Phase.numerics.solver.solver(u,ts,model)
+
+
+
+'''
+for i in range(0,3):
+    ew_values=[0.12, 0.13, 0.14]
+    def ew0_bc(t): return ew_values[i] 
+    def pw0_bc(t): return  -model.interface.pc_function(ew_values[i])
+
+    def ewL_bc(t): return 0.12 
+    def pwL_bc(t): return -model.interface.pc_function(0.12 )
+
+    boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
+                    'p_w': [[ pw0_bc,pwL_bc  ]]}
+
+    model.set_boundary_value(boundary_value = boundary_value)
+    solutions = TCAT2Phase.numerics.solver.solver(model)
+
+'''
+
+
 
 
 
