@@ -15,6 +15,8 @@ model_options = [
                 ]
 
 form_options = {
+        'cgp-TCAT' : {'spijvk': model_types.CgpTCAT('spijvk')
+                      },
         'extended_two_phase' : {'spp': model_types.ExtendedTwoPhase('spp')
                       },
         'two_phase': {'pp': model_types.TwoPhase('pp'),

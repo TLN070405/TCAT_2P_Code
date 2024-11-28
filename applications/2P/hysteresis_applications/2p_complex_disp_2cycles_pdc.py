@@ -244,7 +244,7 @@ OptDB = PETSc.Options()
 OptDB.setValue('snes_fd_color', None)
 OptDB.setValue('ts_type', 'bdf')
 OptDB.setValue('ts_bdf_order', 5)
-OptDB.setValue('ts_max_steps',100000)
+OptDB.setValue('ts_max_steps',50)
 OptDB.setValue('ts_max_reject',500)
 OptDB.setValue('ts_monitor', None)
 
@@ -262,7 +262,7 @@ OptDB.setValue('pc_type', 'sor')
 # which is a dictionary where
 # solutions[time][u_name] = np.array
 u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
-solutions = TCAT2Phase.numerics.solver.solver(u,ts,model)
+solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['e_w'],label=f't={time}')
@@ -296,7 +296,7 @@ counter_hysteresis=model.interface.data.counter_hysteresis
 
 plt.plot(model.interface.data.ew_hysteresis[0,0:counter_hysteresis],
          model.interface.data.pc_hysteresis[0,0:counter_hysteresis],
-         label='scanning curves')
+         label='scanning curves',marker='o')
 plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
 plt.xlabel('e_w')
@@ -305,9 +305,9 @@ plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()
 
-plt.plot(model.interface.data.ew_hysteresis[68,0:counter_hysteresis],
-         model.interface.data.pc_hysteresis[68,0:counter_hysteresis],
-         label='scanning curves')
+plt.plot(model.interface.data.ew_hysteresis[12,0:counter_hysteresis],
+         model.interface.data.pc_hysteresis[12,0:counter_hysteresis],
+         label='scanning curves',marker='o')
 plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
 plt.xlabel('e_w')
@@ -316,13 +316,3 @@ plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()
 
-plt.plot(model.interface.data.ew_hysteresis[70,0:counter_hysteresis],
-         model.interface.data.pc_hysteresis[70,0:counter_hysteresis],
-         label='scanning curves')
-plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
-plt.title('Hysteresis pc-ew curves')
-plt.legend()
-plt.show()

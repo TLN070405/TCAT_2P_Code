@@ -26,75 +26,50 @@ def model_residual_internal(f, u, udot, model):
     residual at internal nodes.
     """
     # Create primary variables
-    e_w, p_w, p_n, p_c = model_primary_variables(u, model)
+    e_w, p_w, e_wn, j_wn, w_wn, k_wn, e_n, p_n, p_c = model_primary_variables(u, model)
 
     model.interface.e_w = e_w
     model.interface.p_w = p_w
     model.interface.p_n = p_n
     model.interface.p_c = p_c
 
+    q_w, q_n, rho_w, rho_n = model_phase_flux(p_w, p_n, p_c, model)
+    del_ew, del_ewn, del_jwn, del_wwn = model_primary_variables_gradient(
+        e_w, e_wn, j_wn, w_wn, model
+    )
+
     mesh = model.mesh
-
-    # Constant Pameters
-    k = model.solid.permeability
-    gravity = model.solid.gravity
-    mu_w = model.w_phase.viscosity
-    mu_n = model.n_phase.viscosity
-    porosity = model.solid.porosity
-
-    # Cell Centered Variables
-    rho_w = utils.cell_center(p_w, model.w_phase.density_function, mesh)
-    rho_n = utils.cell_center(p_n, model.n_phase.density_function, mesh)
-    e_n = porosity - e_w
-    k_rw = utils.cell_center(p_c, model.w_phase.rel_perm_function, mesh)
-    k_rn = utils.cell_center(p_c, model.n_phase.rel_perm_function, mesh)
-
-    # Face Centered Values
-    del_pw = utils.gradient(p_w, mesh)
-    del_pn = utils.gradient(p_n, mesh)
-
-    rho_w_face = utils.interpolate(rho_w, mesh)
-    rho_n_face = utils.interpolate(rho_n, mesh)
-
-    q_w = darcy_velocity(
-        mesh,
-        k,
-        utils.interpolate(k_rw * rho_w, mesh),
-        mu_w,
-        del_pw,
-        rho_w_face,
-        gravity,
-    )
-
-    q_n = darcy_velocity(
-        mesh,
-        k,
-        utils.interpolate(k_rn * rho_n, mesh),
-        mu_n,
-        del_pn,
-        rho_n_face,
-        gravity,
-    )
-
     for cell in mesh.cells:
         if cell.boundary:
             continue
-
         n = cell.ID
-        od_w = 1.0 / cell.length * (q_w[n + 1] - q_w[n])
-        od_n = 1.0 / cell.length * (q_n[n + 1] - q_n[n])
-        od_dp = p_w[n] - p_n[n] + p_c[n]
-        od = [od_dp, od_w[0], od_n[0]]
+        model.current_cell = n
+        od = model_spatial_operator(
+            e_w,
+            p_w,
+            e_wn,
+            j_wn,
+            w_wn,
+            k_wn,
+            p_n,
+            p_c,
+            q_w,
+            q_n,
+            del_ew,
+            del_ewn,
+            del_jwn,
+            del_wwn,
+            cell,
+            model,
+        )
 
         # Time derivative matrix
-        model.current_cell = n
         A = model_A_matrix(
-            e_w[n], p_w[n], p_n[n], p_c[n], rho_w[n], rho_n[n], e_n[n], model
+            e_w, p_w, e_wn, j_wn, k_wn, p_n, p_c, rho_w, rho_n, e_n, model
         )
 
         # Residuals at interior points
         f[n] = model_residual_equations(A, udot, od, model)
-    return e_w, p_w, p_n, p_c
 
 
 def model_primary_variables(u, model):
@@ -104,6 +79,23 @@ def model_primary_variables(u, model):
 
     nodes = model.nodes
     form = model.model.name
+    e_wn = np.zeros([nodes])
+    j_wn = np.zeros([nodes])
+    w_wn = np.zeros([nodes])
+    k_wn = np.zeros([nodes])
+    if form == "cgp-TCAT-spijvk":
+        # Solution Variables
+        e_w = u[:, 0]
+        p_w = u[:, 1]
+        e_wn = u[:, 2]
+        j_wn = u[:, 3]
+        w_wn = u[:, 4]
+        k_wn = u[:, 5]
+        # Primary Variables
+        p_c = np.zeros_like(p_w)
+        p_n = np.zeros_like(p_w)
+        for n in range(0, nodes):
+            p_c[n] = model.gamma_wn * j_wn[n]
     if form == "extended-two-phase-spp":
         # Solution Variables
         e_w = u[:, 0]
@@ -161,11 +153,131 @@ def model_primary_variables(u, model):
             p_c[n] = model.interface.pc_function(e_w[n])
     else:
         print("Error Model Form is unknown")
+    e_n = model.solid.porosity - e_w
 
-    return e_w, p_w, p_n, p_c
+    return e_w, p_w, e_wn, j_wn, w_wn, k_wn, e_n, p_n, p_c
 
 
-def model_A_matrix(e_w, p_w, p_n, p_c, rho_w, rho_n, e_n, model):
+def model_primary_variables_gradient(e_w, e_wn, j_wn, w_wn, model):
+    """
+    gradient of primary variables
+    """
+    mesh = model.mesh
+    del_ew = utils.gradient(e_w, mesh)
+    del_ewn = utils.gradient(e_wn, mesh)
+    del_jwn = utils.gradient(j_wn, mesh)
+    del_wwn = utils.gradient(w_wn, mesh)
+
+    return del_ew, del_ewn, del_jwn, del_wwn
+
+
+def model_phase_flux(p_w, p_n, p_c, model):
+    """
+    phases fluxes calculations
+    """
+    mesh = model.mesh
+
+    # Constant Pameters
+    k = model.solid.permeability
+    gravity = model.solid.gravity
+    mu_w = model.w_phase.viscosity
+    mu_n = model.n_phase.viscosity
+
+    # Cell Centered Variables
+    rho_w = utils.cell_center(p_w, model.w_phase.density_function, mesh)
+    rho_n = utils.cell_center(p_n, model.n_phase.density_function, mesh)
+    k_rw = utils.cell_center(p_c, model.w_phase.rel_perm_function, mesh)
+    k_rn = utils.cell_center(p_c, model.n_phase.rel_perm_function, mesh)
+
+    # Derivatives Values
+    del_pw = utils.gradient(p_w, mesh)
+    del_pn = utils.gradient(p_n, mesh)
+
+    # Face Centered Values
+    rho_w_face = utils.interpolate(rho_w, mesh)
+    rho_n_face = utils.interpolate(rho_n, mesh)
+
+    # Fluxes
+    q_w = darcy_velocity(
+        mesh,
+        k,
+        utils.interpolate(k_rw * rho_w, mesh),
+        mu_w,
+        del_pw,
+        rho_w_face,
+        gravity,
+    )
+
+    q_n = darcy_velocity(
+        mesh,
+        k,
+        utils.interpolate(k_rn * rho_n, mesh),
+        mu_n,
+        del_pn,
+        rho_n_face,
+        gravity,
+    )
+    return q_w, q_n, rho_w, rho_n
+
+
+def model_spatial_operator(
+    e_w,
+    p_w,
+    e_wn,
+    j_wn,
+    w_wn,
+    k_wn,
+    p_n,
+    p_c,
+    q_w,
+    q_n,
+    del_ew,
+    del_ewn,
+    del_jwn,
+    del_wwn,
+    cell,
+    model
+):
+    """
+    Spatial operator for each formulation
+    """
+    form = model.model.name
+    n = cell.ID
+
+    if form == "cgp-TCAT-spijvk":
+        c_wn = model.interface.c_wn
+        gamma_wn = model.interface.gamma_wn
+        k_hat_wn = model.interface.k_hat_wn
+        e_wn_eq = model.interface.e_wn_eq
+
+        od_w = 1.0 / cell.length * (q_w[n + 1] - q_w[n])
+        od_dp = c_wn * (p_w[n] + gamma_wn * j_wn[n]) ^ 2 + gamma_wn * k_hat_wn * (
+            e_wn_eq[n] - e_wn[n]
+        )
+        od_ia = k_hat_wn * (e_wn_eq[n] - e_wn[n]) - (
+            w_wn[n] * del_ewn[n] + e_wn[n] * del_wwn[n]
+        )
+        od_j = -2 * (
+            w_wn[n] * j_wn[n] * del_ewn[n]
+            + e_wn[n] * w_wn[n] * del_jwn[n]
+            + e_wn[n] * j_wn[n] * del_wwn[n]
+        )
+        od_v = (p_w[n] + gamma_wn * j_wn[n]) * e_w[n] * e_wn[n] * w_wn[
+            n
+        ] + od_dp * del_ew
+        od_k = e_w[n] - model.interface.volume_fraction_function(
+            e_wn[n], j_wn[n], k_wn[n]
+        )
+        od = [od_dp, od_w[0], od_ia, od_j, od_v, od_k]
+    else:
+        od_w = 1.0 / cell.length * (q_w[n + 1] - q_w[n])
+        od_n = 1.0 / cell.length * (q_n[n + 1] - q_n[n])
+        od_dp = p_w[n] - p_n[n] + p_c[n]
+        od = [od_dp, od_w[0], od_n[0]]
+    return od
+
+
+def model_A_matrix(e_w, p_w, e_wn, j_wn, k_wn, p_n, p_c, rho_w, rho_n, e_n, model):
     """
     A matrix components for each formulation
     """
@@ -176,10 +288,17 @@ def model_A_matrix(e_w, p_w, p_n, p_c, rho_w, rho_n, e_n, model):
     d_rho_w_p_w = model.w_phase.d_density_function(p_w)
 
     A = np.zeros([model.model.num_u, model.model.num_u])
-
     form = model.model.name
-
-    if form == "extended-two-phase-spp":
+    if form == "cgp-TCAT-spijvk":
+        A[0, 0] = p_w + model.interface.gamma_wn * j_wn
+        A[1, 0] = rho_w
+        A[1, 1] = e_w * d_rho_w_p_w
+        A[2, 0] = j_wn
+        A[2, 2] = 1
+        A[3, 0] = 2 * k_wn
+        A[3, 2] = j_wn
+        A[3, 3] = e_wn
+    elif form == "extended-two-phase-spp":
         A[0, 0] = (
             model.solid.dynamic_capillary_pressure_parameter / model.solid.porosity
         )
@@ -217,7 +336,9 @@ def model_residual_equations(A, udot, od, model):
     """
     form = model.model.name
     n = model.current_cell
-    if form == "extended-two-phase-spp":
+    if form == "cgp-TCAT-spijvk":
+        f = np.dot(A, udot[n]) + np.dot(A, udot[n]) - od
+    elif form == "extended-two-phase-spp":
         f = np.dot(A, udot[n]) - od[0:3]
     elif form in ("two-phase-sp", "two-phase-pp"):
         f = np.dot(A, udot[n]) - od[1:3]
@@ -240,48 +361,9 @@ def model_residual_boundary(t, f, u, model):
     boundary_name = model.boundary_name
     boundary_value = model.boundary_value
 
-    e_w, p_w, p_n, p_c = model_primary_variables(u, model)
-    mesh = model.mesh
-
-    # Constant Pameters
-    k = model.solid.permeability
-    gravity = model.solid.gravity
-    mu_w = model.w_phase.viscosity
-    mu_n = model.n_phase.viscosity
-    porosity = model.solid.porosity
-
-    # Cell Centered Variables
-    rho_w = utils.cell_center(p_w, model.w_phase.density_function, mesh)
-    rho_n = utils.cell_center(p_n, model.n_phase.density_function, mesh)
-    k_rw = utils.cell_center(p_c, model.w_phase.rel_perm_function, mesh)
-    k_rn = utils.cell_center(p_c, model.n_phase.rel_perm_function, mesh)
-
-    # Face Centered Values
-    del_pw = utils.gradient(p_w, mesh)
-    del_pn = utils.gradient(p_n, mesh)
-
-    rho_w_face = utils.interpolate(rho_w, mesh)
-    rho_n_face = utils.interpolate(rho_n, mesh)
-
-    q_w = darcy_velocity(
-        mesh,
-        k,
-        utils.interpolate(k_rw * rho_w, mesh),
-        mu_w,
-        del_pw,
-        rho_w_face,
-        gravity,
-    )
-
-    q_n = darcy_velocity(
-        mesh,
-        k,
-        utils.interpolate(k_rn * rho_n, mesh),
-        mu_n,
-        del_pn,
-        rho_n_face,
-        gravity,
-    )
+    e_w, p_w, e_wn, j_wn, w_wn, k_wn, e_n, p_n, p_c = model_primary_variables(u, model)
+    
+    q_w, q_n, rho_w, rho_n = model_phase_flux(p_w, p_n, p_c, model)
 
     flux_bc = {"q_w": [q_w[0], q_w[nodes - 1]], "q_n": [q_n[0], q_n[nodes - 1]]}
 
@@ -299,7 +381,9 @@ def model_residual_boundary(t, f, u, model):
         if boundary_type[u_names[0]][0][1] == 0:
             f[nodes - 1] = u[nodes - 1] - boundary_value[0][0][1](t)
         elif boundary_type[u_names[0]][0][1] == 1:
-            f[nodes - 1] = flux_bc[boundary_name[0][0][1]][1] - boundary_value[0][0][1](t)
+            f[nodes - 1] = flux_bc[boundary_name[0][0][1]][1] - boundary_value[0][0][1](
+                t
+            )
         else:
             print("Boundary type non supported")
 
@@ -311,14 +395,18 @@ def model_residual_boundary(t, f, u, model):
             if boundary_type[u_names[n]][0][0] == 0:
                 f[0][n] = u[0][n] - boundary_value[n][0][0](t)
             elif boundary_type[u_names[n]][0][0] == 1:
-                f[0][n] = flux_bc[boundary_name[n][0][0]][0] - boundary_value[n][0][0](t)
+                f[0][n] = flux_bc[boundary_name[n][0][0]][0] - boundary_value[n][0][0](
+                    t
+                )
             else:
                 print("Boundary type non supported")
             # Residual at Boundary 2
             if boundary_type[u_names[n]][0][1] == 0:
                 f[nodes - 1][n] = u[nodes - 1][n] - boundary_value[n][0][1](t)
             elif boundary_type[u_names[n]][0][1] == 1:
-                f[nodes - 1][n] = flux_bc[boundary_name[n][0][1]][1] - boundary_value[n][0][1](t)
+                f[nodes - 1][n] = flux_bc[boundary_name[n][0][1]][1] - boundary_value[
+                    n
+                ][0][1](t)
             else:
                 print("Boundary type non supported")
 

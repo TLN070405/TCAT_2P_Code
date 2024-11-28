@@ -23,7 +23,6 @@ class Fluid(Phase):
         self.volume_fraction_function = None
         self.d_volume_fraction_function = None
 
-
     def set_viscosity(self,viscosity):
         """
         Set viscosity
@@ -77,6 +76,7 @@ class Solid(Phase):
         self.permeability = None
         self.gravity = None
         self.dynamic_capillary_pressure_parameter = None
+
     def set_porosity(self,porosity):
         """
         Set porosity

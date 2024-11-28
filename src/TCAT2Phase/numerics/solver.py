@@ -6,7 +6,7 @@ from petsc4py import PETSc
 
 __all__ = ["solver"]
 
-def solver(u,ts,model):
+def solver_time(u,ts,model):
     """
     Collect all information and drive the simulation
     """
@@ -15,6 +15,29 @@ def solver(u,ts,model):
         ts.setMaxTime(t)
         ts.solve(u)
         model.clean_solution(u.getArray(), t)
+
+    return model.solution
+
+def solver_error(u,ts,model):
+    """
+    Collect all information and drive the simulation
+    """
+    iteration = 1
+    max_steps = 100000
+    error_threshold = 1e-6
+    error = float("inf")
+    u_old = u.getArray().copy()
+
+    while error > error_threshold and ts.getStepNumber() < iteration < max_steps:
+        ts.setMaxSteps(iteration)
+        ts.solve(u)
+
+        u_new = u.getArray().copy()
+        error = np.linalg.norm( np.abs(u_new - u_old)/ts.getTimeStep())/len(u_new)
+        u_old = u_new
+        iteration += 1
+
+    model.clean_solution(u.getArray(), ts.getTime())
 
     return model.solution
 

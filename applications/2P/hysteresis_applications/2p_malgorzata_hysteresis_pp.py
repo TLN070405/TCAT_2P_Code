@@ -129,7 +129,7 @@ w_phase.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 # Set hysteresis data
 model.hysteresis = True
 
-drainage_process_new         = np.full((nodes), True)
+drainage_process_new = np.full((nodes), True)
 p_c_reversal         = np.full((nodes), 0.0)
 p_c_endpoint         = np.full((nodes), 0.0)
 e_w_reversal         = np.full((nodes), 0.0)
