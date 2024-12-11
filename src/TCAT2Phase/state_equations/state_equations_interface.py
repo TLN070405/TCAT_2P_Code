@@ -225,7 +225,7 @@ class TCAT:
     """
     VanGenuchten Class to hold functions and parameters
     """
-    def __init__(self,b1,b2,b3,D,porosity,e_ns,e_ws,js_ns,kn_ns):
+    def __init__(self,b1,b2,b3,porosity,e_ns,e_ws,js_ns,kn_ns):
         """
         Initialize the VanGenuchten parameters
         """
@@ -235,7 +235,7 @@ class TCAT:
         self.e_ws = e_ws
         self.js_ns = js_ns
         self.kn_ns = kn_ns
-        self.D  = D
+        self.D  = 6.0*porosity/(e_ws+e_ns)
         self.D2 = self.D*self.D
         self.D3 = self.D2*self.D
 

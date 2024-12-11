@@ -42,47 +42,13 @@ def model_formfunction_boundary(t,f,u,model):
     """
     Boundary points residual
     """
-    # Collect discretization parameters
-    e_w,p_w,p_n,p_c = residual.model_primary_variables(u,model)
     mesh = model.mesh
     nodes=model.nodes
-    # Constant Pameters
-    k = model.solid.permeability
-    gravity =model.solid.gravity
-    mu_w = model.w_phase.viscosity
-    mu_n = model.n_phase.viscosity
 
-    # Cell Centered Variables
-    rho_w = utils.cell_center(p_w,model.w_phase.density_function,mesh)
-    rho_n = utils.cell_center(p_n,model.n_phase.density_function,mesh)
+    # Collect primary variables
+    e_w, p_w, e_wn, j_wn, w_wn, k_wn, e_n, p_n, p_c = residual.model_primary_variables(u,model)
 
-    k_rw  = utils.cell_center(p_c,model.w_phase.rel_perm_function,mesh)
-    k_rn  = utils.cell_center(p_c,model.n_phase.rel_perm_function,mesh)
-
-    # Face Centered Values
-    del_pw = utils.gradient(p_w,mesh)
-    del_pn = utils.gradient(p_n,mesh)
-
-    rho_w_face = utils.interpolate(rho_w,mesh)
-    rho_n_face = utils.interpolate(rho_n,mesh)
-
-    q_w = residual.darcy_velocity(
-                   mesh,
-                   k,
-                   utils.interpolate(k_rw*rho_w,mesh),
-                   mu_w,
-                   del_pw,
-                   rho_w_face,
-                   gravity)
-
-    q_n = residual.darcy_velocity(
-                   mesh,
-                   k,
-                   utils.interpolate(k_rn*rho_n,mesh),
-                   mu_n,
-                   del_pn,
-                   rho_n_face,
-                   gravity)
+    q_w, q_n, rho_w, rho_n = residual.model_phase_flux(e_w, p_w, p_n, p_c, model)
 
     flux_bc ={'q_w':[q_w[0],q_w[nodes-1]],
               'q_n':[q_n[0],q_n[nodes-1]]}

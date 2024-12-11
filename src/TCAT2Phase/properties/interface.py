@@ -6,32 +6,38 @@ class Interface:
     Interface class
     """
     def __init__(self):
-        self.c_wn  = None
-        self.gamma_wn  = None
-        self.k_hat_wn = None
-        self.e_wn_eq = None
+        self.interfacial_dynamics  = None
+        self.interfacial_tension  = None
+        self.interfacial_area_relaxation = None
+        self.interfacial_area_equilibrium = None
         self.pc_function = None
         self.d_pc_function = None
         self.volume_fraction_function = None
         self.d_volume_fraction_function = None
 
-    def set_c_wn(self,c_wn):
+    def set_interfacial_dynamics(self,interfacial_dynamics):
         """
-        Set c_wn
+        Set interfacial_dynamics (c_wn =porosity/tau)
         """
-        self.c_wn = c_wn
+        self.interfacial_dynamics = interfacial_dynamics
 
-    def set_gamma_wn(self,gamma_wn):
+    def set_interfacial_tension(self,interfacial_tension):
         """
-        Set gamma_wn
+        Set interfacial_tension (gamma_wn)
         """
-        self.gamma_wn = gamma_wn
+        self.interfacial_tension = interfacial_tension
 
-    def set_k_hat_wn(self,k_hat_wn):
+    def set_interfacial_area_relaxation(self,interfacial_area_relaxation):
         """
-        Set k_hat_wn
+        Set interfacial_area_relaxation (k_hat_wn)
         """
-        self.k_hat_wn = k_hat_wn
+        self.interfacial_area_relaxation = interfacial_area_relaxation
+
+    def set_interfacial_area_equilibrium(self,interfacial_area_equilibrium):
+        """
+        Set interfacial_area_equilibrium e_wn_eq
+        """
+        self.interfacial_area_equilibrium = interfacial_area_equilibrium
 
     def set_pc_function(self,pc_function,**parameters):
         """

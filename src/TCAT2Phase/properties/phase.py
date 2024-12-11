@@ -16,6 +16,7 @@ class Fluid(Phase):
     def __init__(self,phase_name):
         super().__init__(phase_name)
         self.viscosity = None
+        self.momentum_resistance      = None
         self.residual_volume_fraction = None
         self.density_function = None
         self.d_density_function = None
@@ -28,6 +29,12 @@ class Fluid(Phase):
         Set viscosity
         """
         self.viscosity = viscosity
+
+    def set_momentum_resistance(self,momentum_resistance):
+        """
+        Set momentum_resistance Rw_w
+        """
+        self.momentum_resistance = momentum_resistance
 
     def set_residual_volume_fraction(self,residual_volume_fraction):
         """
