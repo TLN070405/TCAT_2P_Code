@@ -6,8 +6,9 @@ from TCAT2Phase.numerics import utils
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
+import math
 # Domain
-domain_size = np.array([[0.0,1.0]])
+domain_size = np.array([[0.0,10.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -55,7 +56,7 @@ model.set_boundary_name(boundary_name = boundary_name)
 
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s')
-s_phase.set_porosity(0.36)
+s_phase.set_porosity(0.369)
 s_phase.set_gravity(0.0)
 
 # Set wetting-phase properties
@@ -81,11 +82,11 @@ tcat = state_equations_interface.TCAT(
     e_ns = 1. ,
     e_ws = 1. ,
     js_ns = 1.,
-    kn_ns = 1.
+    kn_ns = 1.167425480799784
     )
-wn_interface.set_interfacial_dynamics(1e-7)
+wn_interface.set_interfacial_dynamics(-3.42e-7)
 wn_interface.set_interfacial_tension(35e-3)
-wn_interface.set_interfacial_area_relaxation(1.41e-2)
+wn_interface.set_interfacial_area_relaxation(-1.41e-2)
 wn_interface.set_volume_fraction_function(tcat.volume_fraction_w)
 
 w_phase.set_rel_perm_function(tcat.w_relative_permability)
@@ -96,28 +97,62 @@ model.w_phase = w_phase
 model.interface = wn_interface
 
 
-
-
+# Set initial conditions
+ew_ic= np.zeros([nodes])
+pw_ic= np.zeros([nodes])
+ewn_ic= np.zeros([nodes])
+jwn_ic= np.zeros([nodes])
+wwn_ic= np.zeros([nodes])
+kwn_ic= np.zeros([nodes])
 ewn_eq = np.zeros([nodes])
-for i in range(0,nodes):
-    ewn_eq[i] = 1e-8
+x_loc = np.zeros([nodes])
+d_ew_d_x  = np.zeros([nodes])
+
+
+
+ew_ic[0] =  0.36827819724962085
+pw_ic[0] =  -900
+ewn_ic[0] = 0.12* ew_ic[0]
+jwn_ic[0] = -pw_ic[0]/wn_interface.interfacial_tension
+ewn_eq[0] = ewn_ic[0]
+wwn_ic[0] = 2.249045416635531e-20
+kwn_ic[0] = -11811.673216860348
+
+for i in range(1,nodes):
+    ew_ic[i] =  0.36796438207402804
+    pw_ic[i] =  -1000
+    ewn_ic[i] = 0.1* ew_ic[i]
+    jwn_ic[i] = -pw_ic[i]/wn_interface.interfacial_tension
+    ewn_eq[i] = ewn_ic[i]
+    wwn_ic[i] = 0.0
+    kwn_ic[i] = -13468.662000579367
+
+
 wn_interface.set_interfacial_area_equilibrium(ewn_eq)
 
+initial_conditions = {'e_w': ew_ic,
+                      'p_w': pw_ic,
+                      'e_wn': ewn_ic,
+                      'j_wn': jwn_ic,
+                      'w_wn': wwn_ic,
+                      'k_wn': kwn_ic}
+
+model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
-def ew0_bc(t): return  0.9 * s_phase.porosity
-def pw0_bc(t): return 2000
-def ewn0_bc(t): return 1e-8
-def jwn0_bc(t): return -2000/wn_interface.interfacial_tension
-def wwn0_bc(t): return  0.0
-def kwn0_bc(t): return -2242533027.870139
+def ew0_bc(t): return ew_ic[0]
+def pw0_bc(t): return  pw_ic[0]
+def ewn0_bc(t): return ewn_ic[0]
+def jwn0_bc(t): return jwn_ic[0]
+def wwn0_bc(t): return wwn_ic[0] 
+def kwn0_bc(t): return kwn_ic[0]
 
-def ewL_bc(t): return  0.9 * s_phase.porosity
-def pwL_bc(t): return 2000
-def ewnL_bc(t): return 1e-8
-def jwnL_bc(t): return -2000/wn_interface.interfacial_tension
-def wwnL_bc(t): return  0.0
-def kwnL_bc(t): return -2242533027.870139
+def ewL_bc(t): return  ew_ic[nodes-1]
+def pwL_bc(t): return pw_ic[nodes-1]
+def ewnL_bc(t): return ewn_ic[nodes-1]
+def jwnL_bc(t): return jwn_ic[nodes-1]
+def wwnL_bc(t): return wwn_ic[nodes-1] 
+def kwnL_bc(t): return kwn_ic[nodes-1]
 
 
 boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
@@ -130,40 +165,8 @@ boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 
-
-
-
-# Set initial conditions
-ew_ic= np.zeros([nodes])
-pw_ic= np.zeros([nodes])
-ewn_ic= np.zeros([nodes])
-jwn_ic= np.zeros([nodes])
-wwn_ic= np.zeros([nodes])
-kwn_ic= np.zeros([nodes])
-
-
-
-for i in range(0,nodes):
-    ew_ic[i] =  0.9 * s_phase.porosity
-    pw_ic[i] = 2000
-    ewn_ic[i] = 1e-8
-    jwn_ic[i] = -2000/wn_interface.interfacial_tension
-    wwn_ic[i] = 0.0
-    kwn_ic[i] = -2242533027.870139
-
-
-initial_conditions = {'e_w': ew_ic,
-                      'p_w': pw_ic,
-                      'e_wn': ewn_ic,
-                      'j_wn': jwn_ic,
-                      'w_wn': wwn_ic,
-                      'k_wn': kwn_ic}
-
-model.set_initial_conditions(initial_conditions)
-
-
 # Time
-time_interval = np.array([50.])
+time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1,1,100,1e3,1e4,1e5,1.5e5])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
@@ -172,7 +175,7 @@ OptDB = PETSc.Options()
 # Time-Stepper Options
 OptDB.setValue('snes_fd_color', None)
 OptDB.setValue('ts_type', 'bdf')
-OptDB.setValue('ts_bdf_order', 1)
+OptDB.setValue('ts_bdf_order', 5)
 OptDB.setValue('ts_max_steps',100000)
 OptDB.setValue('ts_max_reject',500)
 OptDB.setValue('ts_monitor', None)
