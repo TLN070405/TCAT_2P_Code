@@ -137,7 +137,7 @@ d_ew_d_x  = np.zeros([nodes])
 for i in range(0,nodes):
     x_loc[i] = i*10/(nodes-1)
     ew_ic[i] = ew_ic_func(x_loc[i],-1000)
-    pw_ic[i] = -1000-1000*9.81*x_loc[i]
+    pw_ic[i] = -1000-1000*9.81*x_loc[i]+1e-4
     ewn_ic[i] = 100*ew_ic[i]
     jwn_ic[i] = -pw_ic[i]/wn_interface.interfacial_tension
     ewn_eq[i] = ewn_ic[i]

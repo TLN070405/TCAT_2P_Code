@@ -163,7 +163,8 @@ model.set_initial_conditions(initial_conditions)
 
 
 # Time
-time_interval = np.array([50.])
+time_interval = np.array([50.]) #Time interval without perturbation
+#time_interval = np.array([.0001,.0001,.001,.01,.1,1,10]) #Time interval with perturbation.
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
