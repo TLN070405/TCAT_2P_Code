@@ -166,7 +166,7 @@ model.set_boundary_value(boundary_value = boundary_value)
 
 
 # Time
-time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1,1,100,1e3,1e4,1e5,1.5e5])
+time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1,1,100,2e5,3e5,5e5,6e5])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters

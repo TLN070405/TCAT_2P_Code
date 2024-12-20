@@ -123,7 +123,7 @@ model.n_phase = n_phase
 model.interface = wn_interface
 
 # Time
-time_interval = np.array([ 1000.,2000.])
+time_interval = np.array([10000])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
@@ -149,13 +149,27 @@ OptDB.setValue('pc_type', 'lu')
 
 
 # Solve model
-solutions = TCAT2Phase.numerics.solver.solver(model)
+u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
+solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
     plt.xlabel('x(m)')
-    plt.ylabel('Pw')
+    plt.ylabel('p_w')
+    plt.title('Richards Solution')
+    plt.legend()
+plt.show()
+
+
+e_w=np.zeros([nodes] )
+for time,variable in solutions.items():
+    p_w = variable['p_w']
+    for n in range(0,nodes):
+        e_w[n]= model.interface.volume_fraction_function(-p_w[n])
+    plt.plot(e_w,mesh.points,label=f't={time}')
+    plt.xlabel('x(m)')
+    plt.ylabel('p_w')
     plt.title('Richards Solution')
     plt.legend()
 plt.show()

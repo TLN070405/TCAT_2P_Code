@@ -132,10 +132,12 @@ w_phase.set_d_volume_fraction_function(vg_imb.d_volume_fraction_w)
 model.hysteresis = True
 
 drainage_process_new         = np.full((nodes), False)
-p_c_reversal         = np.full((nodes), 0.0)
-p_c_endpoint         = np.full((nodes), 0.0)
-e_w_reversal         = np.full((nodes), 0.0)
-e_w_endpoint         = np.full((nodes), 0.0)
+max_reversal_points  = 6
+e_w_reversal         = np.full((nodes,max_reversal_points), 0.003)
+e_w_endpoint         = np.full((nodes,max_reversal_points), 0.4)
+p_c_reversal         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_reversal[0][0]))
+p_c_endpoint         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_endpoint[0][0]))
+
 ew_hysteresis        = np.full((nodes,100000), 0.0)
 pc_hysteresis        = np.full((nodes,100000), 0.0)
 
@@ -145,28 +147,20 @@ switch_condition ='e_w'
 for n in range(1,nodes-1):
     ew_hysteresis[n][0]     =  0.008
     pc_hysteresis[n][0]     =  13706.965861446095
-    e_w_reversal[n]      = 0.003
-    e_w_endpoint[n]      =  0.4
-    p_c_reversal[n]      = wn_interface_imb.pc_function(e_w_reversal[n])
-    p_c_endpoint[n]      = wn_interface_imb.pc_function(e_w_endpoint[n])
-
 
 
 #####    x=0
 ew_hysteresis[0][0]     = 0.12
 pc_hysteresis[0][0]     = 2113.152788450121
-e_w_reversal[0]      = 0.003
-e_w_endpoint[0]      = 0.4
-p_c_reversal[0]      = wn_interface_imb.pc_function(e_w_reversal[0])
-p_c_endpoint[0]      = wn_interface_imb.pc_function(e_w_endpoint[0])
+e_w_reversal[0][0]      = 0.003
+e_w_endpoint[0][0]      = 0.4
+p_c_reversal[0][0]      = wn_interface_imb.pc_function(e_w_reversal[0][0])
+p_c_endpoint[0][0]      = wn_interface_imb.pc_function(e_w_endpoint[0][0])
 
 #####    x=L
 ew_hysteresis[nodes-1][0]     = 0.008
 pc_hysteresis[nodes-1][0]     = 13706.965861446095
-e_w_reversal[nodes-1]      = 0.003
-e_w_endpoint[nodes-1]      = 0.4
-p_c_reversal[nodes-1]      = wn_interface_imb.pc_function(e_w_reversal[nodes-1])
-p_c_endpoint[nodes-1]      = wn_interface_imb.pc_function(e_w_endpoint[nodes-1])
+
 
 
 model.interface = state_equations_hysteresis.ParkerLenhard(
@@ -181,7 +175,8 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     ew_hysteresis,
     pc_hysteresis,
     switch_condition,
-    hysteresis_tol
+    hysteresis_tol,
+    max_reversal_points
     )
 
 # Set initial conditions
@@ -208,7 +203,7 @@ model.set_boundary_value(boundary_value = boundary_value)
 
 
 # Time
-time_interval = np.array([10000,15000,20000])
+time_interval = np.array([10000,20000])
 
 model.set_simulation_time(time_interval)
 
@@ -237,7 +232,8 @@ OptDB.setValue('pc_type', 'sor')
 # Solve model and return model.solutions
 # which is a dictionary where
 # solutions[time][u_name] = np.array
-solutions = TCAT2Phase.numerics.solver.solver(model)
+u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
+solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['e_w'],label=f't={time}')

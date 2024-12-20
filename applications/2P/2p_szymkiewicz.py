@@ -60,11 +60,11 @@ model.set_boundary_value(boundary_value = boundary_value)
 # Set initial conditions: Only set up for constant values!
 ew_ic= np.zeros([nodes] )
 pw_ic= np.zeros([nodes] )
-pw_ic[0] = -1049.67 
-ew_ic[0] =  0.27 
+pw_ic[0] = -1049.67
+ew_ic[0] =  0.27
 for i in range(1,nodes):
-    pw_ic[i] = -9996.39 
-    ew_ic[i] =   0.003 
+    pw_ic[i] = -9996.39
+    ew_ic[i] =   0.003
 
 
 initial_conditions = {'e_w': ew_ic ,
@@ -102,7 +102,7 @@ n_phase.set_volume_fraction_function(state_equations.volume_fraction,**n_en_para
 # Set w-n interphase properties
 wn_interface = TCAT2Phase.properties.interface.Interface()
 
-pd=  1000.0 
+pd=  1000.0
 lamda = 2.0
 bc = state_equations_interface.BrooksCorey(
     pd = pd,
@@ -130,7 +130,7 @@ model.n_phase = n_phase
 model.interface = wn_interface
 
 # Time
-time_interval = np.array([ 10,100,1000,3000])
+time_interval = np.array([ 10,100])
 model.set_simulation_time(time_interval)
  
 # Numerical Parameters
@@ -150,17 +150,17 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options 
+# Preconditioner Options
 OptDB.setValue('pc_type', 'sor')
- 
 
 
- 
+
 # Solve model
 # Solve model and return model.solutions
 # which is a dictionary where
 # solutions[time][u_name] = np.array
-solutions = TCAT2Phase.numerics.solver.solver(model)
+u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
+solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['e_w'],label=f't={time}')
@@ -168,8 +168,7 @@ for time,variable in solutions.items():
     plt.ylabel("e_w")
     plt.title("Szymkiewicz Solution")
     plt.legend()
-plt.show()  
-
+plt.show()
 
 for time,variable in solutions.items():
     print(time,variable)
@@ -178,6 +177,4 @@ for time,variable in solutions.items():
     plt.ylabel('Pw')
     plt.title('Szymkiewicz Solution')
     plt.legend()
-plt.show()    
-
- 
+plt.show()
