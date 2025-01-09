@@ -15,11 +15,14 @@ class ParkerLenharddata:
     ew_endpoint: np.ndarray
     ew_hysteresis: np.ndarray
     pc_hysteresis: np.ndarray
+    process_hysteresis: np.ndarray
     switch_condition: str
     hysteresis_tol: float
     max_reversal_points: int
 
     drainage_process_old: np.ndarray = field(default_factory=lambda: np.array([]))
+    switch_condition_value:  np.ndarray = field(default_factory=lambda: np.array([]))
+
     counter_hysteresis: int = 1
 
 class ParkerLenhard:
@@ -34,6 +37,7 @@ class ParkerLenhard:
             ew_endpoint,
             ew_hysteresis,
             pc_hysteresis,
+            process_hysteresis,
             switch_condition,
             hysteresis_tol,
             max_reversal_points):
@@ -48,11 +52,13 @@ class ParkerLenhard:
             ew_endpoint,
             ew_hysteresis,
             pc_hysteresis,
+            process_hysteresis,
             switch_condition,
             hysteresis_tol,
             max_reversal_points)
 
-        self.data.drainage_process_old     = np.array(drainage_process_new)
+        self.data.drainage_process_old = np.array(drainage_process_new)
+        self.data.switch_condition_value  = np.array(process_hysteresis)
         self.e_w           = np.zeros_like(model.nodes)
         self.p_w           = np.zeros_like(model.nodes)
         self.p_n           = np.zeros_like(model.nodes)
@@ -210,6 +216,10 @@ class ParkerLenhard:
         # Store hysteretic ew and pc for visualization
         self.data.ew_hysteresis[n,self.data.counter_hysteresis] = ew
         self.data.pc_hysteresis[n,self.data.counter_hysteresis] = pc
+        if self.data.drainage_process_new[n] == True:
+            self.data.process_hysteresis[n,self.data.counter_hysteresis] = -1
+        else:
+            self.data.process_hysteresis[n,self.data.counter_hysteresis] = 1
 
     def model_update_hysteresis(self,ts):
         """
@@ -227,6 +237,7 @@ class ParkerLenhard:
 
         for n in range(0,nodes):
             self.model.current_cell = n
+            self.data.switch_condition_value[n,counter] = switch_condition[n]
             self.determine_hysteresis_state(switch_condition[n])
             self.store_hysteresis_results(self.e_w[n], self.p_n[n]-self.p_w[n])
 

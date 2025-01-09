@@ -7,6 +7,7 @@ from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 from TCAT2Phase.state_equations import state_equations_hysteresis
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 # Domain
 
 domain_size = np.array([[0.0,1.0]])
@@ -137,14 +138,14 @@ p_c_endpoint         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_f
 
 ew_hysteresis        = np.full((nodes,100000), 0.0)
 pc_hysteresis        = np.full((nodes,100000), 0.0)
-
+process_hysteresis   = np.full((nodes,100000), 0.0)
 hysteresis_tol = 1e-10
 switch_condition ='e_w'
 
 for n in range(0,nodes):
     ew_hysteresis[n][0]  = 0.397
     pc_hysteresis[n][0]  = 346.7309109719586
-
+    process_hysteresis[n][0] = -1
 
 model.interface = state_equations_hysteresis.ParkerLenhard(
     model,
@@ -157,6 +158,7 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     e_w_endpoint,
     ew_hysteresis,
     pc_hysteresis,
+    process_hysteresis,
     switch_condition,
     hysteresis_tol,
     max_reversal_points
@@ -232,7 +234,7 @@ boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 # Time
-time_interval = np.array([2000])
+time_interval = np.array([1000.0])
 #time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
 
 model.set_simulation_time(time_interval)
@@ -244,7 +246,7 @@ OptDB = PETSc.Options()
 OptDB.setValue('snes_fd_color', None)
 OptDB.setValue('ts_type', 'bdf')
 OptDB.setValue('ts_bdf_order', 5)
-OptDB.setValue('ts_max_steps',50)
+OptDB.setValue('ts_max_steps',10000)
 OptDB.setValue('ts_max_reject',500)
 OptDB.setValue('ts_monitor', None)
 
@@ -274,7 +276,6 @@ plt.show()
 
 
 for time,variable in solutions.items():
-    print(time,variable)
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
     plt.xlabel('x (m)')
     plt.ylabel('p_w')
@@ -316,3 +317,50 @@ plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()
 
+
+
+# Define x and y values
+time_step_number = 1028
+spatial_domain = np.linspace(0, nodes, nodes)
+gradient = model.interface.data.switch_condition_value[:,time_step_number]
+
+
+# Define an arbitrary array z with values -1 or 1
+process = model.interface.data.process_hysteresis[:,time_step_number]
+
+# Create the plot
+plt.figure(figsize=(12, 6))
+plt.plot(spatial_domain, gradient, label="switching condition = e_w", color="black")
+
+# Define colors
+color_map = {-1: "lightcoral", 1: "lightblue"}
+
+
+# Fill the regions based on the values in process
+step = 1
+color = color_map[process[0]]
+plt.axvspan(0, 0 + step, color=color, alpha=0.3)
+
+for n, i in enumerate(np.arange(1, nodes-1, step)):
+    color = color_map[process[n]]
+    plt.axvspan(i, i + step, color=color, alpha=0.3)
+
+color = color_map[process[nodes-1]]
+plt.axvspan(nodes-1, nodes-1 + step, color=color, alpha=0.3)
+# Add labels, title, legend, and grid
+plt.xlabel("spatial nodes")
+plt.ylabel("gradient")
+plt.title("Switching condition versus spatial domain")
+
+# Add custom legend for colors
+plt.plot([], [], color="lightcoral", label="dr", linewidth=10, alpha=0.3)
+plt.plot([], [], color="lightblue", label="imb", linewidth=10, alpha=0.3)
+plt.legend()
+plt.grid(True)
+plt.show()
+
+plt.scatter(gradient,process)
+plt.xlabel('switching gradient')
+plt.ylabel('process -1 for drainage and 1 for imb ')
+plt.title(' Gradient versus process')
+plt.show()
