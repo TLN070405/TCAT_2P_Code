@@ -139,6 +139,7 @@ p_c_endpoint         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_f
 ew_hysteresis        = np.full((nodes,100000), 0.0)
 pc_hysteresis        = np.full((nodes,100000), 0.0)
 process_hysteresis   = np.full((nodes,100000), 0.0)
+time_hysteresis      = np.full((100000), 0.0)
 hysteresis_tol = 1e-10
 switch_condition ='e_w'
 
@@ -159,6 +160,7 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     ew_hysteresis,
     pc_hysteresis,
     process_hysteresis,
+    time_hysteresis,
     switch_condition,
     hysteresis_tol,
     max_reversal_points
@@ -318,6 +320,56 @@ plt.legend()
 plt.show()
 
 
+time= model.interface.data.time_hysteresis[0:counter_hysteresis]
+
+
+# Define x and y values
+time_step_number = 900
+spatial_domain = np.linspace(0, nodes, nodes)
+gradient = model.interface.data.switch_condition_value[:,time_step_number]
+
+
+# Define an arbitrary array z with values -1 or 1
+process = model.interface.data.process_hysteresis[:,time_step_number]
+
+# Create the plot
+plt.figure(figsize=(12, 6))
+plt.plot(spatial_domain, gradient, label="switching condition = e_w", color="black")
+
+# Define colors
+color_map = {-1: "lightcoral", 1: "lightblue"}
+
+
+# Fill the regions based on the values in process
+step = 1
+color = color_map[process[0]]
+plt.axvspan(0, 0 + step, color=color, alpha=0.3)
+
+for n, i in enumerate(np.arange(1, nodes-1, step)):
+    color = color_map[process[n]]
+    plt.axvspan(i, i + step, color=color, alpha=0.3)
+
+color = color_map[process[nodes-1]]
+plt.axvspan(nodes-1, nodes-1 + step, color=color, alpha=0.3)
+# Add labels, title, legend, and grid
+plt.xlabel("spatial nodes")
+plt.ylabel("gradient")
+plt.title(f"Switching condition versus spatial domain at time {time[time_step_number]}")
+
+# Add custom legend for colors
+plt.plot([], [], color="lightcoral", label="dr", linewidth=10, alpha=0.3)
+plt.plot([], [], color="lightblue", label="imb", linewidth=10, alpha=0.3)
+plt.legend()
+plt.grid(True)
+plt.show()
+
+plt.scatter(gradient,process)
+plt.xlabel('switching gradient')
+plt.ylabel('process -1 for drainage and 1 for imb ')
+plt.title(' Gradient versus process')
+plt.show()
+
+
 
 # Define x and y values
 time_step_number = 1028
@@ -350,7 +402,7 @@ plt.axvspan(nodes-1, nodes-1 + step, color=color, alpha=0.3)
 # Add labels, title, legend, and grid
 plt.xlabel("spatial nodes")
 plt.ylabel("gradient")
-plt.title("Switching condition versus spatial domain")
+plt.title(f"Switching condition versus spatial domain at time {time[time_step_number]}")
 
 # Add custom legend for colors
 plt.plot([], [], color="lightcoral", label="dr", linewidth=10, alpha=0.3)

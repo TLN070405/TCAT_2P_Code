@@ -92,7 +92,7 @@ class Solid(Phase):
 
     def set_permeability(self,permeability):
         """
-        Set permeability
+        Set permeability constant
         """
         self.permeability = permeability
 
@@ -104,6 +104,6 @@ class Solid(Phase):
 
     def set_dynamic_capillary_pressure_parameter(self,dynamic_capillary_pressure_parameter):
         """
-        Set gravity constant
+        Set dynamic_capillary_pressure_parameter  constant
         """
         self.dynamic_capillary_pressure_parameter = dynamic_capillary_pressure_parameter

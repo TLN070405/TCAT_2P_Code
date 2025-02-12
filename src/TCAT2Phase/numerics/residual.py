@@ -307,7 +307,7 @@ def model_A_matrix(e_w, p_w, e_wn, j_wn, k_wn, p_n, p_c, rho_w, rho_n, e_n, mode
         A[3, 2] = j_wn
         A[3, 3] = e_wn
     else:
-        d_p_c_e_w = model.interface.d_pc_function(e_w)
+        #d_p_c_e_w = model.interface.d_pc_function(e_w)
         d_e_w_p_c = model.interface.d_volume_fraction_function(p_c)
         d_rho_n_p_n = model.n_phase.d_density_function(p_n)
 
