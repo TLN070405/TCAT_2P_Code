@@ -95,24 +95,24 @@ class ParkerLenhard:
 
         sa = self.apparent_saturation_function(pc)
         snte = self.linear_effective_entrapped_saturation_nw(sa)
-        ew_hystereric = (sa - snte) * (porosity-e_wr) + e_wr
+        ew_hysteretic = (sa - snte) * (porosity-e_wr) + e_wr
 
-        return ew_hystereric
+        return ew_hysteretic
 
     def d_volume_fraction_function(self, pc):
         """
         Hysteretic derivative volume fraction of w phase  
         """
- 
+
         e_wr = self.model.w_phase.residual_volume_fraction
         porosity = self.model.solid.porosity
 
         dsa   = self.d_apparent_saturation_function( pc)
         dsnte = self.d_linear_effective_entrapped_saturation_nw(dsa)
 
-        dew_hystereric = (porosity-e_wr)*(dsa-dsnte)
+        dew_hysteretic = (porosity-e_wr)*(dsa-dsnte)
 
-        return dew_hystereric
+        return dew_hysteretic
 
     def apparent_saturation_function(self, pc):
         """
@@ -137,7 +137,7 @@ class ParkerLenhard:
 
     def d_apparent_saturation_function(self, pc):
         """
-        Hysteretic volume fraction of w phase  
+        Hysteretic apparent saturation with respect to pc dSa/dpc
         """
         drainage_process,sa_reversal,sa_endpoint,pc_reversal,pc_endpoint,snte_reversal,snte_endpoint = self.get_data_hysteresis()
         e_wr = self.model.w_phase.residual_volume_fraction
@@ -166,7 +166,7 @@ class ParkerLenhard:
         e_nr = self.model.n_phase.residual_volume_fraction
         porosity = self.model.solid.porosity
 
-        if sa_reversal == 1.0 or e_nr == 0:
+        if e_nr == 0:
             s_nr_e = 0.0
         else:
             r_nw = ((porosity-e_wr)/e_nr)-1

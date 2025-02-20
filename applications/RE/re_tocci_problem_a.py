@@ -145,8 +145,8 @@ OptDB.setValue('pc_type', 'sor')
 
  
 # Solve model
-solutions = TCAT2Phase.numerics.solver.solver(model)
-
+u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
+solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
