@@ -130,36 +130,27 @@ w_phase.set_d_volume_fraction_function(vg_imb.d_volume_fraction_w)
 
 # Set hysteresis data and model
 model.hysteresis = True
-
-drainage_process_new         = np.full((nodes), False)
-max_reversal_points  = 6
-e_w_reversal         = np.full((nodes,max_reversal_points), 0.003)
-e_w_endpoint         = np.full((nodes,max_reversal_points), 0.4)
-p_c_reversal         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_reversal[0][0]))
-p_c_endpoint         = np.full((nodes,max_reversal_points), wn_interface_dr.pc_function(e_w_endpoint[0][0]))
-
-ew_hysteresis        = np.full((nodes,100000), 0.0)
-pc_hysteresis        = np.full((nodes,100000), 0.0)
-
-hysteresis_tol = 1e-6
 switch_condition ='e_w'
 
-for n in range(1,nodes-1):
-    ew_hysteresis[n][0]     =  0.008
-    pc_hysteresis[n][0]     =  13706.965861446095
+max_reversals  = 20
+hysteresis_tol = 1e-6
+max_time_steps = 100000
+
+e_wr           = w_phase.residual_volume_fraction
 
 
-#####    x=0
-ew_hysteresis[0][0]     = 0.12
-pc_hysteresis[0][0]     = 2113.152788450121
-e_w_reversal[0][0]      = 0.003
-e_w_endpoint[0][0]      = 0.4
-p_c_reversal[0][0]      = wn_interface_imb.pc_function(e_w_reversal[0][0])
-p_c_endpoint[0][0]      = wn_interface_imb.pc_function(e_w_endpoint[0][0])
+drainage_process_new  = np.full((nodes), False)
+e_w_reversal         = np.full((nodes,max_reversals), 1e-5 )
+e_w_endpoint         = np.full((nodes,max_reversals), s_phase.porosity)
+p_c_reversal         = np.full((nodes,max_reversals), wn_interface_imb.pc_function(e_w_reversal[0][0]) )
+p_c_endpoint         = np.full((nodes,max_reversals), wn_interface_imb.pc_function(e_w_endpoint[0][0]) )
 
-#####    x=L
-ew_hysteresis[nodes-1][0]     = 0.008
-pc_hysteresis[nodes-1][0]     = 13706.965861446095
+s_a_reversal         = np.full((nodes,max_reversals), (e_w_reversal[0][0]-e_wr)/(s_phase.porosity-e_wr))
+s_a_endpoint         = np.full((nodes,max_reversals), (e_w_endpoint[0][0]-e_wr)/(s_phase.porosity-e_wr))
+
+s_nte_reversal       = np.full((nodes,max_reversals), 0.0)
+s_nte_endpoint       = np.full((nodes,max_reversals), 0.0)
+path_is_pdc          = np.full((nodes),False )
 
 
 
@@ -172,16 +163,20 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     p_c_endpoint,
     e_w_reversal,
     e_w_endpoint,
-    ew_hysteresis,
-    pc_hysteresis,
+    s_a_reversal,
+    s_a_endpoint,
+    s_nte_reversal,
+    s_nte_endpoint,
+    path_is_pdc,
     switch_condition,
     hysteresis_tol,
-    max_reversal_points
+    max_reversals,
+    max_time_steps
     )
 
 # Set initial conditions
 ew_ic= np.full((nodes), 0.008)
-pw_ic= np.full((nodes), -13706.965861446095)
+pw_ic= np.full((nodes), -wn_interface_imb.pc_function(ew_ic[0]))
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic}
@@ -192,8 +187,8 @@ model.set_initial_conditions(initial_conditions)
 
 def ew0_bc(t): return 0.12
 def ewL_bc(t): return 0.008
-def pw0_bc(t): return -2113.152788450121
-def pwL_bc(t): return -13706.965861446095
+def pw0_bc(t): return -wn_interface_imb.pc_function(0.12)
+def pwL_bc(t): return -wn_interface_imb.pc_function(0.008)
 
 boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
                   'p_w': [[ pw0_bc,pwL_bc  ]]}
@@ -203,7 +198,7 @@ model.set_boundary_value(boundary_value = boundary_value)
 
 
 # Time
-time_interval = np.array([10000,20000])
+time_interval = np.array([20000])
 
 model.set_simulation_time(time_interval)
 
@@ -239,7 +234,7 @@ for time,variable in solutions.items():
     plt.plot(mesh.points,variable['e_w'],label=f't={time}')
     plt.xlabel("x (m)")
     plt.ylabel("e_w")
-    plt.title("ERE Malgorzata Solution")
+    plt.title("ERE Malgorzata + Hysteresis + Entrapment Solution")
     plt.legend()
 plt.show()
 
@@ -249,19 +244,19 @@ for time,variable in solutions.items():
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
     plt.xlabel('x (m)')
     plt.ylabel('p_w')
-    plt.title('ERE Malgorzata Solution')
+    plt.title('ERE Malgorzata + Hysteresis + Entrapment Solution')
     plt.legend()
 plt.show()
 
 # Hysteresis visualization
-e_w_range    = np.linspace(0.003, s_phase.porosity, 1000)
-p_c_mpc_dr   = np.zeros([len(e_w_range)], dtype=np.double)
-p_c_mpc_imb  = np.zeros([len(e_w_range)], dtype=np.double)
+# Hysteresis visualization
+pc_range   = np.linspace(0.0, 15000, 15000)
+e_w_mpc_dr   = np.zeros([len(pc_range)], dtype=np.double)
+e_w_mpc_imb  = np.zeros([len(pc_range)], dtype=np.double)
 
-# Create main drainage and imbibition curves
-for n, value in enumerate(e_w_range):
-    p_c_mpc_dr[n]   = wn_interface_dr.pc_function(value)
-    p_c_mpc_imb[n]  = wn_interface_imb.pc_function(value)
+for n, value in enumerate(pc_range):
+    e_w_mpc_dr[n]   = wn_interface_dr.volume_fraction_function(value)
+    e_w_mpc_imb[n]  = wn_interface_imb.volume_fraction_function(value)
 
 
 counter_hysteresis=model.interface.data.counter_hysteresis
@@ -269,8 +264,8 @@ counter_hysteresis=model.interface.data.counter_hysteresis
 plt.plot(model.interface.data.ew_hysteresis[20,1:counter_hysteresis],
          model.interface.data.pc_hysteresis[20,1:counter_hysteresis],
          label='scanning curves')
-plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
+plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
+plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
 plt.xlabel('e_w')
 plt.ylabel('p_c')
 plt.title('Hysteresis pc-ew curves')

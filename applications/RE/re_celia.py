@@ -117,7 +117,7 @@ model.n_phase = n_phase
 model.interface = wn_interface
 
 # Time
-time_interval = np.array([10000.,20000.,30000.,40000.,50000.,60000.,70000.,86400.])
+time_interval = np.array([86400.])
 model.set_simulation_time(time_interval)
  
 # Numerical Parameters
@@ -144,8 +144,8 @@ OptDB.setValue('pc_type', 'sor')
 
  
 # Solve model
-u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
-solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
+solutions = TCAT2Phase.numerics.solver.solver(model)
+
 
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
@@ -153,4 +153,4 @@ for time,variable in solutions.items():
     plt.ylabel('Pw')
     plt.title('Richards Solution')
     plt.legend()
-plt.show()
+plt.show()    

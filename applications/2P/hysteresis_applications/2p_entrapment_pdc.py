@@ -130,29 +130,27 @@ max_reversals = 8
 drainage_process_new  = np.full((nodes), True)
 
 
-e_w_reversal = s_phase.porosity
-e_w_endpoint = w_phase.residual_volume_fraction +1e-5
+
 e_wr = w_phase.residual_volume_fraction
 
-s_a_reversal         = np.full((nodes,max_reversals), (e_w_reversal-e_wr)/(s_phase.porosity-e_wr))
-s_a_endpoint         = np.full((nodes,max_reversals), (e_w_endpoint-e_wr)/(s_phase.porosity-e_wr))
-p_c_reversal         = np.full((nodes,max_reversals), wn_interface_dr.pc_function(e_w_reversal) )
-p_c_endpoint         = np.full((nodes,max_reversals), wn_interface_dr.pc_function(e_w_endpoint) )
+e_w_reversal         = np.full((nodes,max_reversals), s_phase.porosity)
+e_w_endpoint         = np.full((nodes,max_reversals), w_phase.residual_volume_fraction +1e-5)
+s_a_reversal         = np.full((nodes,max_reversals), (e_w_reversal[0][0]-e_wr)/(s_phase.porosity-e_wr))
+s_a_endpoint         = np.full((nodes,max_reversals), (e_w_endpoint[0][0]-e_wr)/(s_phase.porosity-e_wr))
+p_c_reversal         = np.full((nodes,max_reversals), wn_interface_dr.pc_function(e_w_reversal[0][0]) )
+p_c_endpoint         = np.full((nodes,max_reversals), wn_interface_dr.pc_function(e_w_endpoint[0][0]) )
 s_nte_reversal       = np.full((nodes,max_reversals), 0.0)
 s_nte_endpoint       = np.full((nodes,max_reversals), 0.0)
 path_is_pdc          = np.full((nodes),True )
 
-ew_hysteresis        = np.full((nodes,100000), 0.0)
-pc_hysteresis        = np.full((nodes,100000), 0.0)
-process_hysteresis   = np.full((nodes,100000), 0.0)
-time_hysteresis      = np.full((100000), 0.0)
-hysteresis_tol = 1e-6
+
+
+
+max_time_steps   = 100000
+hysteresis_tol   = 1e-6
 switch_condition ='p_c'
 
-for n in range(0,nodes):
-    ew_hysteresis[n][0]  = 0.35
-    pc_hysteresis[n][0]  = wn_interface_dr.pc_function(0.35)
-    process_hysteresis[n][0] = -1
+
 
 model.interface = state_equations_hysteresis.ParkerLenhard(
     model,
@@ -161,18 +159,17 @@ model.interface = state_equations_hysteresis.ParkerLenhard(
     drainage_process_new,
     p_c_reversal,
     p_c_endpoint,
+    e_w_reversal,
+    e_w_endpoint,
     s_a_reversal,
     s_a_endpoint,
     s_nte_reversal,
     s_nte_endpoint,
     path_is_pdc,
-    ew_hysteresis,
-    pc_hysteresis,
-    process_hysteresis,
-    time_hysteresis,
     switch_condition,
     hysteresis_tol,
-    max_reversals
+    max_reversals,
+    max_time_steps
     )
 
 # Set initial conditions
@@ -226,7 +223,7 @@ boundary_value = {'p_w': [[ pw0_bc,pwL_bc]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 # Time
-time_interval = np.array([1000.0])
+time_interval = np.array([1500.0])
 #time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
 
 model.set_simulation_time(time_interval)
@@ -236,15 +233,7 @@ OptDB = PETSc.Options()
 
 # Time-Stepper Options
 OptDB.setValue('snes_fd_color', None)
-OptDB.setValue('ts_type', 'bdf')
-OptDB.setValue('ts_bdf_order', 5)
-OptDB.setValue('ts_max_steps',10000)
-OptDB.setValue('ts_max_reject',500)
-OptDB.setValue('ts_monitor', None)
-
-# Nonlinear Solver Options
-OptDB.setValue('ts_max_snes_failures',10000)
-
+OptDB.setValue('ts_type', 'bdf')0
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
@@ -287,8 +276,8 @@ for n, value in enumerate(pc_range):
 
 counter_hysteresis=model.interface.data.counter_hysteresis
 
-plt.plot(model.interface.data.ew_hysteresis[0,0:counter_hysteresis],
-         model.interface.data.pc_hysteresis[0,0:counter_hysteresis],
+plt.plot(model.interface.data.ew_hysteresis[0,1:counter_hysteresis],
+         model.interface.data.pc_hysteresis[0,1:counter_hysteresis],
          label='scanning curves',marker='o')
 plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
@@ -298,8 +287,8 @@ plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()
 
-plt.plot(model.interface.data.ew_hysteresis[1,0:counter_hysteresis],
-         model.interface.data.pc_hysteresis[1,0:counter_hysteresis],
+plt.plot(model.interface.data.ew_hysteresis[1,1:counter_hysteresis],
+         model.interface.data.pc_hysteresis[1,1:counter_hysteresis],
          label='scanning curves',marker='o')
 plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
@@ -309,20 +298,8 @@ plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()
 
-plt.plot(model.interface.data.ew_hysteresis[2,0:counter_hysteresis],
-         model.interface.data.pc_hysteresis[2,0:counter_hysteresis],
-         label='scanning curves',marker='o')
-plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
-plt.title('Hysteresis pc-ew curves')
-plt.legend()
-plt.show()
-
-
-plt.plot(model.interface.data.ew_hysteresis[3,0:counter_hysteresis],
-         model.interface.data.pc_hysteresis[3,0:counter_hysteresis],
+plt.plot(model.interface.data.ew_hysteresis[2,1:counter_hysteresis],
+         model.interface.data.pc_hysteresis[2,1:counter_hysteresis],
          label='scanning curves',marker='o')
 plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
@@ -333,8 +310,8 @@ plt.legend()
 plt.show()
 
 
-plt.plot(model.interface.data.ew_hysteresis[4,0:counter_hysteresis],
-         model.interface.data.pc_hysteresis[4,0:counter_hysteresis],
+plt.plot(model.interface.data.ew_hysteresis[3,1:counter_hysteresis],
+         model.interface.data.pc_hysteresis[3,1:counter_hysteresis],
          label='scanning curves',marker='o')
 plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
@@ -344,8 +321,20 @@ plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()
 
-plt.plot(model.interface.data.ew_hysteresis[5,0:counter_hysteresis],
-         model.interface.data.pc_hysteresis[5,0:counter_hysteresis],
+
+plt.plot(model.interface.data.ew_hysteresis[4,1:counter_hysteresis],
+         model.interface.data.pc_hysteresis[4,1:counter_hysteresis],
+         label='scanning curves',marker='o')
+plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
+plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
+plt.xlabel('e_w')
+plt.ylabel('p_c')
+plt.title('Hysteresis pc-ew curves')
+plt.legend()
+plt.show()
+
+plt.plot(model.interface.data.ew_hysteresis[5,1:counter_hysteresis],
+         model.interface.data.pc_hysteresis[5,1:counter_hysteresis],
          label='scanning curves',marker='o')
 plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
