@@ -152,25 +152,24 @@ switch_condition ='p_c'
 
 
 
-model.interface = state_equations_hysteresis.ParkerLenhard(
-    model,
-    wn_interface_imb,
-    wn_interface_dr,
-    drainage_process_new,
-    p_c_reversal,
-    p_c_endpoint,
-    e_w_reversal,
-    e_w_endpoint,
-    s_a_reversal,
-    s_a_endpoint,
-    s_nte_reversal,
-    s_nte_endpoint,
-    path_is_pdc,
-    switch_condition,
-    hysteresis_tol,
-    max_reversals,
-    max_time_steps
-    )
+ParkerLenhard_parameters = {'drainage_process_new':drainage_process_new,
+                            'pc_reversal':p_c_reversal,
+                            'pc_endpoint':p_c_endpoint,
+                            'ew_reversal':e_w_reversal,
+                            'ew_endpoint':e_w_endpoint,
+                            'sa_reversal':s_a_reversal,
+                            'sa_endpoint':s_a_endpoint,
+                            'snte_reversal':s_nte_reversal,
+                            'snte_endpoint':s_nte_endpoint,
+                            'path_is_pdc':path_is_pdc,
+                            'switch_condition':switch_condition,
+                            'hysteresis_tol':hysteresis_tol,
+                            'max_reversals':max_reversals,
+                            'max_time_steps':max_time_steps }
+
+   
+model.interface = state_equations_hysteresis.ParkerLenhard(model, wn_interface_imb, wn_interface_dr, **ParkerLenhard_parameters )
+
 
 # Set initial conditions
 pn_ic = np.full((nodes), 0)
@@ -185,32 +184,22 @@ model.set_initial_conditions(initial_conditions)
 
 def pw0_bc(t):
     """
-    Boundary wetting phase pressure
+    Boundary wetting phase pressure using linear interpolation.
+    Interpolates between time points using the corresponding pressure values.
     """
-    pw_values   = [-wn_interface_dr.pc_function(0.35), -1500, 0.0, -1800,   0.0, -2000,  0.0]
-    time_values = [0 ,   500, 1000,  1500, 2000, 2500, 3000]
-    i=1
-    if time_values[i-1]<=t<=time_values[i]:
-        aa=(pw_values[i]-pw_values[i-1])/(time_values[i]-time_values[i-1])
-        bb=pw_values[i-1]-aa*time_values[i-1]
-        p_w0 =aa*t+bb
-    i=2
-    if time_values[i-1]<t<=time_values[i]:
-        aa=(pw_values[i]-pw_values[i-1])/(time_values[i]-time_values[i-1])
-        bb=pw_values[i-1]-aa*time_values[i-1]
-        p_w0 =aa*t+bb
-    i=3
-    if time_values[i-1]<t<=time_values[i]:
-        aa=(pw_values[i]-pw_values[i-1])/(time_values[i]-time_values[i-1])
-        bb=pw_values[i-1]-aa*time_values[i-1]
-        p_w0 =aa*t+bb
-    i=4
-    if time_values[i-1]<t<=time_values[i]:
-        aa=(pw_values[i]-pw_values[i-1])/(time_values[i]-time_values[i-1])
-        bb=pw_values[i-1]-aa*time_values[i-1]
-        p_w0 =aa*t+bb
+    pw_values = [-wn_interface_dr.pc_function(0.35), -1500, 0.0, -1800, 0.0, -2000, 0.0]
+    time_values = [0, 500, 1000, 1500, 2000, 2500, 3000]
 
-    return p_w0
+    for i in range(1, len(time_values)):
+        if time_values[i-1] <= t <= time_values[i]:
+            # Linear interpolation for the selected time interval
+            aa = (pw_values[i] - pw_values[i-1]) / (time_values[i] - time_values[i-1])
+            bb = pw_values[i-1] - aa * time_values[i-1]
+            return aa * t + bb
+    
+    # If t is outside the range of the time values, return None (or handle as needed)
+    return None
+
 
 def pn0_bc(t): return  0.0
 def pnL_bc(t): return  0.0

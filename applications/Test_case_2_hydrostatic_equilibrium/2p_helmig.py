@@ -1,6 +1,5 @@
 import numpy as np
 from numpy import linalg 
-import math
 from petsc4py import PETSc
 import TCAT2Phase
 from TCAT2Phase.numerics import utils
@@ -8,7 +7,7 @@ from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
 # Domain
-domain_size = np.array([[5.0,10.0]])
+domain_size = np.array([[0.0,0.6]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -22,10 +21,10 @@ mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain,nodes)
 
 # Boundaries
-
+boundary_type = [0,0]
 model = TCAT2Phase.numerics.model.initialize_model(
                                 model_type = 'two_phase',
-                                form = 'pp',
+                                form = 'sp',
                                 domain = domain,
                                 nodes = nodes,
                                 mesh = mesh
@@ -33,62 +32,64 @@ model = TCAT2Phase.numerics.model.initialize_model(
 
 # Set boundary types: 0 - Dirchlet
 #                     1 - Neumann (but not supported yet)
-boundary_type = {'p_w': [[0, 0]],
-                 'p_n': [[0, 0]]}
+boundary_type = {'e_w': [[0, 0]],
+                 'p_w': [[0, 0]]}
 
 model.set_boundary_type(boundary_type = boundary_type)
 # Set boundary names
 
-boundary_name = {'p_w': [['p_w', 'p_w']],
-                 'p_n': [['p_n', 'p_n']]}
+boundary_name = {'e_w': [['e_w', 'e_w']],
+                 'p_w': [['p_w', 'p_w']]}
 
 model.set_boundary_name(boundary_name = boundary_name)
 
 # Set boundary values
-def pw0_bc(t): return -5.0*9.982e2*9.81 
-def pn0_bc(t): return 0.
-def pwL_bc(t): return -10.0*(1.0 - 1.01*math.exp(-(t)/(24.0*3600.0)))*(9.982e2*9.81 )
-def pnL_bc(t): return 0.
+def ew0_bc(t): return 0.1998
+def ewL_bc(t): return 0.111
+def pw0_bc(t): return 92642.5
+def pwL_bc(t): return 1900.
 
 
-boundary_value = {'p_w': [[ pw0_bc,pwL_bc ]],
-                  'p_n': [[ pn0_bc,pnL_bc  ]]}
+boundary_value = {'e_w': [[ ew0_bc, ewL_bc ]],
+                  'p_w': [[ pw0_bc, pwL_bc  ]]}
+
 
 model.set_boundary_value(boundary_value = boundary_value)
 
-# Set initial conditions
-pw_ic= np.zeros([nodes] )
-pn_ic= np.zeros([nodes] )
-for i in range(0,nodes):
-    pw_ic[i] = (-5- i *(5 / (nodes - 1.0)))*9.982e2*9.81
-    pn_ic[i] = 0.0
 
-initial_conditions = {'p_w': pw_ic,
-                      'p_n': pn_ic }
+# Set initial conditions
+ew_ic= np.zeros([nodes] )
+pw_ic= np.zeros([nodes] )
+for i in range(0,nodes):
+    ew_ic[i] = 0.111
+    pw_ic[i] = 1900
+
+initial_conditions = {'e_w': ew_ic,
+                      'p_w': pw_ic }
 
 model.set_initial_conditions(initial_conditions)
 
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s')
-s_phase.set_porosity(0.301 )
-s_phase.set_permeability(5.957035950473679e-12)
-s_phase.set_gravity(-9.81)
+s_phase.set_porosity(0.37)
+s_phase.set_permeability(9.4e-10)
+s_phase.set_gravity(9.8066)
 
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
-w_phase.set_residual_volume_fraction( 9.300e-2  )
+w_phase.set_residual_volume_fraction(0.1036)
 w_phase.set_viscosity(1.e-3)
-w_den_params = {'rho0':9.982e2,
-                'beta': 4.899999743999999e-10 }
+w_den_params = {'rho0':997.8,
+                'beta':4.9e-10}
 w_phase.set_density_function(state_equations.density_exp_pressure,**w_den_params)
 w_phase.set_d_density_function(state_equations.d_density_exp_pressure,**w_den_params)
 
 # Set nonwetting-phase properties
 n_phase = TCAT2Phase.properties.phase.Fluid('n')
-n_phase.set_residual_volume_fraction( 0.0)
-n_phase.set_viscosity(0.00018050541516245486)
-n_den_params = {'rho0':1.205  ,
-                'alpha':1.189866e-5   
+n_phase.set_residual_volume_fraction(0.0)
+n_phase.set_viscosity(1.7e-5)
+n_den_params = {'rho0':1.205 ,
+                'alpha':1.189e-5
                 }
 n_phase.set_density_function(state_equations.density_linear_pressure,**n_den_params)
 n_phase.set_d_density_function(state_equations.d_density_linear_pressure,**n_den_params)
@@ -99,10 +100,10 @@ n_phase.set_volume_fraction_function(state_equations.volume_fraction,**n_en_para
 # Set w-n interphase properties
 wn_interface = TCAT2Phase.properties.interface.Interface()
 
-m =  0.7654784240150094
-n =   4.264e0
-alpha =0.0005585997711272747
-
+m = 0.5
+n = 2.0 
+alpha = 3.4e-4
+ 
 vg = state_equations_interface.VanGenuchten(
     m = m,
     n = n,
@@ -117,6 +118,7 @@ wn_interface.set_d_pc_function(vg.d_capillary_pressure)
 wn_interface.set_volume_fraction_function(vg.volume_fraction_w)
 wn_interface.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 
+
 w_phase.set_rel_perm_function(vg.w_relative_permability)
 n_phase.set_rel_perm_function(vg.n_relative_permability)
 
@@ -130,9 +132,9 @@ model.n_phase = n_phase
 model.interface = wn_interface
 
 # Time
-time_interval = np.array([ 864.0,1728.0,2592.0,3456.0,6048.0])
+time_interval = np.array([1000])
 model.set_simulation_time(time_interval)
-
+ 
 # Numerical Parameters
 OptDB = PETSc.Options()
 
@@ -150,30 +152,35 @@ OptDB.setValue('ts_max_snes_failures',10000)
 # Linear Solver Options
 OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options
-OptDB.setValue('ksp_type', 'gmres')
-OptDB.setValue('pc_type', 'lu')
+# Preconditioner Options 
+OptDB.setValue('pc_type', 'sor')
+ 
 
 
+ 
+# Solve model
 # Solve model and return model.solutions
 # which is a dictionary where
 # solutions[time][u_name] = np.array
-solutions = TCAT2Phase.numerics.solver.solver(model)
+u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
+solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 for time,variable in solutions.items():
-    plt.plot(variable['p_w'],mesh.points,label=f't={time}')
-    plt.xlabel("p_w")
-    plt.ylabel("x(m) ")
-    plt.title("Kees Solution")
+    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
+    plt.xlabel("x(m)")
+    plt.ylabel("e_w")
+    plt.title("Helmig Solution")
     plt.legend()
-plt.show()
+plt.show()  
 
 
 for time,variable in solutions.items():
     print(time,variable)
-    plt.plot(mesh.points,variable['p_n'],label=f't={time}')
+    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
     plt.xlabel('x(m)')
-    plt.ylabel('Pn')
-    plt.title('Kees Solution')
+    plt.ylabel('Pw')
+    plt.title('Helmig Solution')
     plt.legend()
-plt.show()
+plt.show()    
+
+ 

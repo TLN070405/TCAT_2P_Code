@@ -37,45 +37,33 @@ class ParkerLenhard:
     """
     Hysteresis Class to hold functions and parameters
     """
-    def __init__(self,model,imb_interface,dr_interface,
-            drainage_process_new,
-            pc_reversal,
-            pc_endpoint,
-            ew_reversal,
-            ew_endpoint,
-            sa_reversal,
-            sa_endpoint,
-            snte_reversal,
-            snte_endpoint,
-            path_is_pdc,
-            switch_condition,
-            hysteresis_tol,
-            max_reversals,
-            max_time_steps):
+    def __init__(self, model, imb_interface, dr_interface, **kwargs):
         """
         Initialize the imbibition and drainage interfaces
+        Accept parameters in any order using **kwargs
         """
-        self.data = ParkerLenharddata(drainage_process_new,
-            pc_reversal,
-            pc_endpoint,
-            ew_reversal,
-            ew_endpoint,
-            sa_reversal,
-            sa_endpoint,
-            snte_reversal,
-            snte_endpoint,
-            path_is_pdc,
-            switch_condition,
-            hysteresis_tol,
-            max_reversals,
-            max_time_steps)
+        # Default required keys for the data class
+        required_keys = [
+            'drainage_process_new', 'pc_reversal', 'pc_endpoint', 'ew_reversal', 'ew_endpoint',
+            'sa_reversal', 'sa_endpoint', 'snte_reversal', 'snte_endpoint', 'path_is_pdc',
+            'switch_condition', 'hysteresis_tol', 'max_reversals', 'max_time_steps'
+        ]
+        
+        # Check if all required parameters are provided
+        for key in required_keys:
+            if key not in kwargs:
+                raise ValueError(f"Missing required parameter: {key}")
+        
+        # Initialize the ParkerLenharddata dataclass with values from kwargs
+        self.data = ParkerLenharddata(**kwargs)
 
-        self.data.drainage_process_old   = np.array(drainage_process_new)
-        self.data.ew_hysteresis          = np.zeros((model.nodes,max_time_steps))
-        self.data.pc_hysteresis          = np.zeros((model.nodes,max_time_steps))
-        self.data.process_hysteresis     = np.zeros((model.nodes,max_time_steps))
-        self.data.switch_condition_value = np.zeros((model.nodes,max_time_steps))
-        self.data.time                   = np.zeros(max_time_steps)
+        # Initialize other attributes
+        self.data.drainage_process_old   = np.array(self.data.drainage_process_new)
+        self.data.ew_hysteresis          = np.zeros((model.nodes, self.data.max_time_steps))
+        self.data.pc_hysteresis          = np.zeros((model.nodes, self.data.max_time_steps))
+        self.data.process_hysteresis     = np.zeros((model.nodes, self.data.max_time_steps))
+        self.data.switch_condition_value = np.zeros((model.nodes, self.data.max_time_steps))
+        self.data.time                   = np.zeros(self.data.max_time_steps)
         self.data.reversals_number = np.zeros(model.nodes)
         self.data.exceeds_number   = np.zeros(model.nodes)
         
@@ -97,20 +85,19 @@ class ParkerLenhard:
         drainage_process,sa_reversal,sa_endpoint,pc_reversal,pc_endpoint,snte_reversal,snte_endpoint,ew_reversal,ew_endpoint = self.get_data_hysteresis()
         e_wr = self.model.w_phase.residual_volume_fraction
         e_nr = self.model.n_phase.residual_volume_fraction
+        e_ws = self.model.solid.porosity - e_nr - e_wr
 
         if drainage_process:
             interface = self.drainage
-            e_ws = self.model.solid.porosity - e_wr
         else:
             interface = self.imbibition
-            e_ws = self.model.solid.porosity - e_nr - e_wr
 
         sa_reversal_mpc = (interface.volume_fraction_function(pc_reversal)-e_wr)/e_ws
         sa_endpoint_mpc = (interface.volume_fraction_function(pc_endpoint)-e_wr)/e_ws
         snte            = self.linear_effective_entrapped_saturation_nw_ew(ew)
         sa              = (ew-e_wr)/(self.model.solid.porosity-e_wr) +  snte
-        sa_hystereric   = ((sa-sa_endpoint)/(sa_reversal-sa_endpoint))*(sa_reversal_mpc-sa_endpoint_mpc) + sa_endpoint_mpc
-        pc_hysteretic   = interface.pc_function(sa_hystereric * e_ws + e_wr)
+        sa_hysteretic   = ((sa-sa_endpoint)/(sa_reversal-sa_endpoint))*(sa_reversal_mpc-sa_endpoint_mpc) + sa_endpoint_mpc
+        pc_hysteretic   = interface.pc_function(sa_hysteretic * e_ws + e_wr)
 
         return pc_hysteretic
 
@@ -120,14 +107,28 @@ class ParkerLenhard:
         """
         drainage_process,sa_reversal,sa_endpoint,pc_reversal,pc_endpoint,snte_reversal,snte_endpoint,ew_reversal,ew_endpoint = self.get_data_hysteresis()
 
+        e_wr = self.model.w_phase.residual_volume_fraction
+        e_nr = self.model.n_phase.residual_volume_fraction
+        e_ws = self.model.solid.porosity - e_nr - e_wr
         if drainage_process:
             interface = self.drainage
         else:
             interface = self.imbibition
+        
+        sa_reversal_mpc = (interface.volume_fraction_function(pc_reversal)-e_wr)/e_ws
+        sa_endpoint_mpc = (interface.volume_fraction_function(pc_endpoint)-e_wr)/e_ws
 
-        d_pc_hystereric = 0.0 #interface.d_pc_function(ew_new)
+        snte            = self.linear_effective_entrapped_saturation_nw_ew(ew)
+        sa              = (ew-e_wr)/(self.model.solid.porosity-e_wr) +  snte
+        sa_hysteretic   = ((sa-sa_endpoint)/(sa_reversal-sa_endpoint))*(sa_reversal_mpc-sa_endpoint_mpc) + sa_endpoint_mpc
 
-        return d_pc_hystereric
+        dsnte           = self.dlinear_effective_entrapped_saturation_nw_ew(ew)
+        dsa             = 1./(self.model.solid.porosity-e_wr) +  dsnte
+        dsa_hysteretic  = ((sa_reversal_mpc-sa_endpoint_mpc)/(sa_reversal-sa_endpoint))*dsa
+
+        d_pc_hysteretic = e_ws*dsa_hysteretic*interface.d_pc_function(sa_hysteretic)
+
+        return d_pc_hysteretic
 
     def volume_fraction_function(self, pc):
         """
@@ -232,8 +233,7 @@ class ParkerLenhard:
 
     def linear_effective_entrapped_saturation_nw_ew(self,ew):
         """
-        Linear evolution of effective entrapped nw saturation from Parker Lenhard formula  snt_eff = a * sa + b
-        sa : apparent saturation
+        Linear evolution of effective entrapped nw saturation from Parker Lenhard formula  snt_eff = a * ew + b
         """
         drainage_process,sa_reversal,sa_endpoint,pc_reversal,pc_endpoint,snte_reversal,snte_endpoint,ew_reversal,ew_endpoint = self.get_data_hysteresis()
 
@@ -255,6 +255,18 @@ class ParkerLenhard:
 
         return dsnte
 
+    def dlinear_effective_entrapped_saturation_nw_ew(self,ew):
+        """
+        Linear evolution of effective entrapped nw saturation from Parker Lenhard formula  snt_eff = a * ew + b
+        sa : apparent saturation
+        """
+        drainage_process,sa_reversal,sa_endpoint,pc_reversal,pc_endpoint,snte_reversal,snte_endpoint,ew_reversal,ew_endpoint = self.get_data_hysteresis()
+
+        a = (snte_endpoint-snte_reversal)/(ew_endpoint-ew_reversal)
+        b = snte_endpoint - a * sa_endpoint
+        dsnte = a
+
+        return dsnte
 
     def get_data_hysteresis(self):
         """
@@ -292,31 +304,16 @@ class ParkerLenhard:
         elif switch_condition < -self.data.hysteresis_tol:
             self.data.drainage_process_new[n] = True
 
-        #update the scaling points
+        # This part of code is to update the scaling points in case of a reversal
         if self.data.drainage_process_new[n] != self.data.drainage_process_old[n]:
-            self.update_scaling_points(self.s_a[n], self.s_nt_e[n], self.p_c[n])
+            self.update_scaling_points_reversal_case(self.s_a[n], self.s_nt_e[n], self.p_c[n])
 
-        # if there is an exceeding of the current endpoint replace the current scaling points with the correspondent previous ones.
+        # This part of code is to update the scaling points in case of exceeding the current endpoint (without reversal).
         if (self.data.drainage_process_new[n]== True and self.s_a[n] < self.data.sa_endpoint[n][0]) or (self.data.drainage_process_new[n]== False and self.s_a[n] > self.data.sa_endpoint[n][0]):
-            # keep track of the number of exceeds.
-            self.data.exceeds_number[n] +=  1
-
-            for i in range( 0, self.data.max_reversals-2):
-                self.data.pc_endpoint[n][i]   = self.data.pc_endpoint[n][i+2]
-                self.data.pc_reversal[n][i]   = self.data.pc_reversal[n][i+2]
-                self.data.ew_endpoint[n][i]   = self.data.ew_endpoint[n][i+2]
-                self.data.ew_reversal[n][i]   = self.data.ew_reversal[n][i+2]
-                self.data.sa_endpoint[n][i]   = self.data.sa_endpoint[n][i+2]
-                self.data.sa_reversal[n][i]   = self.data.sa_reversal[n][i+2]
-                self.data.snte_endpoint[n][i] = self.data.snte_endpoint[n][i+2]
-                self.data.snte_reversal[n][i] = self.data.snte_reversal[n][i+2]
-
-            if self.data.reversals_number[n] - 2*self.data.exceeds_number[n] == 0 and self.data.path_is_pdc[n]==True:
-                self.data.snte_endpoint[n][0] = 0.0
-                self.data.snte_reversal[n][0] = 0.0
+            self.update_scaling_points_exceeding_case()
 
 
-    def update_scaling_points(self,sa,snte,pc):
+    def update_scaling_points_reversal_case(self,sa,snte,pc):
         """
         function to update hysteresis  reversal and end points. each node has 2 reversal points 
         and 2 endpoints, which means 4 scaling points for each node.
@@ -356,6 +353,28 @@ class ParkerLenhard:
         self.data.ew_endpoint[n][0]  = self.data.ew_reversal[n][0]
         self.data.ew_reversal[n][0]  = (self.data.sa_reversal[n][0] -  self.data.snte_reversal[n][0])*(self.model.solid.porosity-e_wr)+e_wr
 
+    def update_scaling_points_exceeding_case(self):
+        """
+        function to update hysteresis  reversal and end points. each node has 2 reversal points 
+        and 2 endpoints, which means 4 scaling points for each node.
+        """
+        n=self.model.current_cell
+        # keep track of the number of exceeds.
+        self.data.exceeds_number[n] +=  1
+        # Update scaling points in case we have an exceeding of endpoint using the second oldest scaling points.
+        for i in range( 0, self.data.max_reversals-2):
+            self.data.pc_endpoint[n][i]   = self.data.pc_endpoint[n][i+2]
+            self.data.pc_reversal[n][i]   = self.data.pc_reversal[n][i+2]
+            self.data.ew_endpoint[n][i]   = self.data.ew_endpoint[n][i+2]
+            self.data.ew_reversal[n][i]   = self.data.ew_reversal[n][i+2]
+            self.data.sa_endpoint[n][i]   = self.data.sa_endpoint[n][i+2]
+            self.data.sa_reversal[n][i]   = self.data.sa_reversal[n][i+2]
+            self.data.snte_endpoint[n][i] = self.data.snte_endpoint[n][i+2]
+            self.data.snte_reversal[n][i] = self.data.snte_reversal[n][i+2]
+        # If we get back to primary drainage curve then set entrapped scaling points to zero.
+        if self.data.reversals_number[n] - 2*self.data.exceeds_number[n] == 0 and self.data.path_is_pdc[n] == True:
+            self.data.snte_endpoint[n][0] = 0.0
+            self.data.snte_reversal[n][0] = 0.0
 
     def store_hysteresis_results(self,ew,pc):
         """
@@ -377,7 +396,6 @@ class ParkerLenhard:
         main function to update process, update scaling points and store results.
         """
         nodes = self.model.nodes
-        e_wr = self.model.w_phase.residual_volume_fraction
         counter  = self.data.counter_hysteresis
         self.data.time[counter] = ts.getTime()
 
@@ -393,8 +411,6 @@ class ParkerLenhard:
             self.data.switch_condition_value[n,counter] = switch_condition[n]
             self.s_a[n]    = self.apparent_saturation_function(self.p_c[n])
             self.s_nt_e[n] = self.linear_effective_entrapped_saturation_nw(self.s_a[n])
-            #self.s_nt_e[n] = self.linear_effective_entrapped_saturation_nw_ew(self.e_w[n])
-            #self.s_a[n]    = (self.e_w[n]-e_wr)/(self.model.solid.porosity-e_wr) +self.s_nt_e[n]
             self.determine_hysteresis_state(switch_condition[n])
             self.store_hysteresis_results(self.e_w[n], self.p_n[n]-self.p_w[n])
 

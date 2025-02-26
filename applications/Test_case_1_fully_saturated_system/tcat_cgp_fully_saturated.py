@@ -144,7 +144,7 @@ kwn_ic= np.zeros([nodes])
 
 
 for i in range(0,nodes):
-    ew_ic[i] =  0.9 * s_phase.porosity
+    ew_ic[i] =  0.9*s_phase.porosity
     pw_ic[i] = 2000
     ewn_ic[i] = 1e-8
     jwn_ic[i] = -2000/wn_interface.interfacial_tension

@@ -79,6 +79,8 @@ def model_primary_variables(u, model):
     j_wn = np.zeros([nodes])
     w_wn = np.zeros([nodes])
     k_wn = np.zeros([nodes])
+    # the spijvk stands for the primary variables: saturation, pressure, interfacial area, 
+    # mean curvature,velocity and Gaussian curvature 
     if form == "cgp-TCAT-spijvk":
         # Solution Variables
         e_w = u[:, 0]
@@ -92,6 +94,7 @@ def model_primary_variables(u, model):
         p_n = np.zeros_like(p_w)
         for n in range(0, nodes):
             p_c[n] = model.interface.interfacial_tension * j_wn[n]
+    #spp: saturation, pressure, pressure        
     elif form == "extended-two-phase-spp":
         # Solution Variables
         e_w = u[:, 0]
@@ -307,7 +310,7 @@ def model_A_matrix(e_w, p_w, e_wn, j_wn, k_wn, p_n, p_c, rho_w, rho_n, e_n, mode
         A[3, 2] = j_wn
         A[3, 3] = e_wn
     else:
-        #d_p_c_e_w = model.interface.d_pc_function(e_w)
+        d_p_c_e_w = model.interface.d_pc_function(e_w)
         d_e_w_p_c = model.interface.d_volume_fraction_function(p_c)
         d_rho_n_p_n = model.n_phase.d_density_function(p_n)
 
