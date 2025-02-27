@@ -17,7 +17,7 @@ domain =  TCAT2Phase.properties.domain.initialize_domain(
                             )
 
 # Discretization
-nodes = 101
+nodes = 3
 
 # Mesh
 mesh = TCAT2Phase.mesh.grid.Mesh()
@@ -127,18 +127,20 @@ model.hysteresis = True
 max_reversals = 20
 max_time_steps =100000
 e_wr = w_phase.residual_volume_fraction
+e_nr = n_phase.residual_volume_fraction
+porosity=s_phase.porosity
 
-
-drainage_process_new  = np.full((nodes), True)
-e_w_reversal         = np.full((nodes,max_reversals), s_phase.porosity)
-e_w_endpoint         = np.full((nodes,max_reversals), w_phase.residual_volume_fraction +1e-5)
-s_a_reversal         = np.full((nodes,max_reversals), (e_w_reversal[0][0]-e_wr)/(s_phase.porosity-e_wr))
-s_a_endpoint         = np.full((nodes,max_reversals), (e_w_endpoint[0][0]-e_wr)/(s_phase.porosity-e_wr))
-p_c_reversal         = np.full((nodes,max_reversals), wn_interface_dr.pc_function(e_w_reversal[0][0]) )
-p_c_endpoint         = np.full((nodes,max_reversals), wn_interface_dr.pc_function(e_w_endpoint[0][0]) )
+drainage_process_new  = np.full((nodes), False)
+e_w_reversal         = np.full((nodes,max_reversals), e_wr +1e-5 )
+e_w_endpoint         = np.full((nodes,max_reversals), porosity- e_nr)
+p_c_reversal         = np.full((nodes,max_reversals), wn_interface_imb.pc_function(e_w_reversal[0][0]) )
+p_c_endpoint         = np.full((nodes,max_reversals), wn_interface_imb.pc_function(e_w_endpoint[0][0]) )
+s_a_reversal         = np.full((nodes,max_reversals), (e_w_reversal[0][0]-e_wr)/(porosity-e_wr))
+s_a_endpoint         = np.full((nodes,max_reversals), 1.0)
 s_nte_reversal       = np.full((nodes,max_reversals), 0.0)
-s_nte_endpoint       = np.full((nodes,max_reversals), 0.0)
-path_is_pdc          = np.full((nodes),True )
+s_nte_endpoint       = np.full((nodes,max_reversals), e_nr/(porosity-e_wr))
+
+path_is_pdc          = np.full((nodes),False )
 
 
 hysteresis_tol = 1e-6
@@ -158,41 +160,40 @@ ParkerLenhard_parameters = {'drainage_process_new':drainage_process_new,
                             'hysteresis_tol':hysteresis_tol,
                             'max_reversals':max_reversals,
                             'max_time_steps':max_time_steps }
-
-   
 model.interface = state_equations_hysteresis.ParkerLenhard(model, wn_interface_imb, wn_interface_dr, **ParkerLenhard_parameters )
 
+
+
 # Set initial conditions
-pw_ic = np.full((nodes), -wn_interface_dr.pc_function(0.35))  #-1380.2309339564179
+pw_ic = np.full((nodes), -2000)
 
 initial_conditions = {'p_w': pw_ic }
 
 model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
+
 def pw0_bc(t):
     """
-    Boundary wetting phase pressure using linear interpolation
+    Boundary wetting phase pressure
+    Optimized to reduce redundancy
     """
-    # Boundary pressure values corresponding to the time intervals
-    pw_values = [-wn_interface_dr.pc_function(0.35), -1500, 0.0, -1300, -900, -1800, 0.0]
+    pw_values = [-2000, 0.0, -1800, -1000, -4000]
     time_values = [0, 500, 1000, 1500, 2000, 2500, 3000]
 
-    # Loop through each time interval to find the appropriate one
     for i in range(1, len(time_values)):
         if time_values[i-1] < t <= time_values[i]:
-            # Linear interpolation
             aa = (pw_values[i] - pw_values[i-1]) / (time_values[i] - time_values[i-1])
             bb = pw_values[i-1] - aa * time_values[i-1]
             p_w0 = aa * t + bb
             return p_w0
-    # If t is outside the time range, return None or a default value (optional)
-    return None
+
+    return pw_values[-1]  # If t is out of the given time range
 
 
 def pn0_bc(t): return  0.0
 def pnL_bc(t): return  0.0
-def pwL_bc(t): return  -wn_interface_dr.pc_function(0.35)
+def pwL_bc(t): return  -2000
 
 
 boundary_value = {'p_w': [[ pw0_bc,pwL_bc]],
@@ -201,7 +202,7 @@ boundary_value = {'p_w': [[ pw0_bc,pwL_bc]],
 model.set_boundary_value(boundary_value = boundary_value)
 
 # Time
-time_interval = np.array([3000])
+time_interval = np.array([2000])
 #time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
 
 model.set_simulation_time(time_interval)
@@ -213,7 +214,7 @@ OptDB = PETSc.Options()
 OptDB.setValue('snes_fd_color', None)
 OptDB.setValue('ts_type', 'bdf')
 OptDB.setValue('ts_bdf_order', 5)
-OptDB.setValue('ts_max_steps',100000)
+OptDB.setValue('ts_max_steps',10000)
 OptDB.setValue('ts_max_reject',500)
 OptDB.setValue('ts_monitor', None)
 
@@ -235,8 +236,8 @@ solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel("x (m)")
-    plt.ylabel("p_w")
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$p_w$')
     plt.title("Malgorzata Solution")
     plt.legend()
 plt.show()
@@ -259,8 +260,8 @@ plt.plot(model.interface.data.ew_hysteresis[0,1:counter_hysteresis],
          label='scanning curves',marker='o')
 plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
+plt.xlabel(r'$\epsilon^w$')
+plt.ylabel(r'$p_c$')
 plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()
@@ -270,8 +271,8 @@ plt.plot(model.interface.data.ew_hysteresis[1,1:counter_hysteresis],
          label='scanning curves',marker='o')
 plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
 plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
+plt.xlabel(r'$\epsilon^w$')
+plt.ylabel(r'$p_c$')
 plt.title('Hysteresis pc-ew curves')
 plt.legend()
 plt.show()

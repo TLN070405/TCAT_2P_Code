@@ -7,7 +7,6 @@ from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 from TCAT2Phase.state_equations import state_equations_hysteresis
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 # Domain
 
 domain_size = np.array([[0.0,1.0]])
@@ -47,8 +46,6 @@ boundary_name = {'p_w': [['p_w', 'p_w']],
 model.set_boundary_name(boundary_name = boundary_name)
 
 
-
-
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s')
 s_phase.set_porosity(0.4)
@@ -57,7 +54,7 @@ s_phase.set_gravity(0.0)
 
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
-w_phase.set_residual_volume_fraction(0.1*s_phase.porosity)
+w_phase.set_residual_volume_fraction(0.0)
 w_phase.set_viscosity(1.e-3)
 w_den_params = {'rho0':1.e3,
                 'beta':4.9e-10}
@@ -66,7 +63,7 @@ w_phase.set_d_density_function(state_equations.d_density_exp_pressure,**w_den_pa
 
 # Set nonwetting-phase properties
 n_phase = TCAT2Phase.properties.phase.Fluid('n')
-n_phase.set_residual_volume_fraction(0.2*s_phase.porosity)
+n_phase.set_residual_volume_fraction(0.0)
 n_phase.set_viscosity(1.78e-5)
 n_den_params = {'rho0':1.2,
                 'alpha':1.189e-5
@@ -83,9 +80,10 @@ model.w_phase = w_phase
 model.n_phase = n_phase
 # Set w-n interphase properties
 wn_interface_imb = TCAT2Phase.properties.interface.Interface()
-n = 6
+
+n = 2.494
 m = 1.0 - (1.0 / n)
-alpha = 9e-4
+alpha = 1e-3
 
 vg_imb = state_equations_interface.VanGenuchten(
     m = m,
@@ -103,9 +101,10 @@ wn_interface_imb.set_d_volume_fraction_function(vg_imb.d_volume_fraction_w)
 
 # Set wn-interface properties drainage
 wn_interface_dr = TCAT2Phase.properties.interface.Interface()
-n = 9.0
+
+n = 2.494
 m = 1.0 - (1.0 / n)
-alpha = 6e-4
+alpha = 5e-4 
 
 vg_dr = state_equations_interface.VanGenuchten(
     m = m,
@@ -113,7 +112,7 @@ vg_dr = state_equations_interface.VanGenuchten(
     alpha = alpha,
     porosity = s_phase.porosity,
     e_wr = w_phase.residual_volume_fraction,
-    e_nr = 0.0,
+    e_nr = n_phase.residual_volume_fraction,
     )
 wn_interface_dr.set_pc_function(vg_dr.capillary_pressure)
 wn_interface_dr.set_d_pc_function(vg_dr.d_capillary_pressure)
@@ -122,6 +121,9 @@ wn_interface_dr.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 
 w_phase.set_rel_perm_function(vg_dr.w_relative_permability)
 n_phase.set_rel_perm_function(vg_dr.n_relative_permability)
+
+w_phase.set_volume_fraction_function(vg_dr.volume_fraction_w)
+w_phase.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
 
 
 # Set hysteresis data and model
@@ -144,12 +146,9 @@ s_nte_endpoint       = np.full((nodes,max_reversals), 0.0)
 path_is_pdc          = np.full((nodes),True )
 
 
-
-
 max_time_steps   = 100000
-hysteresis_tol   = 1e-6
+hysteresis_tol       = 1e-6
 switch_condition ='p_c'
-
 
 
 ParkerLenhard_parameters = {'drainage_process_new':drainage_process_new,
@@ -166,14 +165,13 @@ ParkerLenhard_parameters = {'drainage_process_new':drainage_process_new,
                             'hysteresis_tol':hysteresis_tol,
                             'max_reversals':max_reversals,
                             'max_time_steps':max_time_steps }
-
-   
 model.interface = state_equations_hysteresis.ParkerLenhard(model, wn_interface_imb, wn_interface_dr, **ParkerLenhard_parameters )
 
 
 # Set initial conditions
+pw_ic = np.full((nodes), -346.73)
 pn_ic = np.full((nodes), 0)
-pw_ic = np.full((nodes), -wn_interface_dr.pc_function(0.35))
+
 
 initial_conditions = {'p_w': pw_ic,
                       'p_n': pn_ic}
@@ -184,12 +182,12 @@ model.set_initial_conditions(initial_conditions)
 
 def pw0_bc(t):
     """
-    Boundary wetting phase pressure using linear interpolation.
-    Interpolates between time points using the corresponding pressure values.
+    Boundary wetting phase pressure using linear interpolation between specified time intervals.
     """
-    pw_values = [-wn_interface_dr.pc_function(0.35), -1500, 0.0, -1800, 0.0, -2000, 0.0]
-    time_values = [0, 500, 1000, 1500, 2000, 2500, 3000]
+    time_values = [0, 500, 1000, 1500, 2000]
+    pw_values = [-346.73, -7000, -2000, -4000, -3000]
 
+    # Iterate through time intervals
     for i in range(1, len(time_values)):
         if time_values[i-1] <= t <= time_values[i]:
             # Linear interpolation for the selected time interval
@@ -197,13 +195,13 @@ def pw0_bc(t):
             bb = pw_values[i-1] - aa * time_values[i-1]
             return aa * t + bb
     
-    # If t is outside the range of the time values, return None (or handle as needed)
-    return None
+    # If t is outside the range of the time values, return None or handle it as needed
+    return pw_values[-1]
 
 
 def pn0_bc(t): return  0.0
 def pnL_bc(t): return  0.0
-def pwL_bc(t): return  -wn_interface_dr.pc_function(0.35)
+def pwL_bc(t): return  -346.73
 
 
 boundary_value = {'p_w': [[ pw0_bc,pwL_bc]],
@@ -211,10 +209,9 @@ boundary_value = {'p_w': [[ pw0_bc,pwL_bc]],
 
 model.set_boundary_value(boundary_value = boundary_value)
 
-# Time
-time_interval = np.array([1500.0])
-#time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
 
+# Time
+time_interval = np.array([2000])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
@@ -224,7 +221,7 @@ OptDB = PETSc.Options()
 OptDB.setValue('snes_fd_color', None)
 OptDB.setValue('ts_type', 'bdf')
 OptDB.setValue('ts_bdf_order', 5)
-OptDB.setValue('ts_max_steps',10000)
+OptDB.setValue('ts_max_steps',100000)
 OptDB.setValue('ts_max_reject',500)
 OptDB.setValue('ts_monitor', None)
 
@@ -237,7 +234,6 @@ OptDB.setValue('ts_atol', 1.e-8)
 # Preconditioner Options
 OptDB.setValue('pc_type', 'sor')
 
-
 # Solve model and return model.solutions
 # which is a dictionary where
 # solutions[time][u_name] = np.array
@@ -246,8 +242,8 @@ solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel("x (m)")
-    plt.ylabel("p_w")
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$p_w$')
     plt.title("Malgorzata Solution")
     plt.legend()
 plt.show()
@@ -255,88 +251,52 @@ plt.show()
 for time,variable in solutions.items():
     print(time,variable)
     plt.plot(mesh.points,variable['p_n'],label=f't={time}')
-    plt.xlabel('x (m)')
-    plt.ylabel('p_n')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$p_n$')
     plt.title('Malgorzata Solution')
     plt.legend()
 plt.show()
 
 # Hysteresis visualization
-pc_range   = np.linspace(0.0, 4000, 4000)
-e_w_mpc_dr   = np.zeros([len(pc_range)], dtype=np.double)
-e_w_mpc_imb  = np.zeros([len(pc_range)], dtype=np.double)
+e_w_range    = np.linspace(0.05, s_phase.porosity, 1000)
+p_c_mpc_dr   = np.zeros([len(e_w_range)], dtype=np.double)
+p_c_mpc_imb  = np.zeros([len(e_w_range)], dtype=np.double)
 
-for n, value in enumerate(pc_range):
-    e_w_mpc_dr[n]   = wn_interface_dr.volume_fraction_function(value)
-    e_w_mpc_imb[n]  = wn_interface_imb.volume_fraction_function(value)
+for n, value in enumerate(e_w_range):
+    p_c_mpc_dr[n]   = wn_interface_dr.pc_function(value)
+    p_c_mpc_imb[n]  = wn_interface_imb.pc_function(value)
 
 
 counter_hysteresis=model.interface.data.counter_hysteresis
-
 plt.plot(model.interface.data.ew_hysteresis[0,1:counter_hysteresis],
          model.interface.data.pc_hysteresis[0,1:counter_hysteresis],
-         label='scanning curves',marker='o')
-plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
-plt.title('Hysteresis pc-ew curves')
+         label='scanning curves')
+plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
+plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
+plt.xlabel(r'$\epsilon^w$')
+plt.ylabel(r'$p_c$')
+plt.title('Hysteresis pc-ew curves node 0')
 plt.legend()
 plt.show()
 
 plt.plot(model.interface.data.ew_hysteresis[1,1:counter_hysteresis],
          model.interface.data.pc_hysteresis[1,1:counter_hysteresis],
-         label='scanning curves',marker='o')
-plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
-plt.title('Hysteresis pc-ew curves')
+         label='scanning curves')
+plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
+plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
+plt.xlabel(r'$\epsilon^w$')
+plt.ylabel(r'$p_c$')
+plt.title('Hysteresis pc-ew curves node 1')
 plt.legend()
 plt.show()
 
 plt.plot(model.interface.data.ew_hysteresis[2,1:counter_hysteresis],
          model.interface.data.pc_hysteresis[2,1:counter_hysteresis],
-         label='scanning curves',marker='o')
-plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
-plt.title('Hysteresis pc-ew curves')
-plt.legend()
-plt.show()
-
-
-plt.plot(model.interface.data.ew_hysteresis[3,1:counter_hysteresis],
-         model.interface.data.pc_hysteresis[3,1:counter_hysteresis],
-         label='scanning curves',marker='o')
-plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
-plt.title('Hysteresis pc-ew curves')
-plt.legend()
-plt.show()
-
-
-plt.plot(model.interface.data.ew_hysteresis[4,1:counter_hysteresis],
-         model.interface.data.pc_hysteresis[4,1:counter_hysteresis],
-         label='scanning curves',marker='o')
-plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
-plt.title('Hysteresis pc-ew curves')
-plt.legend()
-plt.show()
-
-plt.plot(model.interface.data.ew_hysteresis[5,1:counter_hysteresis],
-         model.interface.data.pc_hysteresis[5,1:counter_hysteresis],
-         label='scanning curves',marker='o')
-plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel('e_w')
-plt.ylabel('p_c')
-plt.title('Hysteresis pc-ew curves')
+         label='scanning curves')
+plt.plot(e_w_range,p_c_mpc_imb,label="MIC VG",linestyle="dashed")
+plt.plot(e_w_range,p_c_mpc_dr,label="MDC VG",linestyle="dashed")
+plt.xlabel(r'$\epsilon^w$')
+plt.ylabel(r'$p_c$')
+plt.title('Hysteresis pc-ew curves node 2')
 plt.legend()
 plt.show()

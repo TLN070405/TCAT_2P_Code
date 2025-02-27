@@ -94,7 +94,7 @@ def model_primary_variables(u, model):
         p_n = np.zeros_like(p_w)
         for n in range(0, nodes):
             p_c[n] = model.interface.interfacial_tension * j_wn[n]
-    #spp: saturation, pressure, pressure        
+    #spp: saturation, pressure w , pressure n
     elif form == "extended-two-phase-spp":
         # Solution Variables
         e_w = u[:, 0]
@@ -105,6 +105,7 @@ def model_primary_variables(u, model):
         for n in range(0, nodes):
             model.current_cell = n
             p_c[n] = model.interface.pc_function(e_w[n])
+    #sp: saturation, pressure w 
     elif form == "two-phase-sp":
         # Solution Variables
         e_w = u[:, 0]
@@ -116,6 +117,7 @@ def model_primary_variables(u, model):
             model.current_cell = n
             p_c[n] = model.interface.pc_function(e_w[n])
             p_n[n] = p_w[n] + p_c[n]
+    #pp: pressure w, pressure n         
     elif form == "two-phase-pp":
         # Solution Variables
         p_w = u[:, 0]
@@ -127,6 +129,7 @@ def model_primary_variables(u, model):
             model.current_cell = n
             p_c[n] = p_n[n] - p_w[n]
             e_w[n] = model.interface.volume_fraction_function(p_c[n])
+    #pr: pressure w
     elif form == "richards-pr":
         # Solution Variables
         p_w = u[:]
@@ -138,6 +141,7 @@ def model_primary_variables(u, model):
             model.current_cell = n
             p_c[n] = -p_w[n]
             e_w[n] = model.interface.volume_fraction_function(p_c[n])
+    #sp: saturation, pressure w         
     elif form == "extended-richards-sp":
         # Solution Variables
         e_w = u[:, 0]
