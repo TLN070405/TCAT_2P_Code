@@ -27,6 +27,16 @@ class BCdata:
     pd: float
     lamda: float
 
+@dataclasses.dataclass
+class TCATdata:
+    """
+    Node info for set class
+    """
+    b1: float
+    b2: float
+    b3: float
+    D: float = 0
+
 class VanGenuchten:
     """
     VanGenuchten Class to hold functions and parameters
@@ -53,6 +63,7 @@ class VanGenuchten:
         self.data.m1        = -self.data.m-1.0
         self.data.n1        = self.data.n-1.0
         self.data.m2        =  2.0*self.data.m
+
     def capillary_pressure(self,e_w):
         """
         Van-Genuchten capillary pressure
@@ -209,6 +220,42 @@ class BrooksCorey:
         else:
             k_nr = 0.0
         return k_nr
+
+class TCAT:
+    """
+    VanGenuchten Class to hold functions and parameters
+    """
+    def __init__(self,b1,b2,b3,porosity,e_ns,e_ws,js_ns,kn_ns):
+        """
+        Initialize the VanGenuchten parameters
+        """
+        self.data = TCATdata(b1,b2,b3)
+        self.porosity = porosity
+        self.e_ns = e_ns
+        self.e_ws = e_ws
+        self.js_ns = js_ns
+        self.kn_ns = kn_ns
+        self.D  = 6.0*porosity/(e_ws+e_ns)
+        self.D2 = self.D*self.D
+        self.D3 = self.D2*self.D
+
+
+    def volume_fraction_w(self,e_wn,j_wn,k_wn):
+        """
+        Volume fraction of w phase from linear geometric relation
+        """
+        ewn_term = self.data.b1*self.D*(e_wn + self.e_ns)
+        jwn_term = self.data.b2*self.D2*(-e_wn*j_wn + self.e_ns*self.js_ns)
+        kwn_term = self.data.b3*self.D3*(e_wn*k_wn + self.e_ns*self.kn_ns)
+        e_w= self.porosity-(ewn_term + jwn_term + kwn_term)
+        return e_w
+
+    def w_relative_permability(self,e_w):
+        """
+        Relative permeability for w-phase
+        """
+        k_wr = e_w*e_w
+        return k_wr
 
 def effective_saturation(e_w,e_wr,e_nr,porosity):
     """
