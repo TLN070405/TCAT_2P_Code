@@ -192,57 +192,36 @@ OptDB.setValue('pc_type', 'sor')
 # solutions[time][u_name] = np.array
 u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
+import matplotlib.pyplot as plt
 
-for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
+def plot_solutions(solutions, mesh):
+    """
+    Plots six different variables from the solutions dictionary against mesh points.
+    
+    Parameters:
+    - solutions: Dictionary containing time-step solutions.
+    - mesh: Object containing spatial mesh points.
+    """
+    variables = {
+        r'$\epsilon^w$': 'e_w',
+        r'$p_w$': 'p_w',
+        r'$\epsilon^{wn}$': 'e_wn',
+        r'$J^{wn}$': 'j_wn',
+        r'$w^{wn}$': 'w_wn',
+        r'$K^{wn}$': 'k_wn'
+    }
 
+    fig, axes = plt.subplots(3, 2, figsize=(12, 12))  # Create a 3x2 grid of subplots
+    axes = axes.flatten()  # Flatten to a 1D array for easier indexing
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
+    for idx, (ylabel, key) in enumerate(variables.items()):
+        for time, variable in solutions.items():
+            axes[idx].plot(mesh.points, variable[key], label=f't={time}')
+        
+        axes[idx].set_xlabel(r'$x\, (m)$')
+        axes[idx].set_ylabel(ylabel)
+        axes[idx].set_title('tcat cgp')
+        axes[idx].legend()
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['e_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['j_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$J^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['w_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$w^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['k_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$K^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
+    plt.tight_layout()  # Adjust layout for better appearance
+    plt.show()

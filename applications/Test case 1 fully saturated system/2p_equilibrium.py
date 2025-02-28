@@ -1,8 +1,6 @@
 import numpy as np
-from numpy import linalg 
 from petsc4py import PETSc
 import TCAT2Phase
-from TCAT2Phase.numerics import utils
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
@@ -14,7 +12,7 @@ domain =  TCAT2Phase.properties.domain.initialize_domain(
                             )
 
 # Discretization
-nodes = 101
+nodes = 11
 
 # Mesh
 mesh = TCAT2Phase.mesh.grid.Mesh()
@@ -52,11 +50,13 @@ s_phase.set_gravity(9.8066)
 # Set wetting-phase properties
 w_phase = TCAT2Phase.properties.phase.Fluid('w')
 w_phase.set_residual_volume_fraction(0.0)
-w_phase.set_viscosity(1.e-3)
-w_den_params = {'rho0':1.e3,
-                'beta':4.9e-10}
-w_phase.set_density_function(state_equations.density_exp_pressure,**w_den_params)
-w_phase.set_d_density_function(state_equations.d_density_exp_pressure,**w_den_params)
+w_phase.set_viscosity(1e-3)
+w_den_params = {'rho0': 1e3, 'beta': 4.9e-10}
+
+# Set density functions
+w_phase.set_density_function(state_equations.density_exp_pressure, **w_den_params)
+w_phase.set_d_density_function(state_equations.d_density_exp_pressure, **w_den_params)
+
 
 # Set nonwetting-phase properties
 n_phase = TCAT2Phase.properties.phase.Fluid('n')
@@ -78,14 +78,10 @@ m = 0.5990376904570971
 n = 2.494
 alpha = 1.e-3
 
-vg = state_equations_interface.VanGenuchten(
-    m = m,
-    n = n,
-    alpha = alpha,
-    porosity = s_phase.porosity,
-    e_wr = w_phase.residual_volume_fraction,
-    e_nr = n_phase.residual_volume_fraction,
-    )
+vg = state_equations_interface.VanGenuchten(m=m, n=n, alpha=alpha, 
+                                            porosity=s_phase.porosity, 
+                                            e_wr=w_phase.residual_volume_fraction, 
+                                            e_nr=n_phase.residual_volume_fraction)
 
 wn_interface.set_pc_function(vg.capillary_pressure)
 wn_interface.set_d_pc_function(vg.d_capillary_pressure)
@@ -98,20 +94,14 @@ n_phase.set_rel_perm_function(vg.n_relative_permability)
 w_phase.set_volume_fraction_function(vg.volume_fraction_w)
 w_phase.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 
-
 model.solid = s_phase
 model.w_phase = w_phase
 model.n_phase = n_phase
 model.interface = wn_interface
 
-
-
 # Set initial conditions
 pw_ic= np.zeros([nodes] )
 ew_ic= np.zeros([nodes] )
-
-
-
 
 for i in range(1,nodes):
     ew_ic[i] =  0.10
@@ -126,8 +116,6 @@ initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic }
 
 model.set_initial_conditions(initial_conditions)
-
-
 
 # Time
 time_interval = np.array([1.])
@@ -152,7 +140,6 @@ OptDB.setValue('ts_rtol', 1.e-8)
 OptDB.setValue('ts_atol', 1.e-8)
 # Preconditioner Options
 OptDB.setValue('pc_type', 'sor')
-
 
 # Solve model and return model.solutions
 # which is a dictionary where
@@ -184,8 +171,6 @@ for i in range (0,3):
 
     model.set_boundary_value(boundary_value = boundary_value)
     solutions = TCAT2Phase.numerics.solver.solver_error(u,ts,model)
-
-
 
 plt.gca().set_ylim(0.02, 0.41)  # Y-axis limits
 
