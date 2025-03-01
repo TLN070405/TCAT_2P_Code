@@ -80,8 +80,15 @@ class Interface:
 def initialize_traditional_interface(psk):
     """
     Set up the w-n interphase properties
+    This function setup the interface object for traditional 2P problems,
+    It setup the necessary function of the PSK relations for applications, to make 
+    the preparation of applications easier.
+    This function is not a member of the Interface() class because its only role is to 
+    create instances of the Interface() calss and preparation of the interface obeject for applications.
     """
+    #create an interface object
     wn_interface = Interface()
+    # set the PSK relations (VG or BC) provided by the user
     wn_interface.set_pc_function(psk.capillary_pressure)
     wn_interface.set_d_pc_function(psk.d_capillary_pressure)
     wn_interface.set_volume_fraction_function(psk.volume_fraction_w)
@@ -98,13 +105,26 @@ def initialize_tcat_interface(tcat,
                               interfacial_area_equilibrium):
     """
     Set up the interphase properties
+    This function setup the interface of tcat model, extra parameters related to tcat are needed.
+    The traditional and tcat interfaces are quite different, so two different functions are implemented.
+    The tcat input is the equivalent of psk input in initialize_traditional_interface function.
+    This function is not a member of the Interface() class because its only role is to 
+    create instances of the Interface() calss and preparation of the interface obeject for applications.
     """
+    #create an interface object
     wn_interface = Interface()
+    # set necessary constant parameters for tcat interface
     wn_interface.set_interfacial_dynamics(interfacial_dynamics)
     wn_interface.set_interfacial_tension(interfacial_tension)
     wn_interface.set_interfacial_area_relaxation(interfacial_area_relaxation)
+    # set the equilibrium interfacial area which is a function of space e_wn(x) and not necessarly constant
     wn_interface.set_interfacial_area_equilibrium(interfacial_area_equilibrium)
+    # Set volume fraction function from tcat relations provided by user as input
+    # The volume fraction function for now includes only the linear geometric relation
     wn_interface.set_volume_fraction_function(tcat.volume_fraction_w)
+    # Set the relative permeability function. In fact, the tcat model doesn't have a relative premeability
+    #function, but by comapraison of tcat first equation to traditional model we named this function as
+    # relative permeability because they have the same units.
     wn_interface.set_w_relative_permeability(tcat.w_relative_permability)
 
     return wn_interface

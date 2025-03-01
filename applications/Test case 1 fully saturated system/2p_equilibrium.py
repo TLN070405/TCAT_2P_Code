@@ -2,7 +2,7 @@
 
 import TCAT2Phase
 from TCAT2Phase.state_equations import state_equations_interface
-from TCAT2Phase.numerics import solver_options
+import solver_options
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -50,14 +50,16 @@ w_phase=TCAT2Phase.properties.phase.initialize_wetting_phase(viscosity=1.e-3,
                                                             momentum_resistance=0.0,
                                                             residual_volume_fraction=0.0,
                                                             w_den_params= {'rho0':1.e3,
-                                                                           'beta':4.9e-10})
+                                                                           'beta':4.9e-10},
+                                                            density_function_type='exp')
 
 # Set nonwetting-phase properties
 n_phase=TCAT2Phase.properties.phase.initialize_nonwetting_phase(viscosity=1.78e-5,
                                                                 momentum_resistance=0.0,
                                                                 residual_volume_fraction=0.0,
                                                                 n_den_params={'rho0':1.2,
-                                                                              'alpha':1.189e-5})
+                                                                              'alpha':1.189e-5},
+                                                                density_function_type='linear')
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(m = 0.5990376904570971,
