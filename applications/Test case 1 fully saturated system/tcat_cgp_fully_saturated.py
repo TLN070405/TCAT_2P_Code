@@ -1,10 +1,9 @@
-import numpy as np
-from numpy import linalg 
-from petsc4py import PETSc
+""" tcat cgp fully saturated domain test case """
+
 import TCAT2Phase
-from TCAT2Phase.numerics import utils
-from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
+from TCAT2Phase.numerics import solver_options
+import numpy as np
 import matplotlib.pyplot as plt
 # Domain
 domain_size = np.array([[0.0,1.0]])
@@ -31,7 +30,7 @@ model = TCAT2Phase.numerics.model.initialize_model(
                                     )
 
 # Set boundary types: 0 - Dirchlet
-#                     1 - Neumann 
+#                     1 - Neumann
 boundary_type = {'e_w': [[0, 0]],
                  'p_w': [[0, 0]],
                  'e_wn': [[0, 0]],
@@ -52,57 +51,36 @@ boundary_name = {'e_w': [['e_w', 'e_w']],
 model.set_boundary_name(boundary_name = boundary_name)
 
 
-
 # Set solid phase properties
-s_phase = TCAT2Phase.properties.phase.Solid('s')
-s_phase.set_porosity(0.36)
-s_phase.set_gravity(0.0)
+s_phase=TCAT2Phase.properties.phase.initialize_solid_phase( porosity=0.36,
+                                                            permeability=0.0,
+                                                            gravity=0.0,
+                                                            dynamic_capillary_pressure_parameter=0.0)
 
 # Set wetting-phase properties
-w_phase = TCAT2Phase.properties.phase.Fluid('w')
-w_phase.set_momentum_resistance(1.5e6)
-w_den_params = {'rho0':1.e3,
-                'beta':1e-8}
-w_phase.set_density_function(state_equations.density_exp_pressure,**w_den_params)
-w_phase.set_d_density_function(state_equations.d_density_exp_pressure,**w_den_params)
+w_phase=TCAT2Phase.properties.phase.initialize_wetting_phase(viscosity = 0.0,
+                                                            momentum_resistance=1.5e6,
+                                                            residual_volume_fraction=0.0,
+                                                            w_den_params= {'rho0':1.e3,
+                                                                           'beta':1e-8})
 
 # Set w-n interphase properties
-wn_interface = TCAT2Phase.properties.interface.Interface()
+tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
+                                    b2 = -2.08e-3,
+                                    b3 = 5.33e-2/(4.0 * 3.141592653589793),
+                                    porosity = s_phase.porosity,
+                                    e_ns = 1. ,
+                                    e_ws = 1. ,
+                                    js_ns = 1.,
+                                    kn_ns = 1.)
 
-b1 = 1.47e-1
-b2 = -2.08e-3
-b3 = 5.33e-2/(4.0 * 3.141592653589793)
+wn_interface = TCAT2Phase.properties.interface.initialize_tcat_interface(tcat,
+                                                                        interfacial_dynamics=3.42e-7,
+                                                                        interfacial_tension=35e-3,
+                                                                        interfacial_area_relaxation=-1.41e-2,
+                                                                        interfacial_area_equilibrium = np.full((nodes), 1e-8))
 
-tcat = state_equations_interface.TCAT(
-    b1 = b1,
-    b2 = b2,
-    b3 = b3,
-    porosity = s_phase.porosity,
-    e_ns = 1. ,
-    e_ws = 1. ,
-    js_ns = 1.,
-    kn_ns = 1.
-    )
-wn_interface.set_interfacial_dynamics(3.42e-7)
-wn_interface.set_interfacial_tension(35e-3)
-wn_interface.set_interfacial_area_relaxation(-1.41e-2)
-wn_interface.set_volume_fraction_function(tcat.volume_fraction_w)
-
-w_phase.set_rel_perm_function(tcat.w_relative_permability)
-w_phase.set_volume_fraction_function(tcat.volume_fraction_w)
-
-model.solid = s_phase
-model.w_phase = w_phase
-model.interface = wn_interface
-
-
-
-
-ewn_eq = np.zeros([nodes])
-for i in range(0,nodes):
-    ewn_eq[i] = 1e-8
-wn_interface.set_interfacial_area_equilibrium(ewn_eq)
-
+TCAT2Phase.numerics.model.set_model_phases(model,s_phase,w_phase,None,wn_interface)
 
 # Set boundary values
 def ew0_bc(t): return  0.9 * s_phase.porosity
@@ -129,28 +107,13 @@ boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
 
 model.set_boundary_value(boundary_value = boundary_value)
 
-
-
-
-
 # Set initial conditions
-ew_ic= np.zeros([nodes])
-pw_ic= np.zeros([nodes])
-ewn_ic= np.zeros([nodes])
-jwn_ic= np.zeros([nodes])
-wwn_ic= np.zeros([nodes])
-kwn_ic= np.zeros([nodes])
-
-
-
-for i in range(0,nodes):
-    ew_ic[i] =  0.9*s_phase.porosity
-    pw_ic[i] = 2000
-    ewn_ic[i] = 1e-8
-    jwn_ic[i] = -2000/wn_interface.interfacial_tension
-    wwn_ic[i] = 0.0
-    kwn_ic[i] = -2242533027.870139
-
+ew_ic= np.full((nodes), 0.9*s_phase.porosity)
+pw_ic= np.full((nodes), 2000)
+ewn_ic= np.full((nodes), 1e-8)
+jwn_ic= np.full((nodes), -2000/wn_interface.interfacial_tension)
+wwn_ic= np.full((nodes), 0.0)
+kwn_ic= np.full((nodes), -2242533027.870139)
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic,
@@ -161,67 +124,67 @@ initial_conditions = {'e_w': ew_ic,
 
 model.set_initial_conditions(initial_conditions)
 
-
 # Time
 time_interval = np.array([50.])
 model.set_simulation_time(time_interval)
 
-# Numerical Parameters
-OptDB = PETSc.Options()
+# Set petsc solver options
+solver_options.solver_options(max_time_steps=100000,bdf_order=1,pc_type='sor')
 
-# Time-Stepper Options
-OptDB.setValue('snes_fd_color', None)
-OptDB.setValue('ts_type', 'bdf')
-OptDB.setValue('ts_bdf_order', 1)
-OptDB.setValue('ts_max_steps',100000)
-OptDB.setValue('ts_max_reject',500)
-OptDB.setValue('ts_monitor', None)
-
-# Nonlinear Solver Options
-OptDB.setValue('ts_max_snes_failures',10000)
-
-# Linear Solver Options
-OptDB.setValue('ts_rtol', 1.e-8)
-OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options
-OptDB.setValue('pc_type', 'sor')
-
-
-# Solve model and return model.solutions
-# which is a dictionary where
+# Solve model and return model.solutions which is a dictionary where
 # solutions[time][u_name] = np.array
 u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
-import matplotlib.pyplot as plt
 
-def plot_solutions(solutions, mesh):
-    """
-    Plots six different variables from the solutions dictionary against mesh points.
-    
-    Parameters:
-    - solutions: Dictionary containing time-step solutions.
-    - mesh: Object containing spatial mesh points.
-    """
-    variables = {
-        r'$\epsilon^w$': 'e_w',
-        r'$p_w$': 'p_w',
-        r'$\epsilon^{wn}$': 'e_wn',
-        r'$J^{wn}$': 'j_wn',
-        r'$w^{wn}$': 'w_wn',
-        r'$K^{wn}$': 'k_wn'
-    }
+for time,variable in solutions.items():
+    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$\epsilon^w$')
+    plt.title('tcat cgp')
+    plt.legend()
+plt.show()
 
-    fig, axes = plt.subplots(3, 2, figsize=(12, 12))  # Create a 3x2 grid of subplots
-    axes = axes.flatten()  # Flatten to a 1D array for easier indexing
+for time,variable in solutions.items():
+    print(time,variable)
+    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$p_w$')
+    plt.title('tcat cgp')
+    plt.legend()
+plt.show()
 
-    for idx, (ylabel, key) in enumerate(variables.items()):
-        for time, variable in solutions.items():
-            axes[idx].plot(mesh.points, variable[key], label=f't={time}')
-        
-        axes[idx].set_xlabel(r'$x\, (m)$')
-        axes[idx].set_ylabel(ylabel)
-        axes[idx].set_title('tcat cgp')
-        axes[idx].legend()
+for time,variable in solutions.items():
+    print(time,variable)
+    plt.plot(mesh.points,variable['e_wn'],label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$\epsilon^{wn}$')
+    plt.title('tcat cgp')
+    plt.legend()
+plt.show()
 
-    plt.tight_layout()  # Adjust layout for better appearance
-    plt.show()
+for time,variable in solutions.items():
+    print(time,variable)
+    plt.plot(mesh.points,variable['j_wn'],label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$J^{wn}$')
+    plt.title('tcat cgp')
+    plt.legend()
+plt.show()
+
+for time,variable in solutions.items():
+    print(time,variable)
+    plt.plot(mesh.points,variable['w_wn'],label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$w^{wn}$')
+    plt.title('tcat cgp')
+    plt.legend()
+plt.show()
+
+for time,variable in solutions.items():
+    print(time,variable)
+    plt.plot(mesh.points,variable['k_wn'],label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$K^{wn}$')
+    plt.title('tcat cgp')
+    plt.legend()
+plt.show()

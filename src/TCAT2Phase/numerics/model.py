@@ -43,7 +43,7 @@ class Model:
                           [bc20 bc21]]
 
         where bcXX = 0 for Dirchlet
-                     1 for Neumann (not currently supported)
+                     1 for Neumann 
         """
         self.select_model(model_type, form)
         self.domain = domain
@@ -142,8 +142,7 @@ class Model:
 
     def set_simulation_time(self,time):
         """
-        Collect the simulation output times
-        where time = [t0,t1,t2,...,tn]
+        Collect the simulation output times where time = [t0,t1,t2,...,tn]
         """
         self.time = time
 
@@ -161,3 +160,13 @@ def initialize_model(model_type,form,domain,nodes,mesh):
     Initialize model class
     """
     return Model(model_type,form,domain,nodes,mesh)
+
+
+def set_model_phases(model,s_phase,w_phase,n_phase,wn_interface):
+    """
+    Set the  model phases and interfaces
+    """
+    model.solid = s_phase
+    model.w_phase = w_phase
+    model.n_phase = n_phase
+    model.interface = wn_interface

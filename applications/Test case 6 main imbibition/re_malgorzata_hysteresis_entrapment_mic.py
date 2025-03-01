@@ -73,7 +73,7 @@ n_phase.set_density_function(state_equations.density_linear_pressure,**n_den_par
 n_phase.set_d_density_function(state_equations.d_density_linear_pressure,**n_den_params)
 n_en_params = {'porosity':s_phase.porosity
                 }
-n_phase.set_volume_fraction_function(state_equations.volume_fraction,**n_en_params)
+
 
 # Set up the model phases.
 model.solid = s_phase

@@ -1,6 +1,6 @@
 """phase.py"""
 from functools import partial
-
+from TCAT2Phase.state_equations import state_equations
 
 class Phase:
     """
@@ -21,8 +21,6 @@ class Fluid(Phase):
         self.density_function = None
         self.d_density_function = None
         self.rel_perm_function = None
-        self.volume_fraction_function = None
-        self.d_volume_fraction_function = None
 
     def set_viscosity(self,viscosity):
         """
@@ -42,7 +40,6 @@ class Fluid(Phase):
         """
         self.residual_volume_fraction = residual_volume_fraction
 
-
     def set_density_function(self,density_function,**parameters):
         """
         Set density
@@ -60,18 +57,6 @@ class Fluid(Phase):
         Set density
         """
         self.rel_perm_function = partial(rel_perm_function,**parameters)
-
-    def set_volume_fraction_function(self,volume_fraction_function,**parameters):
-        """
-        Set Volume Fraction
-        """
-        self.volume_fraction_function = partial(volume_fraction_function,**parameters)
-
-    def set_d_volume_fraction_function(self,d_volume_fraction_function,**parameters):
-        """
-        Set derivative of Volume Fraction 
-        """
-        self.d_volume_fraction_function = partial(d_volume_fraction_function,**parameters)
 
 class Solid(Phase):
     """
@@ -107,3 +92,52 @@ class Solid(Phase):
         Set dynamic_capillary_pressure_parameter  constant
         """
         self.dynamic_capillary_pressure_parameter = dynamic_capillary_pressure_parameter
+
+
+def initialize_wetting_phase(viscosity,
+                             momentum_resistance,
+                             residual_volume_fraction,
+                             w_den_params):
+    """
+    Initialize wetting phase
+    """
+    w_phase = Fluid('w')
+    w_phase.set_viscosity(viscosity)
+    w_phase.set_momentum_resistance(momentum_resistance)
+    w_phase.set_residual_volume_fraction(residual_volume_fraction)
+    w_phase.set_density_function(state_equations.density_exp_pressure,**w_den_params)
+    w_phase.set_d_density_function(state_equations.d_density_exp_pressure,**w_den_params)
+
+    return w_phase
+
+def initialize_nonwetting_phase(viscosity,
+                                momentum_resistance,
+                                residual_volume_fraction,
+                                n_den_params):
+    """
+    Initialize non wetting phase
+    """
+    n_phase = Fluid('n')
+    n_phase.set_viscosity(viscosity)
+    n_phase.set_momentum_resistance(momentum_resistance)
+    n_phase.set_residual_volume_fraction(residual_volume_fraction)
+    n_phase.set_density_function(state_equations.density_linear_pressure,**n_den_params)
+    n_phase.set_d_density_function(state_equations.d_density_linear_pressure,**n_den_params)
+
+    return n_phase
+
+
+def initialize_solid_phase(porosity,
+                           permeability,
+                           gravity,
+                           dynamic_capillary_pressure_parameter):
+    """
+    Initialize solid phase
+    """
+    s_phase = Solid('s')
+    s_phase.set_porosity(porosity)
+    s_phase.set_permeability(permeability)
+    s_phase.set_gravity(gravity)
+    s_phase.set_dynamic_capillary_pressure_parameter(dynamic_capillary_pressure_parameter)
+
+    return s_phase
