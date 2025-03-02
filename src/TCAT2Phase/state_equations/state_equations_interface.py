@@ -250,7 +250,7 @@ class TCAT:
         e_w= self.porosity-(ewn_term + jwn_term + kwn_term)
         return e_w
 
-    def w_relative_permability(self,e_w):
+    def w_relative_permeability(self,e_w):
         """
         Relative permeability for w-phase
         """

@@ -154,19 +154,11 @@ class Model:
         for n_u,u_name in enumerate(self.model.u_names):
             self.solution[time][u_name] = np.copy(solution[n_u::self.model.num_u])
 
-
-def initialize_model(model_type,form,domain,nodes,mesh):
-    """
-    Initialize model class
-    """
-    return Model(model_type,form,domain,nodes,mesh)
-
-
-def set_model_phases(model,s_phase,w_phase,n_phase,wn_interface):
-    """
-    Set the  model phases and interfaces
-    """
-    model.solid = s_phase
-    model.w_phase = w_phase
-    model.n_phase = n_phase
-    model.interface = wn_interface
+    def set_model_phases(self,s_phase,w_phase,n_phase,interface):
+        """
+        Set the  model phases and interfaces
+        """
+        self.solid = s_phase
+        self.w_phase = w_phase
+        self.n_phase = n_phase
+        self.interface = interface

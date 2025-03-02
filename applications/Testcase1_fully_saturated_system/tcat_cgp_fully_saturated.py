@@ -2,6 +2,7 @@
 
 import TCAT2Phase
 from TCAT2Phase.state_equations import state_equations_interface
+from TCAT2Phase.state_equations import state_equations
 import solver_options
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,7 +22,7 @@ mesh.uniform_mesh_1d(domain,nodes)
 
 # Boundaries
 boundary_type = [0,0]
-model = TCAT2Phase.numerics.model.initialize_model(
+model = TCAT2Phase.numerics.model.Model(
                                 model_type = 'cgp-TCAT',
                                 form = 'spijvk',
                                 domain = domain,
@@ -50,38 +51,40 @@ boundary_name = {'e_w': [['e_w', 'e_w']],
 
 model.set_boundary_name(boundary_name = boundary_name)
 
-
 # Set solid phase properties
-s_phase=TCAT2Phase.properties.phase.initialize_solid_phase( porosity=0.36,
-                                                            permeability=0.0,
-                                                            gravity=0.0,
-                                                            dynamic_capillary_pressure_parameter=0.0)
+s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.36,
+                                                permeability = None,
+                                                gravity = 0.0,
+                                                dynamic_capillary_pressure_parameter = None)
 
 # Set wetting-phase properties
-w_phase=TCAT2Phase.properties.phase.initialize_wetting_phase(viscosity = 0.0,
-                                                            momentum_resistance=1.5e6,
-                                                            residual_volume_fraction=0.0,
-                                                            w_den_params= {'rho0':1.e3,
-                                                                           'beta':1e-8},
-                                                            density_function_type='exp')
+w_den_params = {'rho0':1.e3, 'beta':1e-8}
+w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
+                                              momentum_resistance = 1.5e6,
+                                              residual_volume_fraction = 0.0,
+                                              density_function = state_equations.density_exp_pressure,
+                                              d_density_function = state_equations.d_density_exp_pressure,
+                                              **w_den_params)
 
 # Set w-n interphase properties
 tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
-                                    b2 = -2.08e-3,
-                                    b3 = 5.33e-2/(4.0 * 3.141592653589793),
-                                    porosity = s_phase.porosity,
-                                    e_ns = 1. ,
-                                    e_ws = 1. ,
-                                    js_ns = 1.,
-                                    kn_ns = 1.)
+                                      b2 = -2.08e-3,
+                                      b3 = 5.33e-2/(4.0 * 3.141592653589793),
+                                      porosity = s_phase.porosity,
+                                      e_ns = 1. ,
+                                      e_ws = 1. ,
+                                      js_ns = 1.,
+                                      kn_ns = 1.)
 
-wn_interface = TCAT2Phase.properties.interface.initialize_tcat_interface(tcat,
-                                                                        interfacial_dynamics=3.42e-7,
-                                                                        interfacial_tension=35e-3,
-                                                                        interfacial_area_relaxation=-1.41e-2,
-                                                                        interfacial_area_equilibrium = np.full((nodes), 1e-8))
+wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
+                                                             interfacial_dynamics = 3.42e-7,
+                                                             interfacial_tension = 35e-3,
+                                                             interfacial_area_relaxation = -1.41e-2,
+                                                             interfacial_area_equilibrium = np.full((nodes), 1e-8))
 
-TCAT2Phase.numerics.model.set_model_phases(model,s_phase,w_phase,None,wn_interface)
+TCAT2Phase.numerics.model.Model.set_model_phases(
+    model, s_phase, w_phase, None, wn_interface
+)
 
 # Set boundary values
 def ew0_bc(t): return  0.9 * s_phase.porosity
