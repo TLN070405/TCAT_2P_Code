@@ -108,15 +108,19 @@ solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 ew_values = [0.12, 0.13, 0.14]
 for i in range(0, 3):
     def ew0_bc(t):
+        """volume fraction bc at x=0"""
         return ew_values[i]
 
     def pw0_bc(t):
+        """w phase pressure bc at x=0"""
         return -model.interface.pc_function(ew_values[i])
 
     def ewL_bc(t):
+        """volume fraction bc at x=L"""
         return ew_values[i]
 
     def pwL_bc(t):
+        """w phase pressure bc at x=L"""
         return -model.interface.pc_function(ew_values[i])
 
     # Set boundary values
