@@ -1,6 +1,6 @@
 """phase.py"""
 from functools import partial
-
+from TCAT2Phase.state_equations import state_equations
 
 class Phase:
     """
@@ -13,35 +13,20 @@ class Fluid(Phase):
     """
     Fluid phase class
     """
-    def __init__(self,phase_name):
+    def __init__(self,phase_name,viscosity,
+                                 momentum_resistance,
+                                 residual_volume_fraction,
+                                 density_function,
+                                 d_density_function,
+                                 **parameters):
         super().__init__(phase_name)
-        self.viscosity = None
-        self.momentum_resistance      = None
-        self.residual_volume_fraction = None
+        self.viscosity = viscosity
+        self.momentum_resistance = momentum_resistance
+        self.residual_volume_fraction = residual_volume_fraction
         self.density_function = None
         self.d_density_function = None
-        self.rel_perm_function = None
-        self.volume_fraction_function = None
-        self.d_volume_fraction_function = None
-
-    def set_viscosity(self,viscosity):
-        """
-        Set viscosity
-        """
-        self.viscosity = viscosity
-
-    def set_momentum_resistance(self,momentum_resistance):
-        """
-        Set momentum_resistance Rw_w
-        """
-        self.momentum_resistance = momentum_resistance
-
-    def set_residual_volume_fraction(self,residual_volume_fraction):
-        """
-        Set irreducible phase volume fraction
-        """
-        self.residual_volume_fraction = residual_volume_fraction
-
+        self.set_density_function(density_function,**parameters)
+        self.set_d_density_function(d_density_function,**parameters)
 
     def set_density_function(self,density_function,**parameters):
         """
@@ -55,55 +40,16 @@ class Fluid(Phase):
         """
         self.d_density_function = partial(d_density_function,**parameters)
 
-    def set_rel_perm_function(self,rel_perm_function,**parameters):
-        """
-        Set density
-        """
-        self.rel_perm_function = partial(rel_perm_function,**parameters)
-
-    def set_volume_fraction_function(self,volume_fraction_function,**parameters):
-        """
-        Set Volume Fraction
-        """
-        self.volume_fraction_function = partial(volume_fraction_function,**parameters)
-
-    def set_d_volume_fraction_function(self,d_volume_fraction_function,**parameters):
-        """
-        Set derivative of Volume Fraction 
-        """
-        self.d_volume_fraction_function = partial(d_volume_fraction_function,**parameters)
 
 class Solid(Phase):
     """
     Solid phase class
     """
-    def __init__(self,phase_name):
+    def __init__(self,phase_name, porosity, permeability,
+                                            gravity,
+                                            dynamic_capillary_pressure_parameter):
         super().__init__(phase_name)
-        self.porosity = None
-        self.permeability = None
-        self.gravity = None
-        self.dynamic_capillary_pressure_parameter = None
-
-    def set_porosity(self,porosity):
-        """
-        Set porosity
-        """
-        self.porosity = porosity
-
-    def set_permeability(self,permeability):
-        """
-        Set permeability constant
-        """
+        self.porosity     = porosity
         self.permeability = permeability
-
-    def set_gravity(self,gravity):
-        """
-        Set gravity constant
-        """
-        self.gravity = gravity
-
-    def set_dynamic_capillary_pressure_parameter(self,dynamic_capillary_pressure_parameter):
-        """
-        Set dynamic_capillary_pressure_parameter  constant
-        """
+        self.gravity      = gravity
         self.dynamic_capillary_pressure_parameter = dynamic_capillary_pressure_parameter

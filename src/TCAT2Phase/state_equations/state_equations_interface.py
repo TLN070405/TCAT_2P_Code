@@ -116,7 +116,7 @@ class VanGenuchten:
         """
         return (1.0 + (self.data.alpha * p_c)**self.data.n)**(-self.data.m)
 
-    def w_relative_permability(self,p_c):
+    def w_relative_permeability(self,p_c):
         """
         Relative permeability for w-phase
         """
@@ -127,7 +127,7 @@ class VanGenuchten:
             k_wr = 1.0
         return k_wr
 
-    def n_relative_permability(self,p_c):
+    def n_relative_permeability(self,p_c):
         """
         Relative permeability for n-phase
         """
@@ -199,7 +199,7 @@ class BrooksCorey:
         """
         return (p_c/self.data.pd )**(-self.data.lamda)
 
-    def w_relative_permability(self,p_c):
+    def w_relative_permeability(self,p_c):
         """
         Relative permeability for w-phase
         """
@@ -210,7 +210,7 @@ class BrooksCorey:
             k_wr = 1.0
         return k_wr
 
-    def n_relative_permability(self,p_c):
+    def n_relative_permeability(self,p_c):
         """
         Relative permeability for n-phase
         """
@@ -250,7 +250,7 @@ class TCAT:
         e_w= self.porosity-(ewn_term + jwn_term + kwn_term)
         return e_w
 
-    def w_relative_permability(self,e_w):
+    def w_relative_permeability(self,e_w):
         """
         Relative permeability for w-phase
         """

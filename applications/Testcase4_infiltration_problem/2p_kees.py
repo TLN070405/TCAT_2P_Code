@@ -15,7 +15,7 @@ domain =  TCAT2Phase.properties.domain.initialize_domain(
                             )
 
 # Discretization
-nodes = 101
+nodes = 51
 
 # Mesh
 mesh = TCAT2Phase.mesh.grid.Mesh()
@@ -120,8 +120,8 @@ wn_interface.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 w_phase.set_rel_perm_function(vg.w_relative_permability)
 n_phase.set_rel_perm_function(vg.n_relative_permability)
 
-w_phase.set_volume_fraction_function(vg.volume_fraction_w)
-w_phase.set_d_volume_fraction_function(vg.d_volume_fraction_w)
+#w_phase.set_volume_fraction_function(vg.volume_fraction_w)
+#w_phase.set_d_volume_fraction_function(vg.d_volume_fraction_w)
 
 
 model.solid = s_phase
