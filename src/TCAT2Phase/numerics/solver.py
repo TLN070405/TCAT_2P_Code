@@ -150,7 +150,7 @@ def _solve_ic(da, u, model):
     snes_ic.setDM(da_ic)
 
     # provide an initial estimation for the solution of initial conditions+ boundary conditions
-    model.initial_conditions(snes_ic, u_ic)
+    model.pass_initial_conditions(snes_ic, u_ic)
 
     # solve the system to get initial conditions in terms of solution variables
     snes_ic.solve(None, u_ic)

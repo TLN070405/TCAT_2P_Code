@@ -371,31 +371,35 @@ def model_residual_boundary(t, f, u, model):
     nodes = model.nodes
     u_names = model.model.u_names
     boundary_type = model.boundary_type
-    boundary_name = model.boundary_name
-    boundary_value = model.boundary_value
+    boundary_conditions = model.boundary_conditions
 
     e_w, p_w, e_wn, j_wn, w_wn, k_wn, e_n, p_n, p_c = model_primary_variables(u, model)
 
     q_w, q_n, rho_w, rho_n = model_phase_flux(e_w, p_w, p_n, p_c, model)
 
-    flux_bc = {"q_w": [q_w[0], q_w[nodes - 1]],
-               "q_n": [q_n[0], q_n[nodes - 1]]}
 
     if model.model.num_u == 1:
         # boundary conditions for one variable formulations
 
         # Residual at Boundary 1
         if boundary_type[u_names[0]][0][0] == 0:
-            f[0] = u[0] - boundary_value[0][0][0](t)
+            # when bc==0 then its Dirichlet BC
+            f[0] = u[0] - boundary_conditions[0][0][0](t)
         elif boundary_type[u_names[0]][0][0] == 1:
-            f[0] = flux_bc[boundary_name[0][0][0]][0] - boundary_value[0][0][0](t)
+            # when bc==1 then its Neumman BC with qw flux
+            f[0] = q_w[0] - boundary_conditions[0][0][0](t)
+        elif boundary_type[u_names[0]][0][0] == 2:
+            # when bc==2 then its Neumman BC with qn flux
+            f[0] = q_n[0] - boundary_conditions[0][0][0](t)
         else:
             print("Boundary type non supported")
         # Residual at Boundary 2
         if boundary_type[u_names[0]][0][1] == 0:
-            f[nodes - 1] = u[nodes - 1] - boundary_value[0][0][1](t)
+            f[nodes - 1] = u[nodes - 1] - boundary_conditions[0][0][1](t)
         elif boundary_type[u_names[0]][0][1] == 1:
-            f[nodes - 1] = flux_bc[boundary_name[0][0][1]][1] - boundary_value[0][0][1](t)
+            f[nodes - 1] = q_w[nodes - 1] - boundary_conditions[0][0][1](t)
+        elif boundary_type[u_names[0]][0][1] == 2:
+            f[nodes - 1] = q_n[nodes - 1] - boundary_conditions[0][0][1](t)
         else:
             print("Boundary type non supported")
 
@@ -405,16 +409,20 @@ def model_residual_boundary(t, f, u, model):
         for n in range(model.model.num_u):
             # Residual at Boundary 1
             if boundary_type[u_names[n]][0][0] == 0:
-                f[0][n] = u[0][n] - boundary_value[n][0][0](t)
+                f[0][n] = u[0][n] - boundary_conditions[n][0][0](t)
             elif boundary_type[u_names[n]][0][0] == 1:
-                f[0][n] = flux_bc[boundary_name[n][0][0]][0] - boundary_value[n][0][0](t)
+                f[0][n] = q_w[0] - boundary_conditions[n][0][0](t)
+            elif boundary_type[u_names[n]][0][0] == 2:
+                f[0][n] = q_n[0] - boundary_conditions[n][0][0](t)
             else:
                 print("Boundary type non supported")
             # Residual at Boundary 2
             if boundary_type[u_names[n]][0][1] == 0:
-                f[nodes - 1][n] = u[nodes - 1][n] - boundary_value[n][0][1](t)
+                f[nodes - 1][n] = u[nodes - 1][n] - boundary_conditions[n][0][1](t)
             elif boundary_type[u_names[n]][0][1] == 1:
-                f[nodes - 1][n] = flux_bc[boundary_name[n][0][1]][1] - boundary_value[n][0][1](t)
+                f[nodes - 1][n] = q_w[nodes - 1] - boundary_conditions[n][0][1](t)
+            elif boundary_type[u_names[n]][0][1] == 2:
+                f[nodes - 1][n] = q_n[nodes - 1] - boundary_conditions[n][0][1](t)
             else:
                 print("Boundary type non supported")
 

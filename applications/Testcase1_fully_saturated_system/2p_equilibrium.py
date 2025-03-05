@@ -25,15 +25,11 @@ model = TCAT2Phase.numerics.model.Model(
                                         )
 
 # Set boundary types: 0 - Dirchlet
-#                     1 - Neumann (but not supported yet)
+#                     1 - Neumann qw
+#                     2 - Neumann qn
 boundary_type = {"e_w": [[0, 0]], "p_w": [[0, 0]]}
 
-model.set_boundary_type(boundary_type=boundary_type)
-
-# Set boundary names
-boundary_name = {"e_w": [["e_w", "e_w"]], "p_w": [["p_w", "p_w"]]}
-
-model.set_boundary_name(boundary_name=boundary_name)
+model.set_boundary_type(boundary_type)
 
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid(
@@ -86,12 +82,13 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 )
 
 # Set initial conditions
-ew_ic = np.full((nodes), 0.10)
-pw_ic = np.full((nodes), -model.interface.pc_function(0.10))
-ew_ic[0] = 0.12
-pw_ic[0] = -model.interface.pc_function(0.12)
-ew_ic[nodes - 1] = 0.12
-pw_ic[nodes - 1] = -model.interface.pc_function(0.12)
+def ew_ic(x):
+    """volume fraction ic at t=0""" 
+    return 0.10
+
+def pw_ic(x):
+    """wetting phase pressure ic at t=0"""
+    return -model.interface.pc_function(0.10)
 
 initial_conditions = {"e_w": ew_ic, "p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
@@ -124,9 +121,9 @@ for i in range(0, 3):
         return -model.interface.pc_function(ew_values[i])
 
     # Set boundary values
-    boundary_value = {"e_w": [[ew0_bc, ewL_bc]], "p_w": [[pw0_bc, pwL_bc]]}
+    boundary_conditions = {"e_w": [[ew0_bc, ewL_bc]], "p_w": [[pw0_bc, pwL_bc]]}
 
-    model.set_boundary_value(boundary_value=boundary_value)
+    model.set_boundary_conditions(boundary_conditions)
     u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
     solutions = TCAT2Phase.numerics.solver.solver_error(u, ts, model)
 
