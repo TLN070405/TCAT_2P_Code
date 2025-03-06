@@ -377,7 +377,6 @@ def model_residual_boundary(t, f, u, model):
 
     q_w, q_n, rho_w, rho_n = model_phase_flux(e_w, p_w, p_n, p_c, model)
 
-
     if model.model.num_u == 1:
         # boundary conditions for one variable formulations
 
