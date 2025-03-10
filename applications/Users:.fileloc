@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>URL</key>
-	<string>file:///Users/tomnelson/opt/anaconda3/envs/petsc/share/petsc/TCAT_PostOralExam/20250305_Updates6/TCAT_2P_Code/applications/Testcase1_fully_saturated_system/2p_equilibrium.py</string>
-</dict>
-</plist>

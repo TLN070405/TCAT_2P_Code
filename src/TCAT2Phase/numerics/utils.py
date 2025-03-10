@@ -1,7 +1,6 @@
 import sys
 import petsc4py
 import numpy as np
-from TCAT2Phase import state_equations
 petsc4py.init(sys.argv)
 
 def calc_average(x,y):
@@ -52,6 +51,18 @@ def interpolate(x,mesh):
                 continue
 
             value[face] = x[cell.ID] + mesh.faces[face].distance/dist*(x[neigh] - x[cell.ID]  )
-            #value[face] = 0.5*(x[cell.ID] + x[neigh])
 
     return value
+
+def gradient_cell(x,cell_id,mesh):
+    """
+    Return the gradient of a cell face.
+    """
+    for cell in mesh.cells:
+        if cell.ID==cell_id:
+            for face,neigh,dist in zip(cell.faces,cell.neighbors,cell.distance):
+                if mesh.faces[face].boundary or mesh.faces[face].owner != cell.ID:
+                    continue
+                gradient_cell = 1/dist*( x[neigh] - x[cell.ID] )
+
+    return gradient_cell

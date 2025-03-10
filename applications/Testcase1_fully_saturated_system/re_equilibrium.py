@@ -15,7 +15,7 @@ domain = TCAT2Phase.properties.domain.initialize_domain(
                                                         )
 
 # Mesh
-nodes = 51
+nodes = 101
 mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain, nodes)
 
@@ -34,14 +34,14 @@ model.set_boundary_type(boundary_type)
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
-    porosity=0.4,
-    permeability=1e-10,
-    gravity=9.8066,
+    porosity=0.369,
+    permeability=6.67e-7,
+    gravity=0.0,
     dynamic_capillary_pressure_parameter=None,
 )
 
 # Set wetting-phase properties
-w_den_params = {"rho0": 1.0e3, "beta": 4.9e-10}
+w_den_params = {"rho0": 1.0e3, "beta": 1e-8}
 w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
@@ -66,9 +66,9 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=0.5990376904570971,
-    n=2.494,
-    alpha=1.0e-3,
+    m=1.0 - (1.0 /4.264),
+    n=4.264,
+    alpha=6.38e-4,
     porosity=s_phase.porosity,
     e_wr=w_phase.residual_volume_fraction,
     e_nr=n_phase.residual_volume_fraction,
@@ -84,7 +84,7 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return -model.interface.pc_function(0.10)
+    return -1000
 
 initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
@@ -98,15 +98,15 @@ solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 
 # Solve model and return model.solutions which is a dictionary where
 # solutions[time][u_name] = np.array
-ew_values = [0.12, 0.13, 0.14]
+pw_values = [0.12, 0.13, 0.14]
 for i in range(0, 3):
     def pw0_bc(t):
         """w phase pressure bc at x=0"""
-        return -model.interface.pc_function(ew_values[i])
+        return -1000
 
     def pwL_bc(t):
         """w phase pressure bc at x=L"""
-        return -model.interface.pc_function(ew_values[i])
+        return -1000
 
     # Set boundary values
     boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
@@ -118,14 +118,14 @@ for i in range(0, 3):
 # visualization
 #plt.gca().set_ylim(0.02, 0.41)  # Y-axis limits
 
-""" for time, variable in solutions.items():
-    plt.plot(mesh.points, variable["e_w"], label=f"t={time}")
+for time, variable in solutions.items():
+    plt.plot(mesh.points, model.interface.e_w, label=f"t={time}")
     plt.xlabel(r"$x\, (m)$")
     plt.ylabel(r"$\epsilon^w$")
     plt.title("equilibrium Solution")
     plt.legend()
 plt.show()
- """
+
 for time, variable in solutions.items():
     # print(time,variable)
     plt.plot(mesh.points, variable["p_w"], label=f"t={time}")

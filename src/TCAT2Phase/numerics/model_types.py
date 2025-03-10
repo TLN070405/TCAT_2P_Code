@@ -21,8 +21,8 @@ class CgpTCAT(BaseModel):
             self.name = 'cgp-TCAT-spijvk'
             self.u_names = ['e_w','p_w','e_wn','j_wn','w_wn','k_wn']
             self.num_u = 6
-            self.residual = residual.model_residual
-            self.form_function = form_function.model_formfunction
+            self.residual = residual.model_residual_tcat
+            self.form_function = form_function.model_formfunction_tcat
 
 class ExtendedTwoPhase(BaseModel):
     """
@@ -33,8 +33,8 @@ class ExtendedTwoPhase(BaseModel):
             self.name = 'extended-two-phase-spp'
             self.u_names = ['e_w','p_w','p_n']
             self.num_u = 3
-            self.residual = residual.model_residual
-            self.form_function = form_function.model_formfunction
+            self.residual = residual.model_residual_tm
+            self.form_function = form_function.model_formfunction_tm
 
 class TwoPhase(BaseModel):
     """
@@ -45,15 +45,15 @@ class TwoPhase(BaseModel):
             self.name = 'two-phase-sp'
             self.u_names = ['e_w','p_w']
             self.num_u = 2
-            self.residual = residual.model_residual
-            self.form_function = form_function.model_formfunction
+            self.residual = residual.model_residual_tm
+            self.form_function = form_function.model_formfunction_tm
 
         if form == 'pp':
             self.name = 'two-phase-pp'
             self.u_names = ['p_w','p_n']
             self.num_u = 2
-            self.residual = residual.model_residual
-            self.form_function = form_function.model_formfunction
+            self.residual = residual.model_residual_tm
+            self.form_function = form_function.model_formfunction_tm
 
 class ExtendedRichards(BaseModel):
     """
@@ -64,8 +64,8 @@ class ExtendedRichards(BaseModel):
             self.name = 'extended-richards-sp'
             self.u_names = ['e_w','p_w']
             self.num_u = 2
-            self.residual = residual.model_residual
-            self.form_function = form_function.model_formfunction
+            self.residual = residual.model_residual_tm
+            self.form_function = form_function.model_formfunction_tm
 
 class Richards(BaseModel):
     """
@@ -76,5 +76,5 @@ class Richards(BaseModel):
             self.name = 'richards-pr'
             self.u_names = ['p_w']
             self.num_u = 1
-            self.residual = residual.model_residual
-            self.form_function = form_function.model_formfunction
+            self.residual = residual.model_residual_tm
+            self.form_function = form_function.model_formfunction_tm
