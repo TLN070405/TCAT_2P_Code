@@ -66,31 +66,32 @@ tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
                                       js_ns = 1.,
                                       kn_ns = 1.)
 
+def interfacial_area_equilibrium(x): return 100
+
 wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
                                                              interfacial_dynamics = 3.42e-7,
                                                              interfacial_tension = 35e-3,
                                                              interfacial_area_relaxation = -1.41e-2,
-                                                             interfacial_area_equilibrium = np.full((nodes), 100))
+                                                             interfacial_area_equilibrium = interfacial_area_equilibrium)
 
 TCAT2Phase.numerics.model.Model.set_model_phases(
     model, s_phase, w_phase, None, wn_interface
 )
 
 # Set boundary values
-def ew0_bc(t): return  0.3321
-def pw0_bc(t): return -1000
-def ewn0_bc(t): return 100
-def jwn0_bc(t): return -1000/wn_interface.interfacial_tension
-def wwn0_bc(t): return  0.0
-def kwn0_bc(t): return -6335.
+ew0_bc = 0.3321
+pw0_bc =-1000
+ewn0_bc =100
+jwn0_bc =-1000/wn_interface.interfacial_tension
+wwn0_bc = 0.0
+kwn0_bc =-6335.
 
-def ewL_bc(t): return  0.3321
-def pwL_bc(t): return -1000
-def ewnL_bc(t): return 100
-def jwnL_bc(t): return -1000/wn_interface.interfacial_tension
-def wwnL_bc(t): return  0.0
-def kwnL_bc(t): return -6335.
-
+ewL_bc = 0.3321
+pwL_bc =-1000
+ewnL_bc = 100
+jwnL_bc =-1000/wn_interface.interfacial_tension
+wwnL_bc = 0.0
+kwnL_bc = -6335.
 
 boundary_conditions= {'e_w': [[ ew0_bc,ewL_bc ]],
                   'p_w': [[ pw0_bc,pwL_bc ]],
@@ -108,8 +109,6 @@ def ewn_ic(x): return 100
 def jwn_ic(x): return -1000/wn_interface.interfacial_tension
 def wwn_ic(x): return 0.0
 def kwn_ic(x): return -6335.
-
-print(model.interface.volume_fraction_function(100, -1000/wn_interface.interfacial_tension, -6335.))
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic,

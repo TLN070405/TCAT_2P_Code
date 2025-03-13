@@ -53,16 +53,3 @@ def interpolate(x,mesh):
             value[face] = x[cell.ID] + mesh.faces[face].distance/dist*(x[neigh] - x[cell.ID]  )
 
     return value
-
-def gradient_cell(x,cell_id,mesh):
-    """
-    Return the gradient of a cell face.
-    """
-    for cell in mesh.cells:
-        if cell.ID==cell_id:
-            for face,neigh,dist in zip(cell.faces,cell.neighbors,cell.distance):
-                if mesh.faces[face].boundary or mesh.faces[face].owner != cell.ID:
-                    continue
-                gradient_cell = 1/dist*( x[neigh] - x[cell.ID] )
-
-    return gradient_cell

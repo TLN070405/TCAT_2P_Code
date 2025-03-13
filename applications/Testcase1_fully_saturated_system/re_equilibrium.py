@@ -100,14 +100,8 @@ solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 # solutions[time][u_name] = np.array
 pw_values = [0.12, 0.13, 0.14]
 for i in range(0, 3):
-    def pw0_bc(t):
-        """w phase pressure bc at x=0"""
-        return -1000
-
-    def pwL_bc(t):
-        """w phase pressure bc at x=L"""
-        return -1000
-
+    pw0_bc = -1000
+    pwL_bc = -1000
     # Set boundary values
     boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 

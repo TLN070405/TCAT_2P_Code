@@ -5,6 +5,7 @@ from TCAT2Phase.numerics import utils
 def model_residual_tm(ts, t, U, Udot, F, model):
     """
     Residual function for the selected traditional model.
+    tm: stands for traditional model.
     """
 
     da = ts.getDM()
@@ -21,6 +22,7 @@ def model_residual_tm(ts, t, U, Udot, F, model):
 def model_residual_tcat(ts, t, U, Udot, F, model):
     """
     Residual function for the selected traditional model.
+    tcat stands for: THERMODYNAMICALLY CONSTRAINED AVERAGING THEORY
     """
 
     da = ts.getDM()
@@ -41,10 +43,7 @@ def model_residual_internal_tm(f, u, udot, model):
     # Create primary variables
     e_w, p_w, e_n, p_n, p_c = model_primary_variables_tm(u, model)
 
-    model.interface.e_w = e_w
-    model.interface.p_w = p_w
-    model.interface.p_n = p_n
-    model.interface.p_c = p_c
+    update_interface(model,e_w,p_w,p_n,p_c)
 
     q_w, q_n, rho_w, rho_n = model_phase_flux_tm(p_w, p_n, p_c, model)
 
@@ -75,6 +74,17 @@ def model_residual_internal_tcat(f, u, udot, model):
 
     # Calculate gradient of primary variables
     del_ew, del_ewn, del_jwn, del_wwn = model_primary_variables_gradient_tcat(e_w, e_wn, j_wn, w_wn, model)
+    params = {"e_w": e_w,
+    "p_w": p_w,
+    "e_wn": e_wn,
+    "j_wn": j_wn,
+    "w_wn": w_wn,
+    "k_wn": k_wn,
+    "q_w": q_w,
+    "del_ew": del_ew,
+    "del_ewn": del_ewn,
+    "del_jwn": del_jwn,
+    "del_wwn": del_wwn}
 
     mesh = model.mesh
     for cell in mesh.cells:
@@ -82,21 +92,7 @@ def model_residual_internal_tcat(f, u, udot, model):
             continue
         n = cell.ID
         model.current_cell = n
-        od = model_spatial_operator_tcat(
-            e_w,
-            p_w,
-            e_wn,
-            j_wn,
-            w_wn,
-            k_wn,
-            q_w,
-            del_ew,
-            del_ewn,
-            del_jwn,
-            del_wwn,
-            cell,
-            model,
-        )
+        od = model_spatial_operator_tcat(params,cell,model)
         # Time derivative matrix
         A = model_time_matrix_tcat(e_w[n], p_w[n], e_wn[n], j_wn[n], k_wn[n],rho_w[n], model)
 
@@ -298,40 +294,42 @@ def model_spatial_operator_tm(p_w,p_n,p_c,q_w,q_n,cell):
     od = [od_dp, od_w[0], od_n[0]]
     return od
 
-def model_spatial_operator_tcat(
-    e_w,
-    p_w,
-    e_wn,
-    j_wn,
-    w_wn,
-    k_wn,
-    q_w,
-    del_ew,
-    del_ewn,
-    del_jwn,
-    del_wwn,
-    cell,
-    model
-):
+def model_spatial_operator_tcat(params,cell,model):
     """
     Spatial operator for each formulation
     """
+    e_w = params["e_w"]
+    p_w = params["p_w"]
+    e_wn = params["e_wn"]
+    j_wn = params["j_wn"]
+    w_wn = params["w_wn"]
+    k_wn = params["k_wn"]
+    q_w = params["q_w"]
+    del_ew = params["del_ew"]
+    del_ewn = params["del_ewn"]
+    del_jwn = params["del_jwn"]
+    del_wwn = params["del_wwn"]
+
     n = cell.ID
     c_wn = model.interface.interfacial_dynamics
     gamma_wn = model.interface.interfacial_tension
     k_hat_wn = model.interface.interfacial_area_relaxation
     e_wn_eq  = model.interface.interfacial_area_equilibrium
 
+    od_dp = np.zeros(3)
+    for i in (n-1, n, n+1):
+        x = model.domain.domain_size[0,0] + i * (1.0 / cell.length[0])
+        pw_jwn = p_w[i] + gamma_wn * j_wn[i]
+        od_dp[i-n+1]= c_wn * (pw_jwn)  + gamma_wn * k_hat_wn/(pw_jwn + 1e-3) * (e_wn_eq(x) - e_wn[i])
+    d2_od_dp =(1/(cell.length[0]*cell.length[0]))*(od_dp[2]-2*od_dp[1]+od_dp[0])
     od_w  = 1.0 / cell.length * (q_w[n + 1] - q_w[n])
-    od_dp = c_wn * (p_w[n] + gamma_wn * j_wn[n])  + gamma_wn * k_hat_wn/(p_w[n] + gamma_wn * j_wn[n] + 1e-3) * (e_wn_eq[n] - e_wn[n])
-    od_dp_forward  = c_wn * (p_w[n+1] + gamma_wn * j_wn[n+1])  + gamma_wn * k_hat_wn/(p_w[n+1] + gamma_wn * j_wn[n+1] + 1e-3) * (e_wn_eq[n+1] - e_wn[n+1])
-    od_dp_backward = c_wn * (p_w[n-1] + gamma_wn * j_wn[n-1])  + gamma_wn * k_hat_wn/(p_w[n-1] + gamma_wn * j_wn[n-1] + 1e-3) * (e_wn_eq[n-1] - e_wn[n-1])
-    od_ia = k_hat_wn * (e_wn_eq[n] - e_wn[n]) - ( w_wn[n] * del_ewn[n] + e_wn[n] * del_wwn[n])
-    od_j = 2/(3*cell.length[0]*cell.length[0]) * (od_dp_forward-2*od_dp+od_dp_backward)-2 * (w_wn[n] * j_wn[n] * del_ewn[n] + e_wn[n] * w_wn[n] * del_jwn[n] + e_wn[n] * j_wn[n]* del_wwn[n])
-    od_v = e_w[n] * e_wn[n] * w_wn[n] + od_dp * del_ew[n]
+    x = model.domain.domain_size[0,0] + n * (1.0 / cell.length[0])
+    od_ia = k_hat_wn * (e_wn_eq(x) - e_wn[n]) - ( w_wn[n] * del_ewn[n] + e_wn[n] * del_wwn[n])
+    od_j =(2/3)* d2_od_dp-2 * (w_wn[n] * j_wn[n] * del_ewn[n] + e_wn[n] * w_wn[n] * del_jwn[n] + e_wn[n] * j_wn[n]* del_wwn[n])
+    od_v = e_w[n] * e_wn[n] * w_wn[n] + od_dp[1] * del_ew[n]
     od_k = e_w[n] - model.interface.volume_fraction_function(e_wn[n], j_wn[n], k_wn[n])
-    od   = [od_dp, od_w[0], od_ia, od_j, od_v, od_k]
-    return od
+
+    return [od_dp[1], od_w[0], od_ia, od_j, od_v, od_k]
 
 def model_time_matrix_tm(e_w, p_w, p_n, p_c, rho_w, rho_n, e_n, model):
     """
@@ -423,53 +421,29 @@ def model_residual_boundary_tm(t, f, u, q_w, q_n, model):
     boundary_type = model.boundary_type
     boundary_conditions = model.boundary_conditions
 
-    if model.model.num_u == 1:
-        # boundary conditions for one variable formulations
-
+    for n in range(model.model.num_u):
         # Residual at Boundary 1
-        if boundary_type[u_names[0]][0][0] == 0:
-            # when bc==0 then its Dirichlet BC
-            f[0] = u[0] - boundary_conditions[0][0][0](t)
-        elif boundary_type[u_names[0]][0][0] == 1:
-            # when bc==1 then its Neumman BC with qw flux
-            f[0] = q_w[0] - boundary_conditions[0][0][0](t)
-        elif boundary_type[u_names[0]][0][0] == 2:
-            # when bc==2 then its Neumman BC with qn flux
-            f[0] = q_n[0] - boundary_conditions[0][0][0](t)
+        bc_value =(boundary_conditions[n][0][0](t) if callable(boundary_conditions[n][0][0]) else boundary_conditions[n][0][0])
+        index =(0,) * (len(u.shape) - 1) + (slice(n),)
+        if boundary_type[u_names[n]][0][0] == 0:
+            f[index] = u[index] - bc_value
+        elif boundary_type[u_names[n]][0][0] == 1:
+            f[index]  = q_w[0] -  bc_value
+        elif boundary_type[u_names[n]][0][0] == 2:
+            f[index]  = q_n[0] -  bc_value
         else:
             print("Boundary type non supported")
         # Residual at Boundary 2
-        if boundary_type[u_names[0]][0][1] == 0:
-            f[nodes - 1] = u[nodes - 1] - boundary_conditions[0][0][1](t)
-        elif boundary_type[u_names[0]][0][1] == 1:
-            f[nodes - 1] = q_w[nodes - 1] - boundary_conditions[0][0][1](t)
-        elif boundary_type[u_names[0]][0][1] == 2:
-            f[nodes - 1] = q_n[nodes - 1] - boundary_conditions[0][0][1](t)
+        bc_value =(boundary_conditions[n][0][1](t) if callable(boundary_conditions[n][0][1]) else boundary_conditions[n][0][1])
+        index=(nodes-1,) * (len(u.shape) - 1) + (slice(n),)
+        if boundary_type[u_names[n]][0][1] == 0:
+            f[index] = u[index] - bc_value
+        elif boundary_type[u_names[n]][0][1] == 1:
+            f[index] = q_w[nodes - 1] - bc_value
+        elif boundary_type[u_names[n]][0][1] == 2:
+            f[index] = q_n[nodes - 1] - bc_value
         else:
             print("Boundary type non supported")
-
-    else:
-        # boundary conditions for two or more variables formulations
-
-        for n in range(model.model.num_u):
-            # Residual at Boundary 1
-            if boundary_type[u_names[n]][0][0] == 0:
-                f[0][n] = u[0][n] - boundary_conditions[n][0][0](t)
-            elif boundary_type[u_names[n]][0][0] == 1:
-                f[0][n] = q_w[0] - boundary_conditions[n][0][0](t)
-            elif boundary_type[u_names[n]][0][0] == 2:
-                f[0][n] = q_n[0] - boundary_conditions[n][0][0](t)
-            else:
-                print("Boundary type non supported")
-            # Residual at Boundary 2
-            if boundary_type[u_names[n]][0][1] == 0:
-                f[nodes - 1][n] = u[nodes - 1][n] - boundary_conditions[n][0][1](t)
-            elif boundary_type[u_names[n]][0][1] == 1:
-                f[nodes - 1][n] = q_w[nodes - 1] - boundary_conditions[n][0][1](t)
-            elif boundary_type[u_names[n]][0][1] == 2:
-                f[nodes - 1][n] = q_n[nodes - 1] - boundary_conditions[n][0][1](t)
-            else:
-                print("Boundary type non supported")
 
 def model_residual_boundary_tcat(t, f, u,q_w, model):
     """
@@ -480,27 +454,39 @@ def model_residual_boundary_tcat(t, f, u,q_w, model):
     u_names = model.model.u_names
     boundary_type = model.boundary_type
     boundary_conditions = model.boundary_conditions
+    # create a mesh for boundary points
+    boundary_mesh = type(mesh)()
 
     # boundary conditions
     for n in range(model.model.num_u):
         # Residual at Boundary 1
+        boundary_mesh.num_faces = len(mesh.cells[0].faces)
+        boundary_mesh.cells = [mesh.cells[0]]  # Only keep the target cell
+        boundary_mesh.faces = {face: mesh.faces[face] for face in mesh.cells[nodes-1].faces}
+        # get the boundary value even its a function or a scalar at x=0
+        bc_value =(boundary_conditions[n][0][0](t) if callable(boundary_conditions[n][0][0]) else boundary_conditions[n][0][0])
         if boundary_type[u_names[n]][0][0] == 0:
-            f[0][n] = u[0][n] - boundary_conditions[n][0][0](t)
+            f[0][n] = u[0][n] - bc_value
         elif boundary_type[u_names[n]][0][0] == 1:
-            f[0][n] = q_w[0] - boundary_conditions[n][0][0](t)
+            f[0][n] = q_w[0] - bc_value
         elif boundary_type[u_names[n]][0][0] == 2:
-            del_u = utils.gradient_cell(u[:][n],0,mesh)
-            f[0][n] = del_u - boundary_conditions[n][0][0](t)
+            del_u = utils.gradient(u[:][n], boundary_mesh)
+            f[0][n] = del_u - bc_value
         else:
             print("Boundary type non supported")
         # Residual at Boundary 2
+        boundary_mesh.num_faces = len(mesh.cells[nodes-1].faces)
+        boundary_mesh.cells = [mesh.cells[nodes-1]]  # Only keep the target cell 
+        boundary_mesh.faces = {face: mesh.faces[face] for face in mesh.cells[nodes-1].faces}
+        # get the boundary value even its a function or a scalar at x=L
+        bc_value =(boundary_conditions[n][0][1](t) if callable(boundary_conditions[n][0][1]) else boundary_conditions[n][0][1])
         if boundary_type[u_names[n]][0][1] == 0:
-            f[nodes - 1][n] = u[nodes - 1][n] - boundary_conditions[n][0][1](t)
+            f[nodes - 1][n] = u[nodes - 1][n] - bc_value
         elif boundary_type[u_names[n]][0][1] == 1:
-            f[nodes - 1][n] = q_w[nodes - 1] - boundary_conditions[n][0][1](t)
+            f[nodes - 1][n] = q_w[nodes - 1] - bc_value
         elif boundary_type[u_names[n]][0][1] == 2:
-            del_u = utils.gradient_cell(u[:][n],nodes - 2,mesh)
-            f[nodes - 1][n] = del_u - boundary_conditions[n][0][1](t)
+            del_u =utils.gradient(u[:][n], boundary_mesh)
+            f[nodes - 1][n] = del_u - bc_value
         else:
             print("Boundary type non supported")
 
@@ -515,3 +501,12 @@ def darcy_velocity(mesh, k, k_r, mu, del_p, rho, g):
             continue
         q[face.ID] = k * k_r[face.ID] / mu * (del_p[face.ID] - rho[face.ID] * g)
     return q
+
+def update_interface(model,e_w,p_w,p_n,p_c):
+    """
+    This function updates the primary variables for the hysteresis applications
+    """
+    model.interface.e_w = e_w
+    model.interface.p_w = p_w
+    model.interface.p_n = p_n
+    model.interface.p_c = p_c
