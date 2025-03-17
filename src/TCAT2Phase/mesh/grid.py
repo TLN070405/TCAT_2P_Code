@@ -166,3 +166,15 @@ class Mesh:
 
         _faces = Faces(self.points)
         self.faces,self.num_faces = _faces.gen_uniform_faces(domain)
+
+
+def create_submesh(mesh,cell_id):
+    """
+    function to create one cell sub mesh from a given mesh
+    """
+    sub_mesh = type(mesh)() # create a new mesh with same type as mesh
+    sub_mesh.num_faces = len(mesh.cells[cell_id].faces)
+    sub_mesh.cells = [mesh.cells[0]]  # Only keep the target cell
+    sub_mesh.faces = {face: mesh.faces[face] for face in mesh.cells[cell_id].faces}
+
+    return sub_mesh

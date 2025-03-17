@@ -1,5 +1,6 @@
 """state_equations.py"""
 import math
+import numpy as np
 
 def effective_saturation(e_w,e_wr,e_nr,porosity):
     """
@@ -42,3 +43,15 @@ def volume_fraction(e_in,porosity):
     """
     e_out = porosity - e_in
     return e_out
+
+def darcy_velocity(mesh, k, k_r, mu, del_p, rho, g):
+    """
+    Calculate the Darcy velocity as:
+        q^a = -k*k_r^a/mu^a(\grad p^a - rho^a*g)
+    """
+    q = np.zeros(mesh.num_faces)
+    for face in mesh.faces:
+        if face.boundary:
+            continue
+        q[face.ID] = k * k_r[face.ID] / mu * (del_p[face.ID] - rho[face.ID] * g)
+    return q
