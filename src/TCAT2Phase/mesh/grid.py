@@ -153,6 +153,7 @@ class Mesh:
         self.num_cells = -1
         self.faces = None
         self.num_faces = -1
+        self.boundary  =  None
 
     def uniform_mesh_1d(self,domain,nodes):
         """
@@ -167,14 +168,24 @@ class Mesh:
         _faces = Faces(self.points)
         self.faces,self.num_faces = _faces.gen_uniform_faces(domain)
 
+        # Create a boudnary mesh that has the same structure of mesh
+        self.boundary = BoundaryMesh(self)
 
-def create_submesh(mesh,cell_id):
+class BoundaryMesh(Mesh):
     """
-    function to create one cell sub mesh from a given mesh
+    A subclass of Mesh that only includes boundary cells and faces.
+    It mimics the structure of the original Mesh class, but filters for boundary data.
     """
-    sub_mesh = type(mesh)() # create a new mesh with same type as mesh
-    sub_mesh.num_faces = len(mesh.cells[cell_id].faces)
-    sub_mesh.cells = [mesh.cells[0]]  # Only keep the target cell
-    sub_mesh.faces = {face: mesh.faces[face] for face in mesh.cells[cell_id].faces}
+    def __init__(self, full_mesh: Mesh):
+        # Initialize the BoundaryMesh from a full mesh
+        self.points = full_mesh.points
+        self.num_points = full_mesh.num_points
+        self.faces = [f for f in full_mesh.faces if f.boundary]
+        self.num_faces = len(self.faces)
 
-    return sub_mesh
+        # Only include boundary cells
+        self.cells = [cell for cell in full_mesh.cells if cell.boundary]
+        self.num_cells = len(self.cells)
+
+    def __repr__(self):
+        return f"BoundaryMesh(num_cells={self.num_cells}, num_faces={self.num_faces})"
