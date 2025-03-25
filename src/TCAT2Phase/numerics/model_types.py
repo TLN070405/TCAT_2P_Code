@@ -1,7 +1,11 @@
 """model_types.py"""
 
-from TCAT2Phase.numerics import residual
 from TCAT2Phase.numerics import form_function
+from TCAT2Phase.numerics.residual_pp import ResidualPP
+from TCAT2Phase.numerics.residual_sp import ResidualSP
+from TCAT2Phase.numerics.residual_spp import ResidualSPP
+from TCAT2Phase.numerics.residual_pr import ResidualPR
+
 
 class BaseModel:
     """
@@ -21,7 +25,7 @@ class CgpTCAT(BaseModel):
             self.name = 'cgp-TCAT-spijvk'
             self.u_names = ['e_w','p_w','e_wn','j_wn','w_wn','k_wn']
             self.num_u = 6
-            self.residual = residual.model_residual_tcat
+            #self.residual = residual.model_residual_tcat
             self.form_function = form_function.model_formfunction_tcat
 
 class ExtendedTwoPhase(BaseModel):
@@ -33,7 +37,7 @@ class ExtendedTwoPhase(BaseModel):
             self.name = 'extended-two-phase-spp'
             self.u_names = ['e_w','p_w','p_n']
             self.num_u = 3
-            self.residual = residual.model_residual_tm
+            self.residual = ResidualSPP.compute_residual
             self.form_function = form_function.model_formfunction_tm
 
 class TwoPhase(BaseModel):
@@ -45,14 +49,14 @@ class TwoPhase(BaseModel):
             self.name = 'two-phase-sp'
             self.u_names = ['e_w','p_w']
             self.num_u = 2
-            self.residual = residual.model_residual_tm
+            self.residual = ResidualSP.compute_residual
             self.form_function = form_function.model_formfunction_tm
 
         if form == 'pp':
             self.name = 'two-phase-pp'
             self.u_names = ['p_w','p_n']
             self.num_u = 2
-            self.residual = residual.model_residual_tm
+            self.residual = ResidualPP.compute_residual
             self.form_function = form_function.model_formfunction_tm
 
 class ExtendedRichards(BaseModel):
@@ -64,7 +68,7 @@ class ExtendedRichards(BaseModel):
             self.name = 'extended-richards-sp'
             self.u_names = ['e_w','p_w']
             self.num_u = 2
-            self.residual = residual.model_residual_tm
+            #self.residual = residual.model_residual_tm
             self.form_function = form_function.model_formfunction_tm
 
 class Richards(BaseModel):
@@ -76,5 +80,5 @@ class Richards(BaseModel):
             self.name = 'richards-pr'
             self.u_names = ['p_w']
             self.num_u = 1
-            self.residual = residual.model_residual_tm
+            self.residual = ResidualPR.compute_residual
             self.form_function = form_function.model_formfunction_tm

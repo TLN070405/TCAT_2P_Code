@@ -1,7 +1,7 @@
 import numpy as np
 
 from TCAT2Phase.numerics import utils
-from TCAT2Phase.numerics import residual
+
 
 def model_formfunction_tm(snes,U,F,model):
     """
@@ -19,7 +19,7 @@ def model_formfunction_tm(snes,U,F,model):
 
     model_formfunction_internal(f,u,model)
 
-    model_formfunction_boundary_tm(0,f,u,model)
+    #model_formfunction_boundary_tm(0,f,u,model)
 
 
 def model_formfunction_tcat(snes,U,F,model):
@@ -47,7 +47,7 @@ def model_formfunction_internal(f,u,model):
     """
     u_name = model.model.u_names
     nodes = model.nodes
-    
+
     for n_u,u_name in enumerate(model.model.u_names):
         for n in range(0,nodes):
             index =(n,) * (len(u.shape) - 1) + (slice(n_u),)
@@ -59,15 +59,10 @@ def model_formfunction_boundary_tm(t,f,u,model):
     """
     Set Boundary points residual equations in order to solve IC in case we have Neumman BC. 
     """
-    e_w, p_w, e_n, p_n, p_c = residual.model_primary_variables_tm(u, model)
-    q_w, q_n, rho_w, rho_n = residual.model_phase_flux_tm(p_w, p_n, p_c, model)
-    residual.model_residual_boundary_tm(t, f, u, q_w, q_n, model)
+
 
 
 def model_formfunction_boundary_tcat(t,f,u,model):
     """
     Set Boundary points residual equations in order to solve IC in case we have Neumman BC. 
     """
-    e_w, p_w, e_wn, j_wn, w_wn, k_wn = residual.model_primary_variables_tcat(u, model)
-    q_w, rho_w = residual.model_phase_flux_tcat(e_w, p_w, model)
-    residual.model_residual_boundary_tcat(t, f, u,q_w, model)

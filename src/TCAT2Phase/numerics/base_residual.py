@@ -1,32 +1,29 @@
 import numpy as np
-import TCAT2Phase
 from TCAT2Phase.numerics import utils
 from TCAT2Phase.state_equations import state_equations
 
 class BaseResidual:
     """
-    class holds the residual of the system of equations
+    Base class for residual computation.
+    Other residual classes will inherit from this.
     """
-    def __init__(self, ts, model):
-        self.ts = ts
+    def __init__(self, model):
         self.model = model
+        self.nodes = model.nodes
         self.mesh = model.mesh
-        self.da = ts.getDM()
-        self.primary_variables_form = 1
-        self.phase_fluxes_form= 1
-        self.spatial_operator_form = 1
-        self.time_matrix_form = 1
+        self.time_mat = np.zeros([model.model.num_u, model.model.num_u])
 
-    def compute_residual(self, t, U, Udot, F):
+    def compute_residual(self,ts, t, U, Udot, F):
         """
         function to compute the whole system equations residuals
         """
-        localU = self.da.getLocalVec()
-        self.da.globalToLocal(U, localU)
+        da = ts.getDM()
+        localU = da.getLocalVec()
+        da.globalToLocal(U, localU)
 
-        u = self.da.getVecArray(localU)
-        udot = self.da.getVecArray(Udot)
-        f = self.da.getVecArray(F)
+        u = da.getVecArray(localU)
+        udot = da.getVecArray(Udot)
+        f = da.getVecArray(F)
 
         # calculate the residual at interior nodes
         self.compute_internal_residual(f, u, udot)
@@ -48,61 +45,45 @@ class BaseResidual:
             n = cell.ID
             self.model.current_cell = n
 
-            od       = self.compute_spatial_operator(primary_variables,fluxes)
-            time_mat = self.compute_time_matrix(primary_variables,fluxes)
-            f[n]     = self.compute_residual_equations(time_mat, udot, od)
+            od       = self.compute_spatial_operator(primary_variables,fluxes,cell)
+            self.compute_time_matrix(primary_variables,fluxes)
+            f[n]     = self.compute_residual_equations (udot, od)
+
 
     def compute_primary_variables(self,u):
         """
         function to get and compute solution and primary variables depending on model and formulation
         """
-        if self.model.form in self.primary_variables_form:
-            form_primary_variables = self.primary_variables_form[self.model.form](u)
-        else:
-            print("Error Model Form is unknown")
-        e_n = self.model.solid.porosity - form_primary_variables['e_w']
 
-        primary_variables = {'e_n': e_n, **form_primary_variables}
-        return primary_variables
+        raise NotImplementedError("This function ")
 
     def compute_phases_fluxes(self,primary_variables):
         """
         function to compute the phases fluxes depending on the model and formualtion
         """
-        if self.model.form in self.phase_fluxes_form:
-            fluxes = self.phase_fluxes_form[self.model.form](primary_variables)
-        else:
-            print("Error Model Form is unknown")
-        return fluxes
+        raise NotImplementedError("This function ")
 
-    def compute_spatial_operator(self,primary_variables,fluxes):
+    def compute_spatial_operator(self,primary_variables,fluxes,cell):
         """
         function to compute the spatial operator of the system of equations depending on model and formulation
         [time_matrix].udot =spatial_operator
         """
-        if self.model.form in self.spatial_operator_form:
-            od = self.spatial_operator_form[self.model.form](primary_variables,fluxes)
-        else:
-            print("Error Model Form is unknown")
-        return od
+
+        raise NotImplementedError("This function ")
 
     def compute_time_matrix(self,primary_variables,fluxes):
         """
         function to compute the time matrix of the system of equations depending on model and formulation
         [time_matrix].udot =spatial_operator
         """
-        if self.model.form in self.time_matrix_form:
-            time_mat = self.time_matrix_form[self.model.form](primary_variables,fluxes)
-        else:
-            print("Error Model Form is unknown")
-        return time_mat
+        raise NotImplementedError("This function ")
 
-    def compute_residual_equations(self,time_mat, udot, od):
+    def compute_residual_equations(self, udot, od):
         """
         function to combine the spatial operator and time matrix to get the residual equations 
         """
         n = self.model.current_cell
-        f = np.dot(time_mat, udot[n]) - od
+        f = np.dot(self.time_mat, udot[n]) - od
         return f
 
     def compute_residual_boundary(self,t, f, u):
@@ -116,10 +97,13 @@ class BaseResidual:
         for n in range(self.model.model.num_u):
             # Residual at Boundaries left and right
             for i, j in enumerate([0, self.model.nodes-1]):
+                # check if bc are time dependent or just constant bc
                 bc_value = self.check_callable_boundary_conditions(boundary_conditions[n][0][i],t)
+                # create an index in order to make a general bc code for both 1 variable and multiple variables formulations
                 index =(j,) * (len(u.shape) - 1) + (slice(n),)
                 if boundary_type[u_names[n]][0][i] == 0:
-                    f[index] = u[index] - bc_value
+                    #f[index] = u[index] - bc_value
+                    f[j] = u[j] - bc_value
                 elif boundary_type[u_names[n]][0][i] == 1:
                     q = self.compute_boundary_flux(j,self.model.w_phase)
                     f[index]  = q -  bc_value
@@ -135,8 +119,6 @@ class BaseResidual:
         """
         # get primary variables
         primary_variables  = self.compute_primary_variables(u)
-
-        #create a boundary mesh consisting of one cell
 
         # Cell Centered Variables
         if phase.phase =='w':
