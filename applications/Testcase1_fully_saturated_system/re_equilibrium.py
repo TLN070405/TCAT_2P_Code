@@ -90,7 +90,7 @@ initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Time
-time_interval = np.array([100.0])
+time_interval = np.array([1.0,2,3])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
@@ -99,14 +99,14 @@ solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 # Solve model and return model.solutions which is a dictionary where
 # solutions[time][u_name] = np.array
 
-pw0_bc = -1000
-pwL_bc = -1000
+pw0_bc = -2000
+pwL_bc = -2000
 # Set boundary values
 boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 
 model.set_boundary_conditions(boundary_conditions)
 u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
-solutions = TCAT2Phase.numerics.solver.solver_error(u, ts, model)
+solutions = TCAT2Phase.numerics.solver.solver_time(u, ts, model)
 
 # visualization
 #plt.gca().set_ylim(0.02, 0.41)  # Y-axis limits

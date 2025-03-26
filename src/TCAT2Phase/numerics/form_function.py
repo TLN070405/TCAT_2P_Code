@@ -1,9 +1,9 @@
 import numpy as np
-
+from . import model_types
 from TCAT2Phase.numerics import utils
 
 
-def model_formfunction_tm(snes,U,F,model):
+def model_formfunction(snes,U,F,model):
     """
     residual function to solve boundary conditions in case we have flux bc
     tm: stands for traditional model.
@@ -19,26 +19,7 @@ def model_formfunction_tm(snes,U,F,model):
 
     model_formfunction_internal(f,u,model)
 
-    #model_formfunction_boundary_tm(0,f,u,model)
-
-
-def model_formfunction_tcat(snes,U,F,model):
-    """
-    residual function to solve boundary conditions in case we have flux bc
-    tcat stands for: THERMODYNAMICALLY CONSTRAINED AVERAGING THEORY
-    """
-    da=snes.getDM()
-    localU=da.getLocalVec()
-    da.globalToLocal(U,localU)
-    #######
-    u=da.getVecArray(localU)
-    f=da.getVecArray(F)
-    #######
-    u=da.getVecArray(localU)
-
-    model_formfunction_internal(f,u,model)
-
-    model_formfunction_boundary_tcat(0,f,u,model)
+    model_formfunction_boundary(0,f,u,model)
 
 
 def model_formfunction_internal(f,u,model):
@@ -50,19 +31,14 @@ def model_formfunction_internal(f,u,model):
 
     for n_u,u_name in enumerate(model.model.u_names):
         for n in range(0,nodes):
-            index =(n,) * (len(u.shape) - 1) + (slice(n_u),)
             x = model.domain.domain_size[0,0] + n* model.domain.domain_length[0]/(nodes-1)
-            f[index] = u[index] - model.initial_conditions[u_name](x)
+            f[n] = u[n] - model.initial_conditions[u_name](x)
 
 
-def model_formfunction_boundary_tm(t,f,u,model):
+def model_formfunction_boundary(t,f,u,model):
     """
     Set Boundary points residual equations in order to solve IC in case we have Neumman BC. 
     """
-
-
-
-def model_formfunction_boundary_tcat(t,f,u,model):
-    """
-    Set Boundary points residual equations in order to solve IC in case we have Neumman BC. 
-    """
+    residual_class = model_types.get_residual_class(model)
+    residual_instance = residual_class(model)
+    residual_instance.compute_residual_boundary(t, f, u)

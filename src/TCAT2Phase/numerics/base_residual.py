@@ -49,7 +49,6 @@ class BaseResidual:
             self.compute_time_matrix(primary_variables,fluxes)
             f[n]     = self.compute_residual_equations (udot, od)
 
-
     def compute_primary_variables(self,u):
         """
         function to get and compute solution and primary variables depending on model and formulation
@@ -93,25 +92,28 @@ class BaseResidual:
         boundary_type = self.model.boundary_type
         boundary_conditions = self.model.boundary_conditions
         u_names = self.model.model.u_names
+        bc_array = np.zeros(self.model.model.num_u)
+        fluxes_bc = np.zeros(self.model.model.num_u)
+        bc_type0  = np.zeros(self.model.model.num_u)
 
-        for n in range(self.model.model.num_u):
+        for i, j in enumerate([0, self.model.nodes-1]):
             # Residual at Boundaries left and right
-            for i, j in enumerate([0, self.model.nodes-1]):
+            for n in range(self.model.model.num_u):
                 # check if bc are time dependent or just constant bc
-                bc_value = self.check_callable_boundary_conditions(boundary_conditions[n][0][i],t)
-                # create an index in order to make a general bc code for both 1 variable and multiple variables formulations
-                index =(j,) * (len(u.shape) - 1) + (slice(n),)
+                bc_array[n] = self.check_callable_boundary_conditions(boundary_conditions[n][0][i],t)
                 if boundary_type[u_names[n]][0][i] == 0:
-                    #f[index] = u[index] - bc_value
-                    f[j] = u[j] - bc_value
+                    fluxes_bc[n] = 0
+                    bc_type0[n]  = 1
                 elif boundary_type[u_names[n]][0][i] == 1:
-                    q = self.compute_boundary_flux(j,self.model.w_phase)
-                    f[index]  = q -  bc_value
+                    fluxes_bc[n] = self.compute_boundary_flux(j,self.model.w_phase)
+                    bc_type0[n]  = 0
                 elif boundary_type[u_names[n]][0][i] == 2:
-                    q = self.compute_boundary_flux(j,self.model.n_phase)
-                    f[index]  = q -  bc_value
+                    fluxes_bc[n] = self.compute_boundary_flux(j,self.model.n_phase)
+                    bc_type0[n]  = 0
                 else:
                     print("Boundary type non supported")
+            f[j]= bc_type0 * u[:][j] +(1-bc_type0) * fluxes_bc - bc_array
+
 
     def compute_boundary_flux(self,phase,u):
         """

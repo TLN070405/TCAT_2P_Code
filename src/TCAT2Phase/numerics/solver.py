@@ -3,10 +3,7 @@
 import numpy as np
 import petsc4py
 from petsc4py import PETSc
-from TCAT2Phase.numerics.residual_pp import ResidualPP
-from TCAT2Phase.numerics.residual_sp import ResidualSP
-from TCAT2Phase.numerics.residual_spp import ResidualSPP
-from TCAT2Phase.numerics.residual_pr import ResidualPR
+from . import model_types
 
 __all__ = ["solver"]
 
@@ -103,7 +100,8 @@ def _get_time_stepper(model, da):
     """
     ts = PETSc.TS().create(PETSc.COMM_WORLD)
     ts.setProblemType(ts.ProblemType.NONLINEAR)
-    residual_instance = ResidualPR(model)
+    residual_class = model_types.get_residual_class(model)
+    residual_instance = residual_class(model)
     ts.setIFunction(residual_instance.compute_residual)
     ts.setDM(da)
     ts.setTime(0)
