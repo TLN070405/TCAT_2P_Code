@@ -28,11 +28,15 @@ def model_formfunction_internal(f,u,model):
     """
     u_name = model.model.u_names
     nodes = model.nodes
+    initial_conditions = np.zeros(model.model.num_u)
 
-    for n_u,u_name in enumerate(model.model.u_names):
-        for n in range(0,nodes):
-            x = model.domain.domain_size[0,0] + n* model.domain.domain_length[0]/(nodes-1)
-            f[n] = u[n] - model.initial_conditions[u_name](x)
+    for n in range(0,nodes):
+        x = model.domain.domain_size[0,0] + n* model.domain.domain_length[0]/(nodes-1)
+        for n_u,u_name in enumerate(model.model.u_names):
+            initial_conditions[n_u] = model.initial_conditions[u_name](x)
+
+        f[n] = u[:][n] - initial_conditions
+
 
 
 def model_formfunction_boundary(t,f,u,model):

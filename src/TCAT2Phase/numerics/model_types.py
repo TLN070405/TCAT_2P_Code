@@ -1,10 +1,12 @@
 """model_types.py"""
 
 from TCAT2Phase.numerics import form_function
-from TCAT2Phase.numerics.residual_pp import ResidualPP
-from TCAT2Phase.numerics.residual_sp import ResidualSP
-from TCAT2Phase.numerics.residual_spp import ResidualSPP
-from TCAT2Phase.numerics.residual_pr import ResidualPR
+from TCAT2Phase.numerics.residual_2p_pp import Residual2pPP
+from TCAT2Phase.numerics.residual_2p_sp import Residual2pSP
+from TCAT2Phase.numerics.residual_e2p_spp import ResidualE2pSPP
+from TCAT2Phase.numerics.residual_re_pr import ResidualRePR
+from TCAT2Phase.numerics.residual_ere_sp import ResidualEReSP
+from TCAT2Phase.numerics.residual_tcat_cgp import ResidualTcatCGP
 
 
 class BaseModel:
@@ -83,11 +85,15 @@ def get_residual_class(model):
     function to get the correct residual depending on model and formulation
     """
     form  = model.model.name
-    if form=="extended-two-phase-spp":
-        return ResidualSPP
+    if form=="cgp-TCAT-spijvk":
+        return ResidualTcatCGP
+    elif form=="extended-two-phase-spp":
+        return ResidualE2pSPP
     elif form=="two-phase-pp":
-        return ResidualPP
+        return Residual2pPP
     elif form=="two-phase-sp":
-        return ResidualSP
+        return Residual2pSP
+    elif form=="extended-richards-sp":
+        return ResidualEReSP
     elif form=="richards-pr":
-        return ResidualPR
+        return ResidualRePR

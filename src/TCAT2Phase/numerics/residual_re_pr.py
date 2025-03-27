@@ -1,9 +1,7 @@
 import numpy as np
-from TCAT2Phase.numerics import utils
-from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.numerics.base_residual import BaseResidual
 
-class ResidualPR(BaseResidual):
+class ResidualRePR(BaseResidual):
     """
     class holds the residual of the system of equations
     Pr: pressure w
@@ -25,33 +23,6 @@ class ResidualPR(BaseResidual):
         e_n = self.model.solid.porosity - e_w
 
         return {'e_w':e_w,'e_n':e_n,'p_w':p_w,'p_n':p_n,'p_c':p_c}
-
-    def compute_phases_fluxes(self,primary_variables):
-        """
-        function to calculate phases fluxes
-        """
-        mesh = self.model.mesh
-        gravity = self.model.solid.gravity
-        k = self.model.solid.permeability
-        mu_w = self.model.w_phase.viscosity
-        mu_n = self.model.n_phase.viscosity
-
-        rho_w = utils.cell_center(primary_variables['p_w'], self.model.w_phase.density_function, mesh)
-        rho_n = utils.cell_center(primary_variables['p_n'], self.model.n_phase.density_function, mesh)
-
-        k_rw = utils.cell_center(primary_variables['p_c'], self.model.interface.w_relative_permeability, mesh)
-        k_rn = utils.cell_center(primary_variables['p_c'], self.model.interface.n_relative_permeability, mesh)
-
-        del_pw = utils.gradient(primary_variables['p_w'], mesh)
-        del_pn = utils.gradient(primary_variables['p_n'], mesh)
-
-        rho_w_face = utils.interpolate(rho_w, mesh)
-        rho_n_face = utils.interpolate(rho_n, mesh)
-
-        q_w = state_equations.darcy_velocity(mesh, k, utils.interpolate(k_rw * rho_w, mesh), mu_w, del_pw, rho_w_face, gravity)
-        q_n = state_equations.darcy_velocity(mesh, k, utils.interpolate(k_rn * rho_n, mesh), mu_n, del_pn, rho_n_face, gravity)
-
-        return {'q_w':q_w,'q_n':q_n,'rho_w':rho_w,'rho_n':rho_n}
 
     def compute_spatial_operator(self,primary_variables,fluxes,cell):
         """
