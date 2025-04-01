@@ -151,7 +151,6 @@ class BaseResidual:
             # And it allows to detect which variable has Dirichlet and which one is Neumman.
             f[j]= bc_type0 * u[:][j] +(1-bc_type0) * fluxes_bc - bc_values
 
-
     def compute_boundary_flux(self,phase,u):
         """
         function to compute phases fluxes at boundary points

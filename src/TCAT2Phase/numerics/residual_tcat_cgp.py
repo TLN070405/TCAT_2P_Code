@@ -7,7 +7,11 @@ class ResidualTcatCGP(BaseResidual):
     """
     class holds the residual of the system of equations
     """
-
+    def __init__(self, model):
+        # Call the __init__ method of BaseResidual
+        super().__init__(model)
+        self.e_wn_eq = self.get_equilibrium_interfacial_area_array()
+    
     def compute_primary_variables(self,u):
         """
         function to get and compute solution and primary variables for 2 phases SP formulation
@@ -26,6 +30,13 @@ class ResidualTcatCGP(BaseResidual):
         """
         function to calculate phases fluxes
         """
+        e_w = primary_variables['e_w']
+        p_w = primary_variables['p_w']
+        e_wn = primary_variables['e_wn']
+        j_wn = primary_variables['j_wn']
+        w_wn = primary_variables['w_wn']
+        k_wn = primary_variables['k_wn']
+
         mesh = self.mesh
         gravity = self.model.solid.gravity
         k = 1./self.model.w_phase.momentum_resistance
@@ -41,7 +52,9 @@ class ResidualTcatCGP(BaseResidual):
 
         q_w = state_equations.darcy_velocity(mesh, k, utils.interpolate(k_rw * rho_w, mesh), mu_w, del_pw, rho_w_face, gravity)
 
-        return {'q_w':q_w,'rho_w':rho_w}
+        d_e_w_d_x, d_e_wn_d_x, d_j_wn_d_x, d_w_wn_d_x = self.compute_primary_variables_gradient(e_w, e_wn, j_wn, w_wn)
+
+        return {'q_w':q_w,'rho_w':rho_w, 'd_e_w_d_x':d_e_w_d_x, 'd_e_wn_d_x':d_e_wn_d_x, 'd_j_wn_d_x':d_j_wn_d_x, 'd_w_wn_d_x':d_w_wn_d_x}
 
     def compute_spatial_operator(self,primary_variables,fluxes,cell):
         """
@@ -52,10 +65,10 @@ class ResidualTcatCGP(BaseResidual):
         c_wn = self.model.interface.interfacial_dynamics
         gamma_wn = self.model.interface.interfacial_tension
         k_hat_wn = self.model.interface.interfacial_area_relaxation
-        e_wn_eq  = self.model.interface.interfacial_area_equilibrium
+        e_wn_eq  = self.e_wn_eq
 
         # intermediate calculation parameters
-        dx2 = (1/(cell.length[0]*cell.length[0]))
+        dx2 = cell.length[0]*cell.length[0]
 
         # primary variables
         e_w = primary_variables['e_w']
@@ -69,14 +82,18 @@ class ResidualTcatCGP(BaseResidual):
         q_w = fluxes['q_w']
 
         # primary variables gradients
-        d_e_w_d_x, d_e_wn_d_x, d_j_wn_d_x, d_w_wn_d_x = self.compute_primary_variables_gradient(e_w, e_wn, j_wn, w_wn)
+        d_e_w_d_x = fluxes['d_e_w_d_x']
+        d_e_wn_d_x = fluxes['d_e_wn_d_x']
+        d_j_wn_d_x = fluxes['d_j_wn_d_x']
+        d_w_wn_d_x = fluxes['d_w_wn_d_x']
+
 
         od_dp = np.zeros(3)
         for idx,node in enumerate ([n-1, n, n+1]):
             pw_jwn = p_w[node] + gamma_wn * j_wn[node]
             od_dp[idx]= c_wn * (pw_jwn)  + gamma_wn * k_hat_wn/(pw_jwn + 1e-3) * (e_wn_eq[node] - e_wn[node])
 
-        d2_od_dp = dx2 * ( od_dp[2] - 2 * od_dp[1] + od_dp[0] )
+        d2_od_dp = ( od_dp[2] - 2 * od_dp[1] + od_dp[0] )/dx2
 
         # d(ewn*wwn)/dx
         d_ewn_wwn_dx = w_wn[n] * d_e_wn_d_x[n] + e_wn[n] * d_w_wn_d_x[n]
@@ -85,7 +102,7 @@ class ResidualTcatCGP(BaseResidual):
         d_ewn_jwn_wwn_dx =j_wn[n] * d_ewn_wwn_dx  + e_wn[n] * w_wn[n] * d_j_wn_d_x[n]
 
         # spatial operators
-        od_w  = 1.0 / cell.length * (q_w[n + 1] - q_w[n])
+        od_w  = (1.0 / cell.length) * (q_w[n + 1] - q_w[n])
         od_ia = k_hat_wn * (e_wn_eq[n] - e_wn[n]) - d_ewn_wwn_dx
         od_j  = (2/3) * d2_od_dp - 2 * d_ewn_jwn_wwn_dx
         od_v  = e_w[n] * e_wn[n] * w_wn[n] + od_dp[1] * d_e_w_d_x[n]
@@ -120,3 +137,16 @@ class ResidualTcatCGP(BaseResidual):
         d_w_wn_d_x = utils.gradient(w_wn, self.mesh)
 
         return d_e_w_d_x, d_e_wn_d_x, d_j_wn_d_x, d_w_wn_d_x
+
+    def get_equilibrium_interfacial_area_array(self):
+        """
+        Function to transform the e_wn_eq(x) function to an array to be used directly
+        in discretization of spatial operator.
+        """
+        nodes = self.model.nodes
+        e_wn_eq  = np.zeros([nodes])
+
+        for n in range(0,nodes):
+            x = self.model.domain.domain_size[0,0] + n* self.model.domain.domain_length[0]/(nodes-1)
+            e_wn_eq[n] = self.model.interface.interfacial_area_equilibrium(x)
+        return e_wn_eq

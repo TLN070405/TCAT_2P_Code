@@ -17,109 +17,87 @@ domain =  TCAT2Phase.properties.domain.initialize_domain(
                             )
 
 # Discretization
-nodes = 3
+nodes = 101
 
 # Mesh
 mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain,nodes)
 
 # Boundaries
-boundary_type = [0,0]
-model = TCAT2Phase.numerics.model.initialize_model(
-                                model_type = 'Richards',
-                                form = 'pr',
-                                domain = domain,
-                                nodes = nodes,
-                                mesh = mesh
-                                    )
+model = TCAT2Phase.numerics.model.Model(
+                                        model_type="Richards", form="pr", domain=domain, nodes=nodes, mesh=mesh
+                                        )
 
 # Set boundary types: 0 - Dirchlet
-#                     1 - Neumann (but not supported yet)
+#                     1 - Neumann qw
+#                     2 - Neumann qn
 boundary_type = {'p_w': [[0, 0]]}
 
 model.set_boundary_type(boundary_type = boundary_type)
 
-# Set boundary names
-boundary_name = {'p_w': [['p_w', 'p_w']]}
-
-model.set_boundary_name(boundary_name = boundary_name)
-
-
-
-
 # Set solid phase properties
-s_phase = TCAT2Phase.properties.phase.Solid('s')
-s_phase.set_porosity(0.4)
-s_phase.set_permeability(1e-10)
-s_phase.set_gravity(0.0)
+s_phase = TCAT2Phase.properties.phase.Solid(
+    "s",
+    porosity=0.4,
+    permeability=1e-10,
+    gravity=0.0,
+    dynamic_capillary_pressure_parameter=None,
+)
 
 # Set wetting-phase properties
-w_phase = TCAT2Phase.properties.phase.Fluid('w')
-w_phase.set_residual_volume_fraction(0.1*s_phase.porosity)
-w_phase.set_viscosity(1.e-3)
-w_den_params = {'rho0':1.e3,
-                'beta':4.9e-10}
-w_phase.set_density_function(state_equations.density_exp_pressure,**w_den_params)
-w_phase.set_d_density_function(state_equations.d_density_exp_pressure,**w_den_params)
+w_den_params = {"rho0": 1.0e3, "beta": 4.9e-10}
+w_phase = TCAT2Phase.properties.phase.Fluid(
+    "w",
+    viscosity=1.0e-3,
+    momentum_resistance=0.0,
+    residual_volume_fraction=0.04,
+    density_function=state_equations.density_exp_pressure,
+    d_density_function=state_equations.d_density_exp_pressure,
+    **w_den_params,
+)
 
 # Set nonwetting-phase properties
-n_phase = TCAT2Phase.properties.phase.Fluid('n')
-n_phase.set_residual_volume_fraction(0.2*s_phase.porosity)
-n_phase.set_viscosity(1.78e-5)
-n_den_params = {'rho0':1.2,
-                'alpha':1.189e-5
-                }
-n_phase.set_density_function(state_equations.density_linear_pressure,**n_den_params)
-n_phase.set_d_density_function(state_equations.d_density_linear_pressure,**n_den_params)
-n_en_params = {'porosity':s_phase.porosity
-                }
+n_den_params = {"rho0": 1.2, "alpha": 1.189e-5}
+n_phase = TCAT2Phase.properties.phase.Fluid(
+    "n",
+    viscosity=1.78e-5,
+    momentum_resistance=0.0,
+    residual_volume_fraction=0.2*0.4,
+    density_function=state_equations.density_linear_pressure,
+    d_density_function=state_equations.d_density_linear_pressure,
+    **n_den_params,
+)
 
-
-# Set up the model phases.
-model.solid = s_phase
-model.w_phase = w_phase
-model.n_phase = n_phase
 # Set w-n interphase properties
-wn_interface_imb = TCAT2Phase.properties.interface.Interface()
-n = 6
-m = 1.0 - (1.0 / n)
-alpha = 9e-4
-
 vg_imb = state_equations_interface.VanGenuchten(
-    m = m,
-    n = n,
-    alpha = alpha,
-    porosity = s_phase.porosity,
-    e_wr = w_phase.residual_volume_fraction,
-    e_nr = n_phase.residual_volume_fraction,
-    )
+    m=1.0 - (1.0 /6.0),
+    n=6.0,
+    alpha=9e-4,
+    porosity=s_phase.porosity,
+    e_wr=w_phase.residual_volume_fraction,
+    e_nr=n_phase.residual_volume_fraction,
+)
 
-wn_interface_imb.set_pc_function(vg_imb.capillary_pressure)
-wn_interface_imb.set_d_pc_function(vg_imb.d_capillary_pressure)
-wn_interface_imb.set_volume_fraction_function(vg_imb.volume_fraction_w)
-wn_interface_imb.set_d_volume_fraction_function(vg_imb.d_volume_fraction_w)
-
-# Set wn-interface properties drainage
-wn_interface_dr = TCAT2Phase.properties.interface.Interface()
-n = 9.0
-m = 1.0 - (1.0 / n)
-alpha = 6e-4
+wn_interface_imb = TCAT2Phase.properties.interface.TraditionalInterface(vg_imb)
 
 vg_dr = state_equations_interface.VanGenuchten(
-    m = m,
-    n = n,
-    alpha = alpha,
-    porosity = s_phase.porosity,
-    e_wr = w_phase.residual_volume_fraction,
-    e_nr = 0.0,
-    )
-wn_interface_dr.set_pc_function(vg_dr.capillary_pressure)
-wn_interface_dr.set_d_pc_function(vg_dr.d_capillary_pressure)
-wn_interface_dr.set_volume_fraction_function(vg_dr.volume_fraction_w)
-wn_interface_dr.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
+    m=1.0 - (1.0 /9.0),
+    n=9.0,
+    alpha=6e-4,
+    porosity=s_phase.porosity,
+    e_wr=w_phase.residual_volume_fraction,
+    e_nr=n_phase.residual_volume_fraction,
+)
 
-w_phase.set_rel_perm_function(vg_dr.w_relative_permability)
-n_phase.set_rel_perm_function(vg_dr.n_relative_permability)
+wn_interface_dr = TCAT2Phase.properties.interface.TraditionalInterface(vg_dr)
+
+# Set model phases and interfaces
+TCAT2Phase.numerics.model.Model.set_model_phases(
+    model, s_phase, w_phase, n_phase, wn_interface
+)
+
+
+
 
 
 # Set hysteresis data and model

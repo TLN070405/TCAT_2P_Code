@@ -104,7 +104,7 @@ boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 model.set_boundary_conditions(boundary_conditions)
 
 # Time
-time_interval = np.array([5000,10000,15000,20000,25000])
+time_interval = np.array([5000,10000,15000])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
