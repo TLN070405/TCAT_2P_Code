@@ -21,7 +21,6 @@ mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain,nodes)
 
 # Boundaries
-boundary_type = [0,0]
 model = TCAT2Phase.numerics.model.Model(
                                 model_type = 'cgp-TCAT',
                                 form = 'spijvk',

@@ -91,8 +91,8 @@ TCAT2Phase.numerics.model.Model.set_model_phases( model, s_phase, w_phase, None,
 
 
 def kwn_ic_func(ew, e_wn, j_wn):
-    b1 = 1.47e-1,
-    b2 = -2.08e-3,
+    b1 = 1.47e-1
+    b2 = -2.08e-3
     b3 = 5.33e-2/(4.0 * 3.141592653589793)
     d_sauter         =  3*0.369
     b1d1             =  b1*d_sauter
