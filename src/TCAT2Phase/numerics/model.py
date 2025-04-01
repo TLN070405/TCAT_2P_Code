@@ -52,9 +52,8 @@ class Model:
         self.current_cell = 0
         self.res = np.zeros_like(self.nodes)
         self.boundary_type = {}
-        self.boundary_value = {}
-        self.boundary_name = {}
-        self.initial_condition = {}
+        self.boundary_conditions = {}
+        self.initial_conditions = {}
         self.solution = {}
         self.time = None
         self.solid = None
@@ -89,56 +88,35 @@ class Model:
         for u in self.model.u_names:
             self.boundary_type[u] = boundary_type[u]
 
-    def set_boundary_value(self,boundary_value):
+    def set_boundary_conditions(self,boundary_conditions):
         """
-        Set the boundary value for each boundary and solution variable
-        """
-        for n_u,u in enumerate(self.model.u_names):
-            self.boundary_value[n_u] = boundary_value[u]
-
-    def set_boundary_name(self,boundary_name):
-        """
-        Set the quantity name for each boundary and solution variable
+        Set the boundary conditions for each boundary and solution variable
         """
         for n_u,u in enumerate(self.model.u_names):
-            self.boundary_name[n_u] = boundary_name[u]
+            self.boundary_conditions[n_u] = boundary_conditions[u]
 
     def set_initial_conditions(self,initial_conditions):
         """
         Set the initial condition for each solution variable
         """
         for u in self.model.u_names:
-            self.initial_condition[u] = initial_conditions[u]
+            self.initial_conditions[u] = initial_conditions[u]
 
-    def initial_conditions(self,ts,U):
+    def pass_initial_conditions(self,snes,U):
         """
-        Set the initial conditions in the PETSc arrays
+        Pass the initial conditions from the model object to PETSc solution arrays
         """
-        da = ts.getDM()
+        da = snes.getDM()
         u = da.getVecArray(U)
-
         for n_u,u_name in enumerate(self.model.u_names):
             if self.model.num_u==1:
                 for n in range(0,self.nodes):
-                    u[n] = self.initial_condition[u_name][n]
+                    x = self.domain.domain_size[0,0] + n* self.domain.domain_length[0]/(self.nodes-1)
+                    u[n] = self.initial_conditions[u_name](x)
             else:
                 for n in range(0,self.nodes):
-                    u[n][n_u] = self.initial_condition[u_name][n]
-
-    def boundary_conditions(self,ts,U):
-        """
-        Set the boundary conditions in the PETSc arrays
-        """
-        da = ts.getDM()
-        u = da.getVecArray(U)
-
-        if self.model.num_u==1:
-            u[0] = self.boundary_value[0][0][0](0)
-            u[self.nodes-1] = self.boundary_value[0][0][1](0)
-        else:
-            for n in range(self.model.num_u):
-                u[0][n] = self.boundary_value[n][0][0](0)
-                u[self.nodes-1][n] = self.boundary_value[n][0][1](0)
+                    x = self.domain.domain_size[0,0] + n* self.domain.domain_length[0]/(self.nodes-1)
+                    u[n][n_u] = self.initial_conditions[u_name](x)
 
     def set_simulation_time(self,time):
         """

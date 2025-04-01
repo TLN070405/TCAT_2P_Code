@@ -3,6 +3,7 @@
 import numpy as np
 import petsc4py
 from petsc4py import PETSc
+from . import model_types
 
 __all__ = ["solver"]
 
@@ -99,7 +100,9 @@ def _get_time_stepper(model, da):
     """
     ts = PETSc.TS().create(PETSc.COMM_WORLD)
     ts.setProblemType(ts.ProblemType.NONLINEAR)
-    ts.setIFunction(model.model.residual, args=[model])
+    residual_class = model_types.get_residual_class(model)
+    residual_instance = residual_class(model)
+    ts.setIFunction(residual_instance.compute_residual)
     ts.setDM(da)
     ts.setTime(0)
     ts.setExactFinalTime(ts.ExactFinalTime.MATCHSTEP)
@@ -150,7 +153,7 @@ def _solve_ic(da, u, model):
     snes_ic.setDM(da_ic)
 
     # provide an initial estimation for the solution of initial conditions+ boundary conditions
-    model.initial_conditions(snes_ic, u_ic)
+    model.pass_initial_conditions(snes_ic, u_ic)
 
     # solve the system to get initial conditions in terms of solution variables
     snes_ic.solve(None, u_ic)

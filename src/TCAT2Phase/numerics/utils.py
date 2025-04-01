@@ -1,7 +1,6 @@
 import sys
 import petsc4py
 import numpy as np
-from TCAT2Phase import state_equations
 petsc4py.init(sys.argv)
 
 def calc_average(x,y):
@@ -52,6 +51,5 @@ def interpolate(x,mesh):
                 continue
 
             value[face] = x[cell.ID] + mesh.faces[face].distance/dist*(x[neigh] - x[cell.ID]  )
-            #value[face] = 0.5*(x[cell.ID] + x[neigh])
 
     return value

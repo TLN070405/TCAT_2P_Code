@@ -1,7 +1,13 @@
 """model_types.py"""
 
-from TCAT2Phase.numerics import residual
 from TCAT2Phase.numerics import form_function
+from TCAT2Phase.numerics.residual_2p_pp import Residual2pPP
+from TCAT2Phase.numerics.residual_2p_sp import Residual2pSP
+from TCAT2Phase.numerics.residual_e2p_spp import ResidualE2pSPP
+from TCAT2Phase.numerics.residual_re_pr import ResidualRePR
+from TCAT2Phase.numerics.residual_ere_sp import ResidualEReSP
+from TCAT2Phase.numerics.residual_tcat_cgp import ResidualTcatCGP
+
 
 class BaseModel:
     """
@@ -21,7 +27,6 @@ class CgpTCAT(BaseModel):
             self.name = 'cgp-TCAT-spijvk'
             self.u_names = ['e_w','p_w','e_wn','j_wn','w_wn','k_wn']
             self.num_u = 6
-            self.residual = residual.model_residual
             self.form_function = form_function.model_formfunction
 
 class ExtendedTwoPhase(BaseModel):
@@ -33,7 +38,6 @@ class ExtendedTwoPhase(BaseModel):
             self.name = 'extended-two-phase-spp'
             self.u_names = ['e_w','p_w','p_n']
             self.num_u = 3
-            self.residual = residual.model_residual
             self.form_function = form_function.model_formfunction
 
 class TwoPhase(BaseModel):
@@ -45,14 +49,12 @@ class TwoPhase(BaseModel):
             self.name = 'two-phase-sp'
             self.u_names = ['e_w','p_w']
             self.num_u = 2
-            self.residual = residual.model_residual
             self.form_function = form_function.model_formfunction
 
         if form == 'pp':
             self.name = 'two-phase-pp'
             self.u_names = ['p_w','p_n']
             self.num_u = 2
-            self.residual = residual.model_residual
             self.form_function = form_function.model_formfunction
 
 class ExtendedRichards(BaseModel):
@@ -64,7 +66,6 @@ class ExtendedRichards(BaseModel):
             self.name = 'extended-richards-sp'
             self.u_names = ['e_w','p_w']
             self.num_u = 2
-            self.residual = residual.model_residual
             self.form_function = form_function.model_formfunction
 
 class Richards(BaseModel):
@@ -76,5 +77,23 @@ class Richards(BaseModel):
             self.name = 'richards-pr'
             self.u_names = ['p_w']
             self.num_u = 1
-            self.residual = residual.model_residual
             self.form_function = form_function.model_formfunction
+
+
+def get_residual_class(model):
+    """
+    function to get the correct residual depending on model and formulation
+    """
+    form  = model.model.name
+    if form=="cgp-TCAT-spijvk":
+        return ResidualTcatCGP
+    elif form=="extended-two-phase-spp":
+        return ResidualE2pSPP
+    elif form=="two-phase-pp":
+        return Residual2pPP
+    elif form=="two-phase-sp":
+        return Residual2pSP
+    elif form=="extended-richards-sp":
+        return ResidualEReSP
+    elif form=="richards-pr":
+        return ResidualRePR

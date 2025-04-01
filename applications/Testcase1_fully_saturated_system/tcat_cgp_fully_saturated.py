@@ -41,18 +41,8 @@ boundary_type = {'e_w': [[0, 0]],
 
 model.set_boundary_type(boundary_type = boundary_type)
 
-# Set boundary names
-boundary_name = {'e_w': [['e_w', 'e_w']],
-                 'p_w': [['p_w', 'p_w']],
-                 'e_wn': [['e_wn', 'e_wn']],
-                 'j_wn': [['j_wn', 'j_wn']],
-                 'w_wn': [['w_wn', 'w_wn']],
-                 'k_wn': [['k_wn', 'k_wn']]}
-
-model.set_boundary_name(boundary_name = boundary_name)
-
 # Set solid phase properties
-s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.36,
+s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
                                                 permeability = None,
                                                 gravity = 0.0,
                                                 dynamic_capillary_pressure_parameter = None)
@@ -76,48 +66,49 @@ tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
                                       js_ns = 1.,
                                       kn_ns = 1.)
 
+def interfacial_area_equilibrium(x): return 100
+
 wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
                                                              interfacial_dynamics = 3.42e-7,
                                                              interfacial_tension = 35e-3,
                                                              interfacial_area_relaxation = -1.41e-2,
-                                                             interfacial_area_equilibrium = np.full((nodes), 1e-8))
+                                                             interfacial_area_equilibrium = interfacial_area_equilibrium)
 
 TCAT2Phase.numerics.model.Model.set_model_phases(
     model, s_phase, w_phase, None, wn_interface
 )
 
 # Set boundary values
-def ew0_bc(t): return  0.9 * s_phase.porosity
-def pw0_bc(t): return 2000
-def ewn0_bc(t): return 1e-8
-def jwn0_bc(t): return -2000/wn_interface.interfacial_tension
-def wwn0_bc(t): return  0.0
-def kwn0_bc(t): return -2242533027.870139
+ew0_bc = 0.3321
+pw0_bc =-1000
+ewn0_bc =100
+jwn0_bc =-1000/wn_interface.interfacial_tension
+wwn0_bc = 0.0
+kwn0_bc =-6335.
 
-def ewL_bc(t): return  0.9 * s_phase.porosity
-def pwL_bc(t): return 2000
-def ewnL_bc(t): return 1e-8
-def jwnL_bc(t): return -2000/wn_interface.interfacial_tension
-def wwnL_bc(t): return  0.0
-def kwnL_bc(t): return -2242533027.870139
+ewL_bc = 0.3321
+pwL_bc =-1000
+ewnL_bc = 100
+jwnL_bc =-1000/wn_interface.interfacial_tension
+wwnL_bc = 0.0
+kwnL_bc = -6335.
 
-
-boundary_value = {'e_w': [[ ew0_bc,ewL_bc ]],
+boundary_conditions= {'e_w': [[ ew0_bc,ewL_bc ]],
                   'p_w': [[ pw0_bc,pwL_bc ]],
                   'e_wn': [[ ewn0_bc,ewnL_bc ]],
                   'j_wn': [[ jwn0_bc,jwnL_bc ]],
                   'w_wn': [[ wwn0_bc,wwnL_bc ]],
                   'k_wn': [[ kwn0_bc,kwnL_bc ]]}
 
-model.set_boundary_value(boundary_value = boundary_value)
+model.set_boundary_conditions(boundary_conditions)
 
 # Set initial conditions
-ew_ic= np.full((nodes), 0.9*s_phase.porosity)
-pw_ic= np.full((nodes), 2000)
-ewn_ic= np.full((nodes), 1e-8)
-jwn_ic= np.full((nodes), -2000/wn_interface.interfacial_tension)
-wwn_ic= np.full((nodes), 0.0)
-kwn_ic= np.full((nodes), -2242533027.870139)
+def ew_ic(x): return 0.3321
+def pw_ic(x): return -1000
+def ewn_ic(x): return 100
+def jwn_ic(x): return -1000/wn_interface.interfacial_tension
+def wwn_ic(x): return 0.0
+def kwn_ic(x): return -6335.
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic,

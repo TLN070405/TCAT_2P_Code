@@ -1,11 +1,12 @@
 import numpy as np
-
+from . import model_types
 from TCAT2Phase.numerics import utils
-from TCAT2Phase.numerics import residual
+
 
 def model_formfunction(snes,U,F,model):
     """
     residual function to solve boundary conditions in case we have flux bc
+    tm: stands for traditional model.
     """
     da=snes.getDM()
     localU=da.getLocalVec()
@@ -25,73 +26,23 @@ def model_formfunction_internal(f,u,model):
     """
     Initial conditions residual at interior of domain
     """
-
-    nodes  = model.nodes
     u_name = model.model.u_names
+    nodes = model.nodes
+    initial_conditions = np.zeros(model.model.num_u)
 
-    for n_u,u_name in enumerate(model.model.u_names):
-        if model.model.num_u==1:
-            for n in range(1,nodes-1):
-                f[n]      = u[n]      - model.initial_condition[u_name][n]
-        else:
-            for n in range(1,nodes-1):
-                f[n][n_u] = u[n][n_u] - model.initial_condition[u_name][n]
+    for n in range(0,nodes):
+        x = model.domain.domain_size[0,0] + n* model.domain.domain_length[0]/(nodes-1)
+        for n_u,u_name in enumerate(model.model.u_names):
+            initial_conditions[n_u] = model.initial_conditions[u_name](x)
+
+        f[n] = u[:][n] - initial_conditions
+
 
 
 def model_formfunction_boundary(t,f,u,model):
     """
-    Boundary points residual
+    Set Boundary points residual equations in order to solve IC in case we have Neumman BC. 
     """
-    mesh = model.mesh
-    nodes=model.nodes
-
-    # Collect primary variables
-    e_w, p_w, e_wn, j_wn, w_wn, k_wn, e_n, p_n, p_c = residual.model_primary_variables(u,model)
-
-    q_w, q_n, rho_w, rho_n = residual.model_phase_flux(e_w, p_w, p_n, p_c, model)
-
-    flux_bc ={'q_w':[q_w[0],q_w[nodes-1]],
-              'q_n':[q_n[0],q_n[nodes-1]]}
-
-    u_names= model.model.u_names
-    boundary_type  = model.boundary_type
-    boundary_name  = model.boundary_name
-    boundary_value = model.boundary_value
-
-    if model.model.num_u == 1:
-        # boundary conditions for one variable formulations
-        #Residual at Boundary 1
-        if boundary_type[u_names[0]][0][0]==0:
-            f[0]    = u[0] - boundary_value[0][0][0](t)
-        elif boundary_type[u_names[0]][0][0]==1:
-            f[0]    = flux_bc[boundary_name[0][0][0]][0] - boundary_value[0][0][0](t)
-        else:
-            print('Boundary type non supported')
-
-        # Residual at Boundary 2
-        if boundary_type[u_names[0]][0][1]==0:
-            f[nodes-1] = u[nodes-1] - boundary_value[0][0][1](t)
-        elif boundary_type[u_names[0]][0][1]==1:
-            f[nodes-1] = flux_bc[boundary_name[0][0][1]][1] - boundary_value[0][0][1](t)
-        else:
-            print('Boundary type non supported')
-
-    else:
-        # boundary conditions for two or more variables formulations
-        for n in range(model.model.num_u):
-
-           #Residual at Boundary 1
-            if boundary_type[u_names[n]][0][0]==0:
-                f[0][n] = u[0][n] - boundary_value[n][0][0](t)
-            elif boundary_type[u_names[n]][0][0]==1:
-                f[0][n] = flux_bc[boundary_name[n][0][0]][0] - boundary_value[n][0][0](t)
-            else:
-                print('Boundary type non supported')
-
-           # Residual at Boundary 2
-            if boundary_type[u_names[n]][0][1]==0:
-                f[nodes-1][n] = u[nodes-1][n] - boundary_value[n][0][1](t)
-            elif boundary_type[u_names[n]][0][1]==1:
-                f[nodes-1][n] =  flux_bc[boundary_name[n][0][1]][1] - boundary_value[n][0][1](t)
-            else:
-                print('Boundary type non supported')
+    residual_class = model_types.get_residual_class(model)
+    residual_instance = residual_class(model)
+    residual_instance.compute_residual_boundary(t, f, u)
