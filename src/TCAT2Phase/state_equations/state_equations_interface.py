@@ -225,37 +225,63 @@ class TCAT:
     """
     VanGenuchten Class to hold functions and parameters
     """
-    def __init__(self,b1,b2,b3,porosity,e_ns,e_ws,js_ns,kn_ns):
+    def __init__(self,b1,b2,b3,porosity,e_ss,js_ns,kn_ns):
         """
         Initialize the VanGenuchten parameters
         """
         self.data = TCATdata(b1,b2,b3)
         self.porosity = porosity
-        self.e_ns = e_ns
-        self.e_ws = e_ws
+        self.e_ss = e_ss
         self.js_ns = js_ns
         self.kn_ns = kn_ns
-        self.D  = 6.0*porosity/(e_ws+e_ns)
+        self.D  = 6.0*porosity/e_ss
         self.D2 = self.D*self.D
         self.D3 = self.D2*self.D
-
+        self.b1D  = b1*self.D
+        self.b2D2 = b2*self.D2
+        self.b3D3 = b3*self.D3
 
     def volume_fraction_w(self,e_wn,j_wn,k_wn):
         """
         Volume fraction of w phase from linear geometric relation
         """
-        ewn_term = self.data.b1*self.D*(e_wn + self.e_ns)
-        jwn_term = self.data.b2*self.D2*(-e_wn*j_wn + self.e_ns*self.js_ns)
-        kwn_term = self.data.b3*self.D3*(e_wn*k_wn + self.e_ns*self.kn_ns)
-        e_w= self.porosity-(ewn_term + jwn_term + kwn_term)
+        wn_term = self.b1D - self.b2D2 * j_wn + self.b3D3 * k_wn
+        ns_term = self.b1D + self.b2D2 * self.js_ns + self.b3D3 * self.kn_ns
+
+        e_w= self.porosity * ( 1- (e_wn * wn_term)/(self.e_ss * ns_term) )
         return e_w
 
     def w_relative_permeability(self,e_w):
         """
         Relative permeability for w-phase
         """
-        k_wr = e_w*e_w
+        k_wr = e_w * e_w
         return k_wr
+
+    def gaussian_curvature(self,e_w, e_wn,j_wn):
+        """
+        Gaussian curvature Kwn of the wn interface from linear geometric relation
+        """
+        e_ns = self.interfacial_area_ns(e_w)
+        ewn_term = self.b1D  * (e_wn + e_ns )
+        jwn_term = self.b2D2 * ( -e_wn * j_wn + e_ns *self.js_ns )
+
+        k_wn = (((self.porosity - e_w - ewn_term - jwn_term)/self.b3D3) - e_ns * self.kn_ns)/e_wn
+        return k_wn
+
+    def interfacial_area_ns(self,e_w):
+        """
+        interfacial area of non wetting and solid phases
+        """
+        e_ns = self.e_ss*( 1-e_w/self.porosity )
+        return e_ns
+
+    def interfacial_area_ws(self,e_w):
+        """
+        interfacial area of wetting and solid phases
+        """
+        e_ws = self.e_ss*(e_w/self.porosity)
+        return e_ws
 
 def effective_saturation(e_w,e_wr,e_nr,porosity):
     """

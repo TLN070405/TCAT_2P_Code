@@ -77,3 +77,10 @@ class TCATInterface(Interface):
         self.interfacial_tension = interfacial_tension
         self.interfacial_area_relaxation = interfacial_area_relaxation
         self.interfacial_area_equilibrium = interfacial_area_equilibrium
+        self.gaussian_curvature = self.set_gaussian_curvature_function(tcat.gaussian_curvature)
+
+    def set_gaussian_curvature_function(self,gaussian_curvature,**parameters):
+        """
+        Set gaussian curvature function from linear geometric relation
+        """
+        return partial(gaussian_curvature,**parameters)

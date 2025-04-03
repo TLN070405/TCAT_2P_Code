@@ -11,6 +11,7 @@ class ResidualTcatCGP(BaseResidual):
         # Call the __init__ method of BaseResidual
         super().__init__(model)
         self.e_wn_eq = self.get_equilibrium_interfacial_area_array()
+        self.od_dp = np.zeros(3)
     
     def compute_primary_variables(self,u):
         """
@@ -64,8 +65,11 @@ class ResidualTcatCGP(BaseResidual):
         # model parameters
         c_wn = self.model.interface.interfacial_dynamics
         gamma_wn = self.model.interface.interfacial_tension
-        k_hat_wn = self.model.interface.interfacial_area_relaxation
+        k1_wn_hat = self.model.interface.interfacial_area_relaxation
         e_wn_eq  = self.e_wn_eq
+
+        # spatial operator array
+        od_dp = self.od_dp
 
         # intermediate calculation parameters
         dx2 = cell.length[0]*cell.length[0]
@@ -87,11 +91,9 @@ class ResidualTcatCGP(BaseResidual):
         d_j_wn_d_x = fluxes['d_j_wn_d_x']
         d_w_wn_d_x = fluxes['d_w_wn_d_x']
 
-
-        od_dp = np.zeros(3)
         for idx,node in enumerate ([n-1, n, n+1]):
             pw_jwn = p_w[node] + gamma_wn * j_wn[node]
-            od_dp[idx]= c_wn * (pw_jwn)  + gamma_wn * k_hat_wn/(pw_jwn + 1e-3) * (e_wn_eq[node] - e_wn[node])
+            od_dp[idx]= c_wn * (pw_jwn)  - (gamma_wn * k1_wn_hat/p_w[node]) * (e_wn_eq[node] - e_wn[node])
 
         d2_od_dp = ( od_dp[2] - 2 * od_dp[1] + od_dp[0] )/dx2
 
@@ -103,10 +105,11 @@ class ResidualTcatCGP(BaseResidual):
 
         # spatial operators
         od_w  = (1.0 / cell.length) * (q_w[n + 1] - q_w[n])
-        od_ia = k_hat_wn * (e_wn_eq[n] - e_wn[n]) - d_ewn_wwn_dx
+        od_ia = -(k1_wn_hat *( p_w[n] + gamma_wn*j_wn[n] )/p_w[n] ) * (e_wn_eq[n] - e_wn[n]) - d_ewn_wwn_dx
         od_j  = (2/3) * d2_od_dp - 2 * d_ewn_jwn_wwn_dx
         od_v  = e_w[n] * e_wn[n] * w_wn[n] + od_dp[1] * d_e_w_d_x[n]
-        od_k  = e_w[n] - self.model.interface.volume_fraction_function(e_wn[n], j_wn[n], k_wn[n])
+        od_k  = k_wn[n] - self.model.interface.gaussian_curvature(e_w[n], e_wn[n], j_wn[n])
+        #od_k  = (e_w[n] - self.model.interface.volume_fraction_function(e_wn[n], j_wn[n], k_wn[n]))
 
         od =[od_dp[1], od_w[0], od_ia, od_j, od_v, od_k]
         return od

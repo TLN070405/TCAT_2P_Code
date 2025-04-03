@@ -3,10 +3,11 @@ import TCAT2Phase
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
+import math
 import solver_options
 
 # Domain
-domain_size = np.array([[0.0,1.0]])
+domain_size = np.array([[0.0,10.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -29,7 +30,8 @@ model = TCAT2Phase.numerics.model.Model(
                                     )
 
 # Set boundary types: 0 - Dirchlet
-#                     1 - Neumann
+#                     1 - Neumann qw
+#                     2 - Neumann qn
 boundary_type = {'e_w': [[0, 0]],
                  'p_w': [[0, 0]],
                  'e_wn': [[0, 0]],
@@ -39,17 +41,16 @@ boundary_type = {'e_w': [[0, 0]],
 
 model.set_boundary_type(boundary_type = boundary_type)
 
-
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
                                                 permeability = None,
-                                                gravity = 0.0,
+                                                gravity = 9.81,
                                                 dynamic_capillary_pressure_parameter = None)
 
 # Set wetting-phase properties
-w_den_params = {'rho0':1.e3, 'beta':1e-8}
+w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
-                                              momentum_resistance = 1.5e6,
+                                              momentum_resistance = 5.10e4,
                                               residual_volume_fraction = 0.0,
                                               density_function = state_equations.density_exp_pressure,
                                               d_density_function = state_equations.d_density_exp_pressure,
@@ -60,34 +61,65 @@ tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
                                       b2 = -2.08e-3,
                                       b3 = 5.33e-2/(4.0 * 3.141592653589793),
                                       porosity = s_phase.porosity,
-                                      e_ns = 1. ,
-                                      e_ws = 1. ,
-                                      js_ns = 1.,
-                                      kn_ns = 1.167425480799784)
+                                      e_ss = 1.89e3,
+                                      js_ns = 2.00e3,
+                                      kn_ns = 1.00e6)
 
-def interfacial_area_equilibrium(x): return 0.1
+def ew_re(p_w):
+    n                = 3.4361
+    m                = 1.0 - (1.0 / n)
+    alpha            = 0.2001*1e-3
+    porosity         = 0.369
+    p_c = -p_w
+    if p_c > 0.0:
+        s_e =  (1.0 + (alpha*p_c)**n)**(-m)
+        e_w = porosity*  s_e
+    else:
+        e_w = porosity
+    return e_w
+
+def interfacial_area_equilibrium(x): return 1*ew_re(-1000-1000*9.81*x)
+
 wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
-                                                             interfacial_dynamics = 3.42e-7,
-                                                             interfacial_tension = 35e-3,
-                                                             interfacial_area_relaxation = -1.41e-2,
+                                                             interfacial_dynamics = 7.35e-10,
+                                                             interfacial_tension = 7.20e-2,
+                                                             interfacial_area_relaxation = 3.64e-3,
                                                              interfacial_area_equilibrium = interfacial_area_equilibrium)
 
-TCAT2Phase.numerics.model.Model.set_model_phases( model, s_phase, w_phase, None, wn_interface)
+TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, None, wn_interface)
+
+# Set initial conditions
+
+def pw_ic(x): return -1000-1000*9.81*x
+def ew_ic(x): return ew_re(pw_ic(x))
+def ewn_ic(x): return 1*ew_ic(x)
+def jwn_ic(x): return -pw_ic(x)/wn_interface.interfacial_tension
+def wwn_ic(x): return  0.0
+def kwn_ic(x): return  model.interface.gaussian_curvature(ew_ic(x), ewn_ic(x), jwn_ic(x))
+
+initial_conditions = {'e_w': ew_ic,
+                      'p_w': pw_ic,
+                      'e_wn': ewn_ic,
+                      'j_wn': jwn_ic,
+                      'w_wn': wwn_ic,
+                      'k_wn': kwn_ic}
+
+model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
-def ew0_bc(t): return  0.9 * s_phase.porosity
-def pw0_bc(t): return -1000
-def ewn0_bc(t): return 0.1
-def jwn0_bc(t): return 1000/wn_interface.interfacial_tension
-def wwn0_bc(t): return  0.0
-def kwn0_bc(t): return -12257.385200908866
+ew0_bc  = ew_ic(0.)
+pw0_bc  = pw_ic(0.)
+ewn0_bc = ewn_ic(0.)
+jwn0_bc = jwn_ic(0.)
+wwn0_bc = wwn_ic(0.)
+kwn0_bc = kwn_ic(0.)
 
-def ewL_bc(t): return  0.9 * s_phase.porosity
-def pwL_bc(t): return -1000
-def ewnL_bc(t): return 0.1
-def jwnL_bc(t): return 1000/wn_interface.interfacial_tension
-def wwnL_bc(t): return  0.0
-def kwnL_bc(t): return -12257.385200908866
+ewL_bc  = ew_ic(10.)
+pwL_bc  = pw_ic(10.)
+ewnL_bc = ewn_ic(10.)
+jwnL_bc = jwn_ic(10.)
+wwnL_bc = wwn_ic(10.)
+kwnL_bc = kwn_ic(10.)
 
 
 boundary_conditions = {'e_w': [[ ew0_bc,ewL_bc ]],
@@ -99,37 +131,13 @@ boundary_conditions = {'e_w': [[ ew0_bc,ewL_bc ]],
 
 model.set_boundary_conditions(boundary_conditions)
 
-# Set initial conditions
-# Set initial conditions
-def ew_ic(x): return 0.9 * s_phase.porosity
-def pw_ic(x):
-    if x==0:
-        pw = -1000
-    elif x== 1.0:
-        pw = -1000
-    else:
-        pw = -1000+1e-6
-    return pw
-def ewn_ic(x): return 0.1
-def jwn_ic(x): return  1000/wn_interface.interfacial_tension
-def wwn_ic(x): return 0.0
-def kwn_ic(x): return  -12257.385200908866
-
-initial_conditions = {'e_w': ew_ic,
-                      'p_w': pw_ic,
-                      'e_wn': ewn_ic,
-                      'j_wn': jwn_ic,
-                      'w_wn': wwn_ic,
-                      'k_wn': kwn_ic}
-
-model.set_initial_conditions(initial_conditions)
 
 # Time
-time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1])
+time_interval = np.array([10, 20, 50])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
-solver_options.solver_options(max_time_steps=100000,bdf_order=1,pc_type='ilu')
+solver_options.solver_options(max_time_steps=100000,bdf_order=1,pc_type='sor')
 
 
 # Solve model and return model.solutions

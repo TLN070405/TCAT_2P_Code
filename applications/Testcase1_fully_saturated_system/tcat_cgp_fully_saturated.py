@@ -30,7 +30,8 @@ model = TCAT2Phase.numerics.model.Model(
                                     )
 
 # Set boundary types: 0 - Dirchlet
-#                     1 - Neumann
+#                     1 - Neumann qw
+#                     2 - Neumann qn
 boundary_type = {'e_w': [[0, 0]],
                  'p_w': [[0, 0]],
                  'e_wn': [[0, 0]],
@@ -47,9 +48,9 @@ s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
                                                 dynamic_capillary_pressure_parameter = None)
 
 # Set wetting-phase properties
-w_den_params = {'rho0':1.e3, 'beta':1e-8}
+w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
-                                              momentum_resistance = 1.5e6,
+                                              momentum_resistance = 5.10e4,
                                               residual_volume_fraction = 0.0,
                                               density_function = state_equations.density_exp_pressure,
                                               d_density_function = state_equations.d_density_exp_pressure,
@@ -60,17 +61,16 @@ tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
                                       b2 = -2.08e-3,
                                       b3 = 5.33e-2/(4.0 * 3.141592653589793),
                                       porosity = s_phase.porosity,
-                                      e_ns = 1. ,
-                                      e_ws = 1. ,
-                                      js_ns = 1.,
-                                      kn_ns = 1.)
+                                      e_ss = 1.89e3 ,
+                                      js_ns = 2.00e3,
+                                      kn_ns = 1.00e6)
 
-def interfacial_area_equilibrium(x): return 100
+def interfacial_area_equilibrium(x): return 1e-3
 
 wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
-                                                             interfacial_dynamics = 3.42e-7,
-                                                             interfacial_tension = 35e-3,
-                                                             interfacial_area_relaxation = -1.41e-2,
+                                                             interfacial_dynamics = 7.35e-10,
+                                                             interfacial_tension = 7.20e-2,
+                                                             interfacial_area_relaxation = 3.64e-3,
                                                              interfacial_area_equilibrium = interfacial_area_equilibrium)
 
 TCAT2Phase.numerics.model.Model.set_model_phases(
@@ -78,19 +78,19 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 )
 
 # Set boundary values
-ew0_bc = 0.3321
-pw0_bc =-1000
-ewn0_bc =100
-jwn0_bc =-1000/wn_interface.interfacial_tension
+ew0_bc  = 0.369
+pw0_bc  = 2500
+ewn0_bc = 1e-3
+jwn0_bc = -pw0_bc/wn_interface.interfacial_tension
 wwn0_bc = 0.0
-kwn0_bc =-6335.
+kwn0_bc = model.interface.gaussian_curvature(ew0_bc, ewn0_bc,jwn0_bc)
 
-ewL_bc = 0.3321
-pwL_bc =-1000
-ewnL_bc = 100
-jwnL_bc =-1000/wn_interface.interfacial_tension
+ewL_bc = 0.369
+pwL_bc = 2000
+ewnL_bc = 1e-3
+jwnL_bc = -pwL_bc/wn_interface.interfacial_tension
 wwnL_bc = 0.0
-kwnL_bc = -6335.
+kwnL_bc = model.interface.gaussian_curvature(ewL_bc, ewnL_bc,jwnL_bc)
 
 boundary_conditions= {'e_w': [[ ew0_bc,ewL_bc ]],
                   'p_w': [[ pw0_bc,pwL_bc ]],
@@ -102,12 +102,36 @@ boundary_conditions= {'e_w': [[ ew0_bc,ewL_bc ]],
 model.set_boundary_conditions(boundary_conditions)
 
 # Set initial conditions
-def ew_ic(x): return 0.3321
-def pw_ic(x): return -1000
-def ewn_ic(x): return 100
-def jwn_ic(x): return -1000/wn_interface.interfacial_tension
-def wwn_ic(x): return 0.0
-def kwn_ic(x): return -6335.
+def ew_ic(x):
+    """
+    volume fraction w initial conditions
+    """
+    return 0.369
+def pw_ic(x):
+    """
+    pressure w initial conditions
+    """
+    return ((2000-2500)/(1.-0.))*x + 2500
+def ewn_ic(x):
+    """
+    interfacial area of wn interface initial conditions
+    """
+    return 1e-3
+def jwn_ic(x):
+    """
+    Mean curvature of wn interface initial conditions
+    """
+    return -pw_ic(x)/wn_interface.interfacial_tension
+def wwn_ic(x):
+    """
+    velocity of wn interface initial conditions
+    """
+    return 0.0
+def kwn_ic(x):
+    """
+    Gaussian curvature of wn interface initial conditions
+    """
+    return model.interface.gaussian_curvature(ew_ic(x), ewn_ic(x),jwn_ic(x))
 
 initial_conditions = {'e_w': ew_ic,
                       'p_w': pw_ic,
@@ -119,7 +143,7 @@ initial_conditions = {'e_w': ew_ic,
 model.set_initial_conditions(initial_conditions)
 
 # Time
-time_interval = np.array([50.])
+time_interval = np.array([10])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
