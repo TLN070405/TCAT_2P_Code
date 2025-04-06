@@ -6,6 +6,8 @@ from TCAT2Phase.state_equations import state_equations
 import solver_options
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
+from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 # Domain
 domain_size = np.array([[0.0, 1.0]])
@@ -84,13 +86,13 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return -1000
+    return ((2000-2500)/(1.-0.))*x + 2500
 
 initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Time
-time_interval = np.array([1.0,2,3])
+time_interval = np.array([1,5,10])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
@@ -99,8 +101,8 @@ solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 # Solve model and return model.solutions which is a dictionary where
 # solutions[time][u_name] = np.array
 
-pw0_bc = -2000
-pwL_bc = -2000
+pw0_bc = 2500
+pwL_bc = 2000
 # Set boundary values
 boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 
@@ -112,10 +114,36 @@ solutions = TCAT2Phase.numerics.solver.solver_time(u, ts, model)
 #plt.gca().set_ylim(0.02, 0.41)  # Y-axis limits
 
 for time, variable in solutions.items():
-    # print(time,variable)
     plt.plot(mesh.points, variable["p_w"], label=f"t={time}")
     plt.xlabel(r"$x\, (m)$")
     plt.ylabel(r"$p_w$")
     plt.title("equilibrium Solution")
     plt.legend()
 plt.show()
+
+
+for time,variable in solutions.items():
+    p_w = variable['p_w']
+    e_w=np.zeros([nodes] )
+    j_wn=np.zeros([nodes] )
+    for n in range(0,nodes):
+        e_w[n]= model.interface.volume_fraction_function(-p_w[n])
+        j_wn[n]= -p_w[n]/ 7.20e-2
+    variable["e_w"] = e_w
+    variable["j_wn"] = j_wn
+    plt.plot(mesh.points,e_w,label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$\epsilon^w$')
+    plt.title('Volume fraction vs space')
+    plt.legend()
+plt.show()
+
+# Get the directory where the current script (re_test_case_1.py) is located
+script_dir = Path(__file__).resolve().parent
+
+# Ensure we join the script directory with the filename
+filename = "RE_test_case_1.h5"
+file_path = script_dir   # This gives you the full path to the file
+
+# Save the data to the correct file path
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions)

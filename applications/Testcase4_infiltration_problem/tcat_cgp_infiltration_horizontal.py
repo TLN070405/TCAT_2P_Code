@@ -4,6 +4,9 @@ from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
 import solver_options
+from pathlib import Path
+from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
+
 # Domain
 domain_size = np.array([[0.0,10.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -62,7 +65,6 @@ tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
                                       e_ss = 1.89e3,
                                       js_ns = 2.00e3,
                                       kn_ns = 1.00e6)
-
 
 
 def interfacial_area_equilibrium(x):
@@ -126,7 +128,7 @@ model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1, 1,5,1e2,1e3,1e4])
+time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1, 1,5])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
@@ -192,3 +194,13 @@ for time,variable in solutions.items():
     plt.title('tcat cgp')
     plt.legend()
 plt.show()
+
+# Get the directory where the current script (re_test_case_1.py) is located
+script_dir = Path(__file__).resolve().parent
+
+# Ensure we join the script directory with the filename
+filename = "tcat_cgp_test_case_4.h5"
+file_path = script_dir   # This gives you the full path to the file
+
+# Save the data to the correct file path
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions)

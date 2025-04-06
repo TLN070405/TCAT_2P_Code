@@ -6,6 +6,8 @@ from TCAT2Phase.state_equations import state_equations
 import solver_options
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
+from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
 domain_size = np.array([[0.0,1.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -143,7 +145,7 @@ initial_conditions = {'e_w': ew_ic,
 model.set_initial_conditions(initial_conditions)
 
 # Time
-time_interval = np.array([10])
+time_interval = np.array([1,5,10])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
@@ -206,3 +208,14 @@ for time,variable in solutions.items():
     plt.title('tcat cgp')
     plt.legend()
 plt.show()
+
+
+# Get the directory where the current script (re_test_case_1.py) is located
+script_dir = Path(__file__).resolve().parent
+
+# Ensure we join the script directory with the filename
+filename = "tcat_cgp_test_case_1.h5"
+file_path = script_dir   # This gives you the full path to the file
+
+# Save the data to the correct file path
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions)

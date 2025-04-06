@@ -6,16 +6,18 @@ from TCAT2Phase.state_equations import state_equations
 import solver_options
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
+from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 # Domain
-domain_size = np.array([[0.0, 1.0]])
+domain_size = np.array([[0.0, 10.0]])
 domain = TCAT2Phase.properties.domain.initialize_domain(
                                                         dims=1,
                                                         domain_size=domain_size,
                                                         )
 
 # Mesh
-nodes = 51
+nodes = 101
 mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain, nodes)
 
@@ -34,14 +36,14 @@ model.set_boundary_type(boundary_type)
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
-    porosity=0.4,
-    permeability=1e-10,
-    gravity=9.8066,
+    porosity=0.369,
+    permeability=6.67e-7,
+    gravity=9.81,
     dynamic_capillary_pressure_parameter=None,
 )
 
 # Set wetting-phase properties
-w_den_params = {"rho0": 1.0e3, "beta": 4.9e-10}
+w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
@@ -56,7 +58,7 @@ w_phase = TCAT2Phase.properties.phase.Fluid(
 n_den_params = {"rho0": 1.2, "alpha": 1.189e-5}
 n_phase = TCAT2Phase.properties.phase.Fluid(
     "n",
-    viscosity=1.78e-5,
+    viscosity=1.8e-4,
     momentum_resistance=0.0,
     residual_volume_fraction=0.0,
     density_function=state_equations.density_linear_pressure,
@@ -66,9 +68,9 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=0.5990376904570971,
-    n=2.494,
-    alpha=1.0e-3,
+    m=1.0 - (1.0 / 3.4361),
+    n=3.4361,
+    alpha=0.20*1e-3,
     porosity=s_phase.porosity,
     e_wr=w_phase.residual_volume_fraction,
     e_nr=n_phase.residual_volume_fraction,
@@ -84,7 +86,7 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return -model.interface.pc_function(0.12)-10
+    return -1000-1000*9.81*x+10
 
 initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
@@ -92,11 +94,11 @@ model.set_initial_conditions(initial_conditions)
 # Set boundary values
 def pw0_bc(t):
     """w phase pressure bc at x=0"""
-    return -model.interface.pc_function(0.12)
+    return pw_ic(0.)-10
 
 def pwL_bc(t):
     """w phase pressure bc at x=L"""
-    return -model.interface.pc_function(0.12)
+    return  pw_ic(10.)-10
 
 
 boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
@@ -104,7 +106,7 @@ boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 model.set_boundary_conditions(boundary_conditions)
 
 # Time
-time_interval = np.array([5000,10000,15000])
+time_interval = np.array([1e-3,1e-2,1e-1,1,10])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
@@ -128,3 +130,30 @@ for time, variable in solutions.items():
     plt.title("equilibrium Solution")
     plt.legend()
 plt.show()
+
+
+for time,variable in solutions.items():
+    p_w = variable['p_w']
+    e_w=np.zeros([nodes] )
+    j_wn=np.zeros([nodes] )
+    for n in range(0,nodes):
+        e_w[n]= model.interface.volume_fraction_function(-p_w[n])
+        j_wn[n]= -p_w[n]/ 7.20e-2
+    variable["e_w"] = e_w
+    variable["j_wn"] = j_wn
+    plt.plot(mesh.points,e_w,label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$\epsilon^w$')
+    plt.title('Volume fraction vs space')
+    plt.legend()
+plt.show()
+
+# Get the directory where the current script (re_test_case_1.py) is located
+script_dir = Path(__file__).resolve().parent
+
+# Ensure we join the script directory with the filename
+filename = "RE_test_case_3.h5"
+file_path = script_dir   # This gives you the full path to the file
+
+# Save the data to the correct file path
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions)

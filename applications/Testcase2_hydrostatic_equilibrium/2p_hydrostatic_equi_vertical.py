@@ -8,7 +8,7 @@ from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
 import solver_options
 # Domain
-domain_size = np.array([[0.0,0.6]])
+domain_size = np.array([[0.0,10.]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -38,29 +38,29 @@ model.set_boundary_type(boundary_type)
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
-    porosity=0.37,
-    permeability=9.4e-10,
-    gravity=9.8066,
+    porosity=0.369,
+    permeability=6.67e-7,
+    gravity=9.81,
     dynamic_capillary_pressure_parameter=None,
 )
 
 # Set wetting-phase properties
-w_den_params = {"rho0": 997.8, "beta": 4.9e-10}
+w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.e-3,
     momentum_resistance=0.0,
-    residual_volume_fraction=0.1036,
+    residual_volume_fraction=0.0,
     density_function=state_equations.density_exp_pressure,
     d_density_function=state_equations.d_density_exp_pressure,
     **w_den_params,
 )
 
 # Set nonwetting-phase properties
-n_den_params = {"rho0": 1.205, "alpha": 1.189e-5}
+n_den_params = {"rho0": 1.205, "alpha": 1.189866e-5}
 n_phase = TCAT2Phase.properties.phase.Fluid(
     "n",
-    viscosity=1.7e-5,
+    viscosity= 1.8e-4,
     momentum_resistance=0.0,
     residual_volume_fraction=0.0,
     density_function=state_equations.density_linear_pressure,
@@ -70,12 +70,12 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=0.5,
-    n=2.0,
-    alpha=3.4e-4,
-    porosity=s_phase.porosity,
-    e_wr=w_phase.residual_volume_fraction,
-    e_nr=n_phase.residual_volume_fraction,
+    m = 1.0 - (1.0 / 3.4361),
+    n = 3.4361,
+    alpha = 0.2001*1e-3,
+    porosity = s_phase.porosity,
+    e_wr = w_phase.residual_volume_fraction,
+    e_nr = n_phase.residual_volume_fraction,
 )
 
 wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
@@ -86,22 +86,22 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 )
 
 # Set initial conditions
-def ew_ic(x):
-    """volume fraction ic at t=0""" 
-    return 0.111
-
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return 1900
+    return -1000-1000*9.81*x
+
+def ew_ic(x):
+    """volume fraction ic at t=0""" 
+    return  model.interface.volume_fraction_function(-pw_ic(x))
 
 initial_conditions = {"e_w": ew_ic, "p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
-ew0_bc = 0.1998
-ewL_bc = 0.111
-pw0_bc = 92642.5
-pwL_bc = 1900.
+ew0_bc =  ew_ic(0.)
+ewL_bc =  ew_ic(10.)
+pw0_bc =  pw_ic(0.)
+pwL_bc =  pw_ic(10.)
 
 
 boundary_conditions = {'e_w': [[ ew0_bc, ewL_bc ]],
@@ -109,19 +109,15 @@ boundary_conditions = {'e_w': [[ ew0_bc, ewL_bc ]],
 
 model.set_boundary_conditions(boundary_conditions)
 
-
 # Time
-time_interval = np.array([1000])
+time_interval = np.array([10, 20, 50])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
 solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 
-
-# Solve model
 # Solve model and return model.solutions
-# which is a dictionary where
-# solutions[time][u_name] = np.array
+# which is a dictionary where solutions[time][u_name] = np.array
 u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
@@ -130,17 +126,16 @@ for time,variable in solutions.items():
     plt.plot(mesh.points,variable['e_w'],label=f't={time}')
     plt.xlabel(r'$x\, (m)$')
     plt.ylabel(r'$\epsilon^w$')
-    plt.title("Helmig Solution")
+    plt.title("two phase hydrostatic equilibirium volume fraction vs space")
     plt.legend()
 plt.show()
 
 
 for time,variable in solutions.items():
-    print(time,variable)
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
     plt.xlabel(r'$x\, (m)$')
     plt.ylabel(r'$p_w$')
-    plt.title('Helmig Solution')
+    plt.title("two phase hydrostatic equilibirium pressure vs space")
     plt.legend()
 plt.show()
  
