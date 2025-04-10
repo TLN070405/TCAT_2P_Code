@@ -34,14 +34,14 @@ model.set_boundary_type(boundary_type)
 # Set solid phase properties
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
-    porosity=0.4,
-    permeability=1e-10,
-    gravity=9.8066,
+    porosity=0.369,
+    permeability=3.0e-11,
+    gravity= 9.81,
     dynamic_capillary_pressure_parameter=None,
 )
 
 # Set wetting-phase properties
-w_den_params = {"rho0": 1.0e3, "beta": 4.9e-10}
+w_den_params = {"rho0": 1.0e3, "beta": 1e-8}
 w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
@@ -66,13 +66,14 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=0.5990376904570971,
-    n=2.494,
-    alpha=1.0e-3,
+    m=1.0 - (1.0 /9.),
+    n=9.,
+    alpha=0.0006,
     porosity=s_phase.porosity,
     e_wr=w_phase.residual_volume_fraction,
     e_nr=n_phase.residual_volume_fraction,
 )
+
 
 wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
 
@@ -82,19 +83,30 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 )
 
 # Set initial conditions
-def ew_ic(x):
-    """volume fraction ic at t=0""" 
-    return 0.10
-
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return -model.interface.pc_function(0.10)
+    return ((2000-2500)/(1.-0.))*x + 2500
+
+def ew_ic(x):
+    """volume fraction ic at t=0""" 
+    return model.interface.volume_fraction_function(-pw_ic(x))
 
 initial_conditions = {"e_w": ew_ic, "p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
+
+pw0_bc =  2500
+pwL_bc =  2000
+ew0_bc = model.interface.volume_fraction_function(-pw0_bc)
+ewL_bc = model.interface.volume_fraction_function(-pwL_bc)
+
+# Set boundary conditions
+boundary_conditions = {"e_w": [[ew0_bc, ewL_bc]], "p_w": [[pw0_bc, pwL_bc]]}
+model.set_boundary_conditions(boundary_conditions)
+
+
 # Time
-time_interval = np.array([1.0])
+time_interval = np.array([1,5,10])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
@@ -102,30 +114,8 @@ solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 
 # Solve model and return model.solutions which is a dictionary where
 # solutions[time][u_name] = np.array
-ew_values = [0.12, 0.13, 0.14]
-for i in range(0, 3):
-    def ew0_bc(t):
-        """volume fraction bc at x=0"""
-        return ew_values[i]
-
-    def pw0_bc(t):
-        """w phase pressure bc at x=0"""
-        return -model.interface.pc_function(ew_values[i])
-
-    def ewL_bc(t):
-        """volume fraction bc at x=L"""
-        return ew_values[i]
-
-    def pwL_bc(t):
-        """w phase pressure bc at x=L"""
-        return -model.interface.pc_function(ew_values[i])
-
-    # Set boundary values
-    boundary_conditions = {"e_w": [[ew0_bc, ewL_bc]], "p_w": [[pw0_bc, pwL_bc]]}
-
-    model.set_boundary_conditions(boundary_conditions)
-    u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
-    solutions = TCAT2Phase.numerics.solver.solver_error(u, ts, model)
+u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
+solutions = TCAT2Phase.numerics.solver.solver_time(u, ts, model)
 
 # visualization
 plt.gca().set_ylim(0.02, 0.41)  # Y-axis limits

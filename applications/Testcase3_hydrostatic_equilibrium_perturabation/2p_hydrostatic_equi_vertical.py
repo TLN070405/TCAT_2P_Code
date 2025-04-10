@@ -1,14 +1,11 @@
 import numpy as np
-from numpy import linalg 
-from petsc4py import PETSc
 import TCAT2Phase
-from TCAT2Phase.numerics import utils
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
 import solver_options
 # Domain
-domain_size = np.array([[0.0,10.]])
+domain_size = np.array([[0.0,1.]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -39,16 +36,16 @@ model.set_boundary_type(boundary_type)
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
     porosity=0.369,
-    permeability=6.67e-7,
-    gravity=9.81,
+    permeability=3.0e-11,
+    gravity= 9.81,
     dynamic_capillary_pressure_parameter=None,
 )
 
 # Set wetting-phase properties
-w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
+w_den_params = {"rho0": 1.0e3, "beta": 1e-8}
 w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
-    viscosity=1.e-3,
+    viscosity=1.0e-3,
     momentum_resistance=0.0,
     residual_volume_fraction=0.0,
     density_function=state_equations.density_exp_pressure,
@@ -60,7 +57,7 @@ w_phase = TCAT2Phase.properties.phase.Fluid(
 n_den_params = {"rho0": 1.2, "alpha": 1.189e-5}
 n_phase = TCAT2Phase.properties.phase.Fluid(
     "n",
-    viscosity= 1.8e-4,
+    viscosity=1.78e-5,
     momentum_resistance=0.0,
     residual_volume_fraction=0.0,
     density_function=state_equations.density_linear_pressure,
@@ -70,13 +67,15 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m = 1.0 - (1.0 / 3.4361),
-    n = 3.4361,
-    alpha = 0.20*1e-3,
-    porosity = s_phase.porosity,
-    e_wr = w_phase.residual_volume_fraction,
-    e_nr = n_phase.residual_volume_fraction,
+    m=1.0 - (1.0 /9.),
+    n=9.,
+    alpha=0.0006,
+    porosity=s_phase.porosity,
+    e_wr=w_phase.residual_volume_fraction,
+    e_nr=n_phase.residual_volume_fraction,
 )
+
+
 
 wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
 
@@ -99,7 +98,7 @@ model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
 pw0_bc =  pw_ic(0.)-10.
-pwL_bc =  pw_ic(10.)-10.
+pwL_bc =  pw_ic(1.)-10.
 ew0_bc =  model.interface.volume_fraction_function(-pw0_bc)
 ewL_bc =  model.interface.volume_fraction_function(-pwL_bc)
 

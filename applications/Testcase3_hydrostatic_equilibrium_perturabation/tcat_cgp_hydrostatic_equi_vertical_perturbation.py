@@ -8,7 +8,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 # Domain
-domain_size = np.array([[0.0,10.0]])
+domain_size = np.array([[0.0,1.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -67,16 +67,18 @@ tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
                                       kn_ns = 1.00e6)
 
 def ew_re(p_w):
-    n                = 3.4361
+    n                = 9.
     m                = 1.0 - (1.0 / n)
-    alpha            = 0.2001*1e-3
+    alpha            = 0.0006
     porosity         = 0.369
+    e_wr             = 0.
+    e_nr             = 0.
     p_c = -p_w
     if p_c > 0.0:
         s_e =  (1.0 + (alpha*p_c)**n)**(-m)
-        e_w = porosity*  s_e
+        e_w = e_wr + s_e*(porosity-e_wr-e_nr)
     else:
-        e_w = porosity
+        e_w = porosity-e_nr
     return e_w
 
 def interfacial_area_equilibrium(x): return 1*ew_re(-1000-1000*9.81*x)
@@ -115,12 +117,12 @@ jwn0_bc = jwn_ic(0.)
 wwn0_bc = wwn_ic(0.)
 kwn0_bc = kwn_ic(0.)
 
-ewL_bc  = ew_ic(10.)
-pwL_bc  = pw_ic(10.)
-ewnL_bc = ewn_ic(10.)
-jwnL_bc = jwn_ic(10.)
-wwnL_bc = wwn_ic(10.)
-kwnL_bc = kwn_ic(10.)
+ewL_bc  = ew_ic(1.)
+pwL_bc  = pw_ic(1.)
+ewnL_bc = ewn_ic(1.)
+jwnL_bc = jwn_ic(1.)
+wwnL_bc = wwn_ic(1.)
+kwnL_bc = kwn_ic(1.)
 
 
 boundary_conditions = {'e_w': [[ ew0_bc,ewL_bc ]],
@@ -148,66 +150,67 @@ u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
-for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title('tcat cgp')
-    plt.legend()
+# Chart 1: Volume Fraction (ε^w)
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['e_w'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$\epsilon^w\,[-]$', fontsize=20)
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 2: Pressure (p^w)
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['p_w'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$p^w\,[Pa]$', fontsize=20)
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 3: ε^{wn} with y-axis scale [-2,2]
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['e_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$\epsilon^{wn}\,[-]$', fontsize=20)
+plt.ylim([-2, 2])
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 4: J^{wn}_n with units [1/m]
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['j_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$J^{wn}_n\,[1/m]$', fontsize=20)
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 5: w^{wn} with y-axis scale [-2,2]
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['w_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$w^{wn}\,[-]$', fontsize=20)
+plt.ylim([-2, 2])
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 6: K^{wn}_n with units [1/m^2] overwritten to be zero for all space and time
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['k_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$K^{wn}_n\,[1/m^2]$', fontsize=20)
+plt.legend(fontsize=12)
 plt.show()
 
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['e_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['j_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$J^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['w_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$w^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['k_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$K^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-# Get the directory where the current script (re_test_case_1.py) is located
-script_dir = Path(__file__).resolve().parent
-
-# Ensure we join the script directory with the filename
+# Export results
 filename = "tcat_cgp_test_case_3.h5"
-file_path = script_dir   # This gives you the full path to the file
+file_path = Path(__file__).resolve().parent/ 'outputs'
 
 # Save the data to the correct file path
 save_solutions_to_hdf5(str(file_path), filename,mesh, solutions)

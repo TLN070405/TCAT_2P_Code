@@ -8,7 +8,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 # Domain
-domain_size = np.array([[0.0,10.0]])
+domain_size = np.array([[0.0,1.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -74,8 +74,9 @@ def interfacial_area_equilibrium(x):
     if x ==0.:
         e_wn_eq = 0.11
     else:
-        e_wn_eq = 0.3 *0.36796438207402804
+        e_wn_eq = 0.3 *0.3657256743800621
     return e_wn_eq
+
 
 wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
                                                              interfacial_dynamics = 7.35e-10,
@@ -86,7 +87,7 @@ wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
 TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, None, wn_interface)
 
 # Set initial conditions
-def ew_ic(x): return 0.36796438207402804
+def ew_ic(x): return 0.3657256743800621
 def pw_ic(x): return -1000
 def ewn_ic(x): return 0.3* ew_ic(x)
 def jwn_ic(x): return -pw_ic(x)/wn_interface.interfacial_tension
@@ -102,15 +103,16 @@ initial_conditions = {'e_w': ew_ic,
 
 model.set_initial_conditions(initial_conditions)
 
+
 # Set boundary conditions
-def ew0_bc(t): return 0.36827819724962085
+def ew0_bc(t): return 0.36772409210407025
 def pw0_bc(t): return  -900
 def ewn0_bc(t): return 0.11
 def jwn0_bc(t): return -pw0_bc(t)/wn_interface.interfacial_tension
 def wwn0_bc(t): return 0.0
 def kwn0_bc(t): return model.interface.gaussian_curvature(ew0_bc(t), ewn0_bc(t), jwn0_bc(t))
 
-def ewL_bc(t): return 0.36796438207402804
+def ewL_bc(t): return 0.3657256743800621
 def pwL_bc(t): return  -1000
 def ewnL_bc(t): return 0.3* ewL_bc(t)
 def jwnL_bc(t): return -pwL_bc(t)/wn_interface.interfacial_tension
@@ -128,7 +130,7 @@ model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1, 1,5])
+time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1, 1,4])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
@@ -141,66 +143,66 @@ u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
-for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title('tcat cgp')
-    plt.legend()
+# Chart 1: Volume Fraction (ε^w)
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['e_w'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$\epsilon^w\,[-]$', fontsize=20)
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 2: Pressure (p^w)
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['p_w'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$p^w\,[Pa]$', fontsize=20)
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 3: ε^{wn} with y-axis scale [-2,2]
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['e_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$\epsilon^{wn}\,[-]$', fontsize=20)
+plt.ylim([-2, 2])
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 4: J^{wn}_n with units [1/m]
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['j_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$J^{wn}_n\,[1/m]$', fontsize=20)
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 5: w^{wn} with y-axis scale [-2,2]
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['w_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$w^{wn}\,[-]$', fontsize=20)
+plt.ylim([-2, 2])
+plt.legend(fontsize=12)
+plt.show()
+
+# Chart 6: K^{wn}_n with units [1/m^2] overwritten to be zero for all space and time
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['k_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$K^{wn}_n\,[1/m^2]$', fontsize=20)
+plt.legend(fontsize=12)
 plt.show()
 
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['e_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['j_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$J^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['w_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$w^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['k_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$K^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
-plt.show()
-
-# Get the directory where the current script (re_test_case_1.py) is located
-script_dir = Path(__file__).resolve().parent
-
-# Ensure we join the script directory with the filename
+# Export results
 filename = "tcat_cgp_test_case_4.h5"
-file_path = script_dir   # This gives you the full path to the file
+file_path = Path(__file__).resolve().parent/ 'outputs'
 
 # Save the data to the correct file path
 save_solutions_to_hdf5(str(file_path), filename,mesh, solutions)

@@ -8,7 +8,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 # Domain
-domain_size = np.array([[0. , 10.]])
+domain_size = np.array([[0. , 1.]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -35,13 +35,13 @@ model.set_boundary_type(boundary_type)
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
     porosity=0.369,
-    permeability=1.96e-8,
-    gravity=0.0,
+    permeability=3.0e-11,
+    gravity= 9.81,
     dynamic_capillary_pressure_parameter=None,
 )
 
 # Set wetting-phase properties
-w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
+w_den_params = {"rho0": 1.0e3, "beta": 1e-8}
 w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
@@ -56,7 +56,7 @@ w_phase = TCAT2Phase.properties.phase.Fluid(
 n_den_params = {"rho0": 1.2, "alpha": 1.189e-5}
 n_phase = TCAT2Phase.properties.phase.Fluid(
     "n",
-    viscosity=1.8e-4,
+    viscosity=1.78e-5,
     momentum_resistance=0.0,
     residual_volume_fraction=0.0,
     density_function=state_equations.density_linear_pressure,
@@ -66,9 +66,9 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=1.0 - (1.0 / 3.4361),
-    n=3.4361,
-    alpha=0.20*1e-3,
+    m=1.0 - (1.0 /9.),
+    n=9.,
+    alpha=0.0006,
     porosity=s_phase.porosity,
     e_wr=w_phase.residual_volume_fraction,
     e_nr=n_phase.residual_volume_fraction,
@@ -95,11 +95,11 @@ initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Time
-time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1, 1,5])
+time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1, 1,4])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
-solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="lu")
+solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 
 
 # Solve model
@@ -144,12 +144,10 @@ for time,variable in solutions.items():
     plt.legend()
 plt.show()
 
-# Get the directory where the current script (re_test_case_1.py) is located
-script_dir = Path(__file__).resolve().parent
-
-# Ensure we join the script directory with the filename
+ 
+# Export results
 filename = "RE_test_case_4.h5"
-file_path = script_dir   # This gives you the full path to the file
+file_path = Path(__file__).resolve().parent/ 'outputs'
 
 # Save the data to the correct file path
 save_solutions_to_hdf5(str(file_path), filename,mesh, solutions)

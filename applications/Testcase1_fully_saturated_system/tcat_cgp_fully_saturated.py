@@ -156,66 +156,67 @@ solver_options.solver_options(max_time_steps=100000,bdf_order=1,pc_type='sor')
 u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
-for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title('tcat cgp')
-    plt.legend()
+# Chart 1: Volume Fraction (ε^w)
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['e_w'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$\epsilon^w\,[-]$', fontsize=20)
+plt.legend(fontsize=12)
 plt.show()
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.title('tcat cgp')
-    plt.legend()
+# Chart 2: Pressure (p^w)
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['p_w'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$p^w\,[Pa]$', fontsize=20)
+plt.legend(fontsize=12)
 plt.show()
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['e_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
+# Chart 3: ε^{wn} with y-axis scale [-2,2]
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['e_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$\epsilon^{wn}\,[-]$', fontsize=20)
+plt.ylim([-2, 2])
+plt.legend(fontsize=12)
 plt.show()
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['j_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$J^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
+# Chart 4: J^{wn}_n with units [1/m]
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['j_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$J^{wn}_n\,[1/m]$', fontsize=20)
+plt.legend(fontsize=12)
 plt.show()
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['w_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$w^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
+# Chart 5: w^{wn} with y-axis scale [-2,2]
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, variable['w_wn'], label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$w^{wn}\,[-]$', fontsize=20)
+plt.ylim([-2, 2])
+plt.legend(fontsize=12)
 plt.show()
 
-for time,variable in solutions.items():
-    print(time,variable)
-    plt.plot(mesh.points,variable['k_wn'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$K^{wn}$')
-    plt.title('tcat cgp')
-    plt.legend()
+# Chart 6: K^{wn}_n with units [1/m^2] overwritten to be zero for all space and time
+plt.figure(figsize=(10, 6))
+for time, variable in solutions.items():
+    plt.plot(mesh.points, np.zeros_like(mesh.points), label=f'TCAT CGP, t={time}')
+plt.xlabel(r'$x\,[m]$', fontsize=20)
+plt.ylabel(r'$K^{wn}_n\,[1/m^2]$', fontsize=20)
+plt.legend(fontsize=12)
 plt.show()
 
 
-# Get the directory where the current script (re_test_case_1.py) is located
-script_dir = Path(__file__).resolve().parent
 
-# Ensure we join the script directory with the filename
+# Export results
 filename = "tcat_cgp_test_case_1.h5"
-file_path = script_dir   # This gives you the full path to the file
+file_path = Path(__file__).resolve().parent/ 'outputs'
 
 # Save the data to the correct file path
 save_solutions_to_hdf5(str(file_path), filename,mesh, solutions)
