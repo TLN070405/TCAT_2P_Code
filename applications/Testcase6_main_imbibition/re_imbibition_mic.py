@@ -12,7 +12,7 @@ domain = TCAT2Phase.properties.domain.initialize_domain(
                                                         )
 
 # Mesh
-nodes = 101
+nodes = 401
 mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain, nodes)
 
@@ -32,7 +32,7 @@ model.set_boundary_type(boundary_type)
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
     porosity=0.369,
-    permeability=3.0e-11,
+    permeability=2.67e-9,
     gravity= 0.0,
     dynamic_capillary_pressure_parameter=None,
 )
@@ -43,7 +43,7 @@ w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
     momentum_resistance=0.0,
-    residual_volume_fraction=0.1*0.369,
+    residual_volume_fraction=0.0687*0.369,
     density_function=state_equations.density_exp_pressure,
     d_density_function=state_equations.d_density_exp_pressure,
     **w_den_params,
@@ -55,7 +55,7 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
     "n",
     viscosity=1.78e-5,
     momentum_resistance=0.0,
-    residual_volume_fraction=0.1*0.369,
+    residual_volume_fraction= (1.-0.915)*0.369,
     density_function=state_equations.density_linear_pressure,
     d_density_function=state_equations.d_density_linear_pressure,
     **n_den_params,
@@ -63,9 +63,9 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=1.0 - (1.0 /6.),
-    n=6.,
-    alpha=0.0009,
+    m=1.0 - (1.0 /15.6),
+    n=15.6,
+    alpha=2.73e-3,
     porosity=s_phase.porosity,
     e_wr=w_phase.residual_volume_fraction,
     e_nr=n_phase.residual_volume_fraction,
@@ -79,7 +79,7 @@ TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phas
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return -wn_interface.pc_function(0.1*0.369+1e-5)
+    return -wn_interface.pc_function(0.0254)
 
 initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
@@ -93,7 +93,8 @@ model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval = np.array([1,10,100])
+#time_interval = np.array([1,5,10,12,14,16,17,18, 19, 20,100])  #Time intervals good for 0.200 Ew ICs
+time_interval = np.array([1,5,10,15,20,30,32,35,38,40,41,42,43,50,100])  # Time intervals starting at Swr
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
@@ -107,9 +108,9 @@ solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.title('Richards Solution imbibition of fully dry soil')
+    plt.xlabel(r'$x\, [m]$',fontsize=20)
+    plt.ylabel(r'$p_w \, [Pa]$',fontsize=20)
+ #   plt.title('Richards Solution imbibition of fully dry soil')
     plt.legend()
 plt.show()
 
@@ -120,8 +121,8 @@ for time,variable in solutions.items():
     for n in range(0,nodes):
         e_w[n]= model.interface.volume_fraction_function(-p_w[n])
     plt.plot(mesh.points,e_w,label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title('Richards Solution imbibiion of fully dry  soil')
+    plt.xlabel(r'$x\, [m]$',fontsize=20)
+    plt.ylabel(r'$\epsilon^{\overline{\overline{w}}} \, [-]$', fontsize=20)
+ #   plt.title('Richards Solution imbibiion of fully dry  soil')
     plt.legend()
 plt.show()

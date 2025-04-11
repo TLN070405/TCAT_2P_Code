@@ -8,7 +8,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 # Domain
-domain_size = np.array([[0.0,1.0]])
+domain_size = np.array([[0.0,0.1]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -51,8 +51,8 @@ s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
 # Set wetting-phase properties
 w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
-                                              momentum_resistance = 5.10e4,
-                                              residual_volume_fraction = 0.0,
+                                              momentum_resistance = 3.75e5,#5.10e4,
+                                              residual_volume_fraction = 0.0687*0.369,
                                               density_function = state_equations.density_exp_pressure,
                                               d_density_function = state_equations.d_density_exp_pressure,
                                               **w_den_params)
@@ -71,25 +71,23 @@ def interfacial_area_equilibrium(x):
     """
     Equilibrium specific interfacial area function of space
     """
-    if x ==0.:
-        e_wn_eq = 0.11
-    else:
-        e_wn_eq = 0.3 *0.3657256743800621
+    e_wn_eq = 100.
     return e_wn_eq
 
 
 wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
-                                                             interfacial_dynamics = 7.35e-10,
+                                                             interfacial_dynamics = 6.398675e-05, #7.35e-10,
                                                              interfacial_tension = 7.20e-2,
-                                                             interfacial_area_relaxation = 3.64e-3,
+                                                             interfacial_area_relaxation = 1.003597e-10 ,#3.64e-3,
                                                              interfacial_area_equilibrium = interfacial_area_equilibrium)
 
 TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, None, wn_interface)
 
+
 # Set initial conditions
-def ew_ic(x): return 0.3657256743800621
-def pw_ic(x): return -1000
-def ewn_ic(x): return 0.3* ew_ic(x)
+def ew_ic(x): return 0.35701796706321004
+def pw_ic(x): return -402
+def ewn_ic(x): return 100.
 def jwn_ic(x): return -pw_ic(x)/wn_interface.interfacial_tension
 def wwn_ic(x): return 0.0
 def kwn_ic(x): return model.interface.gaussian_curvature(ew_ic(x), ewn_ic(x), jwn_ic(x))
@@ -105,18 +103,18 @@ model.set_initial_conditions(initial_conditions)
 
 
 # Set boundary conditions
-def ew0_bc(t): return 0.36772409210407025
-def pw0_bc(t): return  -900
-def ewn0_bc(t): return 0.11
+def ew0_bc(t): return 0.35901615483439936
+def pw0_bc(t): return -400
+def ewn0_bc(t): return 100.
 def jwn0_bc(t): return -pw0_bc(t)/wn_interface.interfacial_tension
 def wwn0_bc(t): return 0.0
 def kwn0_bc(t): return model.interface.gaussian_curvature(ew0_bc(t), ewn0_bc(t), jwn0_bc(t))
 
-def ewL_bc(t): return 0.3657256743800621
-def pwL_bc(t): return  -1000
-def ewnL_bc(t): return 0.3* ewL_bc(t)
-def jwnL_bc(t): return -pwL_bc(t)/wn_interface.interfacial_tension
-def wwnL_bc(t): return 0.0 
+def ewL_bc(t): return ew_ic(domain_size[0][1])
+def pwL_bc(t): return pw_ic(domain_size[0][1])
+def ewnL_bc(t): return ewn_ic(domain_size[0][1])
+def jwnL_bc(t): return jwn_ic(domain_size[0][1])
+def wwnL_bc(t): return wwn_ic(domain_size[0][1])
 def kwnL_bc(t): return model.interface.gaussian_curvature(ew0_bc(t), ewn0_bc(t), jwn0_bc(t))
 
 boundary_conditions = {'e_w': [[ ew0_bc,ewL_bc ]],
@@ -130,7 +128,7 @@ model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval = np.array([1e-5,1e-4,1e-3,1e-2,1e-1, 1,4])
+time_interval = np.array([1e-7,1e-5,1e-4,1e-3,1e-2,1e-1, 1,4])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options

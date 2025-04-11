@@ -7,21 +7,24 @@ from TCAT2Phase.io.hdf5_io import load_solutions_from_hdf5
 
 def volume_fraction_exact(p_w):
     """ volume fraction exact solution"""
-    n                = 9.
-    m                = 1.0 - (1.0 / n)
-    alpha            = 0.0006
-    porosity         = 0.369
+    n =  37.8
+    m = 1.0 - (1.0 / n)
+    alpha = 2.28e-3
+    porosity = 0.369
+    e_wr = 0.0687*porosity
+    e_nr = 0.
+
     p_c = -p_w
     if p_c > 0.0:
         s_e =  (1.0 + (alpha*p_c)**n)**(-m)
-        e_w = porosity*  s_e
+        e_w = s_e * (porosity - e_wr - e_nr) + e_wr
     else:
-        e_w = porosity
+        e_w = porosity - e_nr
     return e_w
 
 def pressure_w_exact(x):
     """wetting phase pressure exact solution"""
-    return -1000-1000*9.81*x
+    return -1-1000*9.81*x
 
 def interfacial_area_exact(x):
     """exact solution interfacial area"""
@@ -69,8 +72,8 @@ filename_re = "RE_test_case_2.h5"
 filename_cgp = "tcat_cgp_test_case_2.h5"
 
 # Load the data from the file
-solutions_re, mesh_points = load_solutions_from_hdf5(str(script_dir), filename_re)
-solutions_cgp, mesh_points = load_solutions_from_hdf5(str(script_dir), filename_cgp)
+solutions_re, mesh_points, metadata = load_solutions_from_hdf5(str(script_dir), filename_re)
+solutions_cgp, mesh_points , metadata= load_solutions_from_hdf5(str(script_dir), filename_cgp)
 
 
 e_w_exact= np.zeros([len(mesh_points)] )

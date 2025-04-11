@@ -37,7 +37,7 @@ model.set_boundary_type(boundary_type)
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
     porosity=0.369,
-    permeability=3.0e-11,
+    permeability=2.67e-9,
     gravity= 9.81,
     dynamic_capillary_pressure_parameter=None,
 )
@@ -48,7 +48,7 @@ w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
     momentum_resistance=0.0,
-    residual_volume_fraction=0.0,
+    residual_volume_fraction=0.0687*0.369,
     density_function=state_equations.density_exp_pressure,
     d_density_function=state_equations.d_density_exp_pressure,
     **w_den_params,
@@ -68,9 +68,9 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=1.0 - (1.0 /9.),
-    n=9.,
-    alpha=0.0006,
+    m=1.0 - (1.0 /37.8),
+    n=37.8,
+    alpha=2.28e-3,
     porosity=s_phase.porosity,
     e_wr=w_phase.residual_volume_fraction,
     e_nr=n_phase.residual_volume_fraction,
@@ -86,7 +86,7 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return ((2000-2500)/(1.-0.))*x + 2500
+    return ((200-600)/(1.-0.))*x + 600
 
 initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
@@ -101,8 +101,8 @@ solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 # Solve model and return model.solutions which is a dictionary where
 # solutions[time][u_name] = np.array
 
-pw0_bc = 2500
-pwL_bc = 2000
+pw0_bc = 600
+pwL_bc = 200
 # Set boundary values
 boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 

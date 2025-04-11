@@ -35,7 +35,7 @@ model.set_boundary_type(boundary_type)
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
     porosity=0.369,
-    permeability=3.0e-11,
+    permeability=2.67e-9,
     gravity= 9.81,
     dynamic_capillary_pressure_parameter=None,
 )
@@ -46,7 +46,7 @@ w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
     momentum_resistance=0.0,
-    residual_volume_fraction=0.0,
+    residual_volume_fraction=0.0687*0.369,
     density_function=state_equations.density_exp_pressure,
     d_density_function=state_equations.d_density_exp_pressure,
     **w_den_params,
@@ -66,14 +66,13 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=1.0 - (1.0 /9.),
-    n=9.,
-    alpha=0.0006,
+    m=1.0 - (1.0 /37.8),
+    n=37.8,
+    alpha=2.28e-3,
     porosity=s_phase.porosity,
     e_wr=w_phase.residual_volume_fraction,
     e_nr=n_phase.residual_volume_fraction,
 )
-
 
 wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
 
@@ -129,7 +128,6 @@ for time, variable in solutions.items():
 plt.show()
 
 for time, variable in solutions.items():
-    # print(time,variable)
     plt.plot(mesh.points, variable["p_w"], label=f"t={time}")
     plt.xlabel(r"$x\, (m)$")
     plt.ylabel(r"$p_w$")

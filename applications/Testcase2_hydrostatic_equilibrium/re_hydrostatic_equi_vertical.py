@@ -7,7 +7,7 @@ import solver_options
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
-domain_size = np.array([[0. , 1.]])
+domain_size = np.array([[0. , 0.1]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -36,7 +36,7 @@ model.set_boundary_type(boundary_type)
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
     porosity=0.369,
-    permeability=3.0e-11,
+    permeability=2.67e-9,
     gravity= 9.81,
     dynamic_capillary_pressure_parameter=None,
 )
@@ -47,7 +47,7 @@ w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
     momentum_resistance=0.0,
-    residual_volume_fraction=0.0,
+    residual_volume_fraction=0.0687*0.369,
     density_function=state_equations.density_exp_pressure,
     d_density_function=state_equations.d_density_exp_pressure,
     **w_den_params,
@@ -67,9 +67,9 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=1.0 - (1.0 /9.),
-    n=9.,
-    alpha=0.0006,
+    m=1.0 - (1.0 /37.8),
+    n=37.8,
+    alpha=2.28e-3,
     porosity=s_phase.porosity,
     e_wr=w_phase.residual_volume_fraction,
     e_nr=n_phase.residual_volume_fraction,
@@ -86,14 +86,14 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return -1000-1000*9.81*x
+    return -1-1000*9.81*x
 
 initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Set boundary conditions
 pw0_bc = pw_ic(0.)
-pwL_bc = pw_ic(1.)
+pwL_bc = pw_ic(0.1)
 
 # Set boundary conditions
 boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}

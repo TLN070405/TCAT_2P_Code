@@ -1,14 +1,11 @@
 import numpy as np
-from numpy import linalg 
-from petsc4py import PETSc
 import TCAT2Phase
-from TCAT2Phase.numerics import utils
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
 import solver_options
 # Domain
-domain_size = np.array([[0.0,1.]])
+domain_size = np.array([[0.0,0.1]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -24,13 +21,13 @@ mesh.uniform_mesh_1d(domain,nodes)
 # Boundaries
 boundary_type = [0,0]
 model = TCAT2Phase.numerics.model.Model(
-                                        model_type="two_phase", form="sp", domain=domain, nodes=nodes, mesh=mesh
+                                        model_type="two_phase", form="pp", domain=domain, nodes=nodes, mesh=mesh
                                         )
 
 # Set boundary types: 0 - Dirchlet
 #                     1 - Neumann (but not supported yet)
-boundary_type = {'e_w': [[0, 0]], 'p_w': [[0, 0]]}
-
+#boundary_type = {'e_w': [[0, 0]], 'p_w': [[0, 0]]}
+boundary_type = {'p_w': [[0, 0]], 'p_n': [[0, 0]]}
 model.set_boundary_type(boundary_type)
 # Set boundary names
 
@@ -39,7 +36,7 @@ model.set_boundary_type(boundary_type)
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
     porosity=0.369,
-    permeability=3.0e-11,
+    permeability=2.67e-9,
     gravity= 9.81,
     dynamic_capillary_pressure_parameter=None,
 )
@@ -50,7 +47,7 @@ w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
     momentum_resistance=0.0,
-    residual_volume_fraction=0.0,
+    residual_volume_fraction=0.0687*0.369,
     density_function=state_equations.density_exp_pressure,
     d_density_function=state_equations.d_density_exp_pressure,
     **w_den_params,
@@ -70,14 +67,13 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
 
 # Set w-n interphase properties
 vg = state_equations_interface.VanGenuchten(
-    m=1.0 - (1.0 /9.),
-    n=9.,
-    alpha=0.0006,
+    m=1.0 - (1.0 /37.8),
+    n=37.8,
+    alpha=2.28e-3,
     porosity=s_phase.porosity,
     e_wr=w_phase.residual_volume_fraction,
     e_nr=n_phase.residual_volume_fraction,
 )
-
 
 
 wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
@@ -90,25 +86,22 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return -1000-1000*9.81*x
+    return -1-1000*9.81*x
 
-def ew_ic(x):
+def pn_ic(x):
     """volume fraction ic at t=0""" 
-    return  model.interface.volume_fraction_function(-pw_ic(x))
+    return 0.
 
-initial_conditions = {"e_w": ew_ic, "p_w": pw_ic}
+initial_conditions = {"p_w": pw_ic, "p_n": pn_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
-ew0_bc =  ew_ic(0.)
-ewL_bc =  ew_ic(1.)
-pw0_bc =  pw_ic(0.)
-pwL_bc =  pw_ic(1.)
+pn0_bc =  pn_ic(domain_size[0][0])
+pnL_bc =  pn_ic(domain_size[0][1])
+pw0_bc =  pw_ic(domain_size[0][0])
+pwL_bc =  pw_ic(domain_size[0][1])
 
-
-boundary_conditions = {'e_w': [[ ew0_bc, ewL_bc ]],
-                  'p_w': [[ pw0_bc, pwL_bc  ]]}
-
+boundary_conditions = {'p_w': [[ pw0_bc, pwL_bc  ]],'p_n': [[ pn0_bc, pnL_bc  ]]}
 model.set_boundary_conditions(boundary_conditions)
 
 # Time
@@ -125,19 +118,33 @@ solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
 for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title("two phase hydrostatic equilibirium volume fraction vs space")
-    plt.legend()
-plt.show()
-
-
-for time,variable in solutions.items():
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
     plt.xlabel(r'$x\, (m)$')
     plt.ylabel(r'$p_w$')
     plt.title("two phase hydrostatic equilibirium pressure vs space")
+    plt.legend()
+plt.show()
+
+for time,variable in solutions.items():
+    plt.plot(mesh.points,variable['p_n'],label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$p_n$')
+    plt.title("two phase hydrostatic equilibirium pressure vs space")
+    plt.legend()
+plt.show()
+
+for time,variable in solutions.items():
+    p_w = variable['p_w']
+    p_n = variable['p_n']
+    e_w=np.zeros([nodes] )
+    for n in range(0,nodes):
+        e_w[n]= model.interface.volume_fraction_function(p_n[n]-p_w[n])
+    variable["e_w"] = e_w
+
+    plt.plot(mesh.points,e_w,label=f't={time}')
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$\epsilon^w$')
+    plt.title('Volume fraction vs space')
     plt.legend()
 plt.show()
  

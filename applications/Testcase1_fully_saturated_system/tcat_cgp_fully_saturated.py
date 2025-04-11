@@ -52,8 +52,8 @@ s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
 # Set wetting-phase properties
 w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
-                                              momentum_resistance = 5.10e4,
-                                              residual_volume_fraction = 0.0,
+                                              momentum_resistance = 3.75e5,#5.10e4,
+                                              residual_volume_fraction = 0.0687*0.369,
                                               density_function = state_equations.density_exp_pressure,
                                               d_density_function = state_equations.d_density_exp_pressure,
                                               **w_den_params)
@@ -70,9 +70,9 @@ tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
 def interfacial_area_equilibrium(x): return 1e-3
 
 wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
-                                                             interfacial_dynamics = 7.35e-10,
+                                                             interfacial_dynamics = 6.398675e-05, #7.35e-10,
                                                              interfacial_tension = 7.20e-2,
-                                                             interfacial_area_relaxation = 3.64e-3,
+                                                             interfacial_area_relaxation =  1.003597e-10 ,#3.64e-3,
                                                              interfacial_area_equilibrium = interfacial_area_equilibrium)
 
 TCAT2Phase.numerics.model.Model.set_model_phases(
@@ -81,14 +81,14 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 
 # Set boundary values
 ew0_bc  = 0.369
-pw0_bc  = 2500
+pw0_bc  = 600
 ewn0_bc = 1e-3
 jwn0_bc = -pw0_bc/wn_interface.interfacial_tension
 wwn0_bc = 0.0
 kwn0_bc = model.interface.gaussian_curvature(ew0_bc, ewn0_bc,jwn0_bc)
 
 ewL_bc = 0.369
-pwL_bc = 2000
+pwL_bc = 200
 ewnL_bc = 1e-3
 jwnL_bc = -pwL_bc/wn_interface.interfacial_tension
 wwnL_bc = 0.0

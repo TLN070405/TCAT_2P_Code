@@ -16,8 +16,8 @@ script_dir = script_dir.parent / 'outputs'
 filename_re = "RE_test_case_4.h5"
 filename_cgp = "tcat_cgp_test_case_4.h5"
 # Load the data from the file
-solutions_re, mesh_points = load_solutions_from_hdf5(str(script_dir), filename_re)
-solutions_cgp, mesh_points = load_solutions_from_hdf5(str(script_dir), filename_cgp)
+solutions_re, mesh_points, metadata = load_solutions_from_hdf5(str(script_dir), filename_re)
+solutions_cgp, mesh_points , metadata= load_solutions_from_hdf5(str(script_dir), filename_cgp)
 
 
 # Determine the final time from the solutions (assumes keys are numeric)
