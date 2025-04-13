@@ -77,6 +77,10 @@ vg = state_equations_interface.VanGenuchten(
 
 wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
 
+#set relative permeabilities
+w_phase.set_relative_permeability_function(vg.w_relative_permeability)
+n_phase.set_relative_permeability_function(vg.n_relative_permeability)
+
 # Set model phases and interfaces
 TCAT2Phase.numerics.model.Model.set_model_phases(
     model, s_phase, w_phase, n_phase, wn_interface

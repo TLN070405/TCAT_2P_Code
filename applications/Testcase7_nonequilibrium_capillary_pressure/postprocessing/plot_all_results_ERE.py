@@ -13,6 +13,7 @@ script_dir = script_dir.parent / 'outputs'
 
 nodes_array=[33,65,101]
 tau_array=[0,1e7,1e8]
+
 # --------------- Volume Fraction ------------------#
 plt.figure(figsize=(10, 6))  # Standardize chart dimensions
 for tau in (tau_array):
@@ -26,7 +27,7 @@ for tau in (tau_array):
         for time, variables in solutions.items():
             plt.plot(mesh_points, variables["e_w"],
                     label=f"tau={tau:g}, nodes={nodes} ",
-                    linestyle="solid")
+                    linestyle="dashed")
 
 # Adding axis labels with units and larger font sizes
 plt.xlabel(r"$x\,[m]$", fontsize=20)
@@ -48,7 +49,7 @@ for tau in (tau_array):
         for time, variables in solutions.items():
             plt.plot(mesh_points, variables["p_w"],
                     label=f"tau={tau:g}, nodes={nodes} ",
-                    linestyle="solid")
+                    linestyle="dashed")
 
 # Adding axis labels with units and larger font sizes
 plt.xlabel(r"$x\,[m]$", fontsize=20)

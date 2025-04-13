@@ -73,6 +73,7 @@ class ParkerLenhard:
         self.p_c           = np.zeros(model.nodes)
         self.s_a           = np.zeros(model.nodes)
         self.s_nt_e        = np.zeros(model.nodes)
+        self.primary_variables = {}
         self.imbibition    = imb_interface
         self.drainage      = dr_interface
         self.model         = model
@@ -289,7 +290,7 @@ class ParkerLenhard:
     def determine_hysteresis_state(self,switch_condition):
         """
         function to update the current process at each node (drainage or imbibition ) based on 
-        the switch condition (which is different for each node). 
+        the switch condition (which is different for each node).
         If the switch condition is greater than some user defined tolerance (hysteresis_tol), 
         an imbibition process will take place. Else, the current process is a drainage. 
         The theoretical value of  "hysteresis_tol" is zero, but to avoid oscillations 
@@ -398,6 +399,12 @@ class ParkerLenhard:
         nodes = self.model.nodes
         counter  = self.data.counter_hysteresis
         self.data.time[counter] = ts.getTime()
+
+        #Get primary variables from solver
+        self.e_w = self.primary_variables['e_w']
+        self.p_w = self.primary_variables['p_w']
+        self.p_n = self.primary_variables['p_n']
+        self.p_c = self.primary_variables['p_c']
 
         if self.data.switch_condition == 'p_c':
             switch_condition = self.data.pc_hysteresis[:,counter-1] - self.p_c

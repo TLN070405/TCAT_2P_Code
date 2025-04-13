@@ -93,8 +93,9 @@ wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
 TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, None, wn_interface)
 
 # Set initial conditions
+perturbation = 10.
 
-def pw_ic(x): return -1-1000*9.81*x+10.
+def pw_ic(x): return -1-1000*9.81*x + perturbation
 def ew_ic(x): return ew_re(pw_ic(x))
 def ewn_ic(x): return 1.*ew_ic(x)
 def jwn_ic(x): return -pw_ic(x)/wn_interface.interfacial_tension

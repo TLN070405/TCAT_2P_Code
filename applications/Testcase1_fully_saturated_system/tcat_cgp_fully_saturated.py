@@ -81,14 +81,14 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 
 # Set boundary values
 ew0_bc  = 0.369
-pw0_bc  = 600
+pw0_bc  = 2500
 ewn0_bc = 1e-3
 jwn0_bc = -pw0_bc/wn_interface.interfacial_tension
 wwn0_bc = 0.0
 kwn0_bc = model.interface.gaussian_curvature(ew0_bc, ewn0_bc,jwn0_bc)
 
 ewL_bc = 0.369
-pwL_bc = 200
+pwL_bc = 2000
 ewnL_bc = 1e-3
 jwnL_bc = -pwL_bc/wn_interface.interfacial_tension
 wwnL_bc = 0.0
@@ -113,7 +113,7 @@ def pw_ic(x):
     """
     pressure w initial conditions
     """
-    return ((2000-2500)/(1.-0.))*x + 2500
+    return ((2000-2500.)/(1.-0.))*x + 2500.
 def ewn_ic(x):
     """
     interfacial area of wn interface initial conditions
@@ -149,7 +149,7 @@ time_interval = np.array([1,5,10])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
-solver_options.solver_options(max_time_steps=100000,bdf_order=1,pc_type='sor')
+solver_options.solver_options(max_time_steps=100000,bdf_order=5,pc_type='sor')
 
 # Solve model and return model.solutions which is a dictionary where
 # solutions[time][u_name] = np.array
@@ -162,6 +162,7 @@ for time, variable in solutions.items():
     plt.plot(mesh.points, variable['e_w'], label=f'TCAT CGP, t={time}')
 plt.xlabel(r'$x\,[m]$', fontsize=20)
 plt.ylabel(r'$\epsilon^w\,[-]$', fontsize=20)
+plt.ylim([0, 0.4])
 plt.legend(fontsize=12)
 plt.show()
 

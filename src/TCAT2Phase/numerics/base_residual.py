@@ -37,6 +37,8 @@ class BaseResidual:
         """
         primary_variables = self.compute_primary_variables(u)
 
+        self.model.interface.primary_variables = primary_variables
+
         fluxes = self.compute_phases_fluxes(primary_variables)
 
         for cell in self.mesh.cells:
@@ -69,8 +71,8 @@ class BaseResidual:
         rho_w = utils.cell_center(primary_variables['p_w'], self.model.w_phase.density_function, mesh)
         rho_n = utils.cell_center(primary_variables['p_n'], self.model.n_phase.density_function, mesh)
 
-        k_rw = utils.cell_center(primary_variables['p_c'], self.model.interface.w_relative_permeability, mesh)
-        k_rn = utils.cell_center(primary_variables['p_c'], self.model.interface.n_relative_permeability, mesh)
+        k_rw = utils.cell_center(primary_variables['p_c'], self.model.w_phase.relative_permeability_function, mesh)
+        k_rn = utils.cell_center(primary_variables['p_c'], self.model.n_phase.relative_permeability_function, mesh)
 
         del_pw = utils.gradient(primary_variables['p_w'], mesh)
         del_pn = utils.gradient(primary_variables['p_n'], mesh)

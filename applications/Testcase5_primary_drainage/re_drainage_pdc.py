@@ -73,6 +73,10 @@ vg = state_equations_interface.VanGenuchten(
 
 wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
 
+#set relative permeabilities
+w_phase.set_relative_permeability_function(vg.w_relative_permeability)
+n_phase.set_relative_permeability_function(vg.n_relative_permeability)
+
 # Set model phases and interfaces
 TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phase, wn_interface)
 
@@ -85,15 +89,15 @@ initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Set boundary conditions
-pw0_bc = -wn_interface.pc_function(0.0687*0.369+1e-5)
-pwL_bc = -wn_interface.pc_function(0.0687*0.369+1e-5)
+pw0_bc = -wn_interface.pc_function(w_phase.residual_volume_fraction +1e-5)
+pwL_bc = -wn_interface.pc_function(w_phase.residual_volume_fraction +1e-5)
 
 boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval = np.array([1,10,100,1e3,5e3,1e4,2e4,5e4,1e5,1e6,1e7,1e8])
+time_interval = np.array([1,10,100,1e3,1e4,1e5,1e6,1e7])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
@@ -104,24 +108,75 @@ solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
-plt.figure(figsize=(10, 6))  # Standardize chart dimensions
+
 for time,variable in solutions.items():
     plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, [m]$', fontsize=20)
-    plt.ylabel(r'$p^w\, [Pa]$', fontsize=20)
- #   plt.title('Richards Solution drainage of fully water saturated soil')
-    plt.legend(fontsize=12)
+    plt.xlabel(r'$x\, (m)$')
+    plt.ylabel(r'$p_w$')
+    plt.title('Richards Solution drainage of fully water saturated soil')
+    plt.legend()
 plt.show()
 
 
-e_w=np.zeros([nodes] )
-for time,variable in solutions.items():
+e_w = np.zeros([nodes])
+for time, variable in solutions.items():
     p_w = variable['p_w']
-    for n in range(0,nodes):
-        e_w[n]= model.interface.volume_fraction_function(-p_w[n])
-    plt.plot(mesh.points,e_w,label=f't={time}')
-    plt.xlabel(r'$x\, [m]$', fontsize=20)
-    plt.ylabel(r'$\epsilon^{\overline{\overline{w}}}\, [-]$', fontsize=20)
- #   plt.title('Richards Solution drainage of fully water saturated soil')
-    plt.legend(fontsize=12)
+    for n in range(0, nodes):
+        e_w[n] = model.interface.volume_fraction_function(-p_w[n])
+    plt.plot(mesh.points, e_w, label=f't={time:.1e}')  # scientific notation
+plt.xlabel(r'$x\, [m]$', fontsize=20)
+plt.ylabel(r'$\epsilon^{\overline{\overline{w}}} \, [-]$', fontsize=20)
+#plt.title('Richards Solution drainage of fully water saturated soil')
+plt.legend()
+plt.show()
+
+
+
+e_w = np.zeros([nodes])
+for time, variable in solutions.items():
+    p_w = variable['p_w']
+    for n in range(0, nodes):
+        e_w[n] = model.interface.volume_fraction_function(-p_w[n])
+    
+    # Convert time to base 10 exponent format
+    exponent = int(np.floor(np.log10(time))) if time != 0 else 0
+    base = time / (10**exponent) if time != 0 else 0
+    if np.isclose(base, 1.0):  # Simplify for powers of 10
+        time_label = rf'$t=10^{{{exponent}}}$'
+    else:
+        time_label = rf'$t={base:.1f}\times 10^{{{exponent}}}$'
+
+    plt.plot(mesh.points, e_w, label=time_label)
+
+plt.xlabel(r'$x\, [m]$', fontsize=20)
+plt.ylabel(r'$\epsilon^{\overline{\overline{w}}} \, [-]$', fontsize=20)
+#plt.title('Richards Solution drainage of fully water saturated soil')
+plt.legend()
+plt.show()
+
+
+
+e_w = np.zeros([nodes])
+for time, variable in solutions.items():
+    p_w = variable['p_w']
+    for n in range(0, nodes):
+        e_w[n] = model.interface.volume_fraction_function(-p_w[n])
+    
+    # Format time in 10^x style
+    exponent = int(np.floor(np.log10(time))) if time != 0 else 0
+    base = time / (10**exponent) if time != 0 else 0
+    if np.isclose(base, 1.0):
+        time_label = rf'$t=10^{{{exponent}}}$'
+    else:
+        time_label = rf'$t={base:.1f}\times 10^{{{exponent}}}$'
+
+    plt.plot(mesh.points, e_w, label=time_label)
+
+plt.xlabel(r'$x\, [m]$', fontsize=20)
+plt.ylabel(r'$\epsilon^{\overline{\overline{w}}} \, [-]$', fontsize=20)
+#plt.title('Richards Solution drainage of fully water saturated soil')
+
+# Put legend outside the plot area on the right
+plt.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), borderaxespad=0.)
+plt.tight_layout()
 plt.show()

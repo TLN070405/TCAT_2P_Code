@@ -165,7 +165,7 @@ for time, variable in solutions.items():
     plt.plot(mesh.points, variable['e_wn'], label=f'TCAT CGP, t={time}')
 plt.xlabel(r'$x\,[m]$', fontsize=20)
 plt.ylabel(r'$\epsilon^{wn}\,[-]$', fontsize=20)
-plt.ylim([-2, 2])
+plt.ylim([0, 200])
 plt.legend(fontsize=12)
 plt.show()
 

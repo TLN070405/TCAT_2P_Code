@@ -8,126 +8,96 @@ from TCAT2Phase.state_equations import state_equations_interface
 from TCAT2Phase.state_equations import state_equations_hysteresis
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import solver_options
 # Domain
 
 domain_size = np.array([[0.0,1.0]])
-domain =  TCAT2Phase.properties.domain.initialize_domain(
-                            dims = 1,
-                            domain_size = domain_size,
-                            )
-
-# Discretization
-nodes = 3
+domain = TCAT2Phase.properties.domain.initialize_domain(
+                                                        dims=1,
+                                                        domain_size=domain_size,
+                                                        )
 
 # Mesh
+nodes = 101
 mesh = TCAT2Phase.mesh.grid.Mesh()
-mesh.uniform_mesh_1d(domain,nodes)
+mesh.uniform_mesh_1d(domain, nodes)
 
 # Boundaries
-boundary_type = [0,0]
-model = TCAT2Phase.numerics.model.initialize_model(
-                                model_type = 'Richards',
-                                form = 'pr',
-                                domain = domain,
-                                nodes = nodes,
-                                mesh = mesh
-                                    )
+model = TCAT2Phase.numerics.model.Model(
+                                        model_type="Richards", form="pr", domain=domain, nodes=nodes, mesh=mesh
+                                        )
 
 # Set boundary types: 0 - Dirchlet
 #                     1 - Neumann (but not supported yet)
 boundary_type = {'p_w': [[0, 0]]}
 
-model.set_boundary_type(boundary_type = boundary_type)
-
-# Set boundary names
-boundary_name = {'p_w': [['p_w', 'p_w']]}
-
-model.set_boundary_name(boundary_name = boundary_name)
-
-
-
+model.set_boundary_type(boundary_type)
 
 # Set solid phase properties
-s_phase = TCAT2Phase.properties.phase.Solid('s')
-s_phase.set_porosity(0.4)
-s_phase.set_permeability(1e-10)
-s_phase.set_gravity(0.0)
+s_phase = TCAT2Phase.properties.phase.Solid(
+    "s",
+    porosity=0.4,
+    permeability=1e-10,
+    gravity= 0.0,
+    dynamic_capillary_pressure_parameter=None,
+)
 
 # Set wetting-phase properties
-w_phase = TCAT2Phase.properties.phase.Fluid('w')
-w_phase.set_residual_volume_fraction(0.1*s_phase.porosity)
-w_phase.set_viscosity(1.e-3)
-w_den_params = {'rho0':1.e3,
-                'beta':4.9e-10}
-w_phase.set_density_function(state_equations.density_exp_pressure,**w_den_params)
-w_phase.set_d_density_function(state_equations.d_density_exp_pressure,**w_den_params)
+w_den_params = {"rho0": 1.0e3, "beta": 4.9e-10}
+w_phase = TCAT2Phase.properties.phase.Fluid(
+    "w",
+    viscosity=1.e-3,
+    momentum_resistance=0.0,
+    residual_volume_fraction=0.1*0.4,
+    density_function=state_equations.density_exp_pressure,
+    d_density_function=state_equations.d_density_exp_pressure,
+    **w_den_params,
+)
 
 # Set nonwetting-phase properties
-n_phase = TCAT2Phase.properties.phase.Fluid('n')
-n_phase.set_residual_volume_fraction(0.2*s_phase.porosity)
-n_phase.set_viscosity(1.78e-5)
-n_den_params = {'rho0':1.2,
-                'alpha':1.189e-5
-                }
-n_phase.set_density_function(state_equations.density_linear_pressure,**n_den_params)
-n_phase.set_d_density_function(state_equations.d_density_linear_pressure,**n_den_params)
-n_en_params = {'porosity':s_phase.porosity
-                }
-n_phase.set_volume_fraction_function(state_equations.volume_fraction,**n_en_params)
+n_den_params = {"rho0": 1.2, "alpha": 1.189e-5}
+n_phase = TCAT2Phase.properties.phase.Fluid(
+    "n",
+    viscosity=1.78e-5,
+    momentum_resistance=0.0,
+    residual_volume_fraction=0.2*0.4,
+    density_function=state_equations.density_linear_pressure,
+    d_density_function=state_equations.d_density_linear_pressure,
+    **n_den_params,
+)
 
-# Set up the model phases.
-model.solid = s_phase
-model.w_phase = w_phase
-model.n_phase = n_phase
-# Set w-n interphase properties
-wn_interface_imb = TCAT2Phase.properties.interface.Interface()
-n = 6
-m = 1.0 - (1.0 / n)
-alpha = 9e-4
-
+# Set w-n interfaces properties
 vg_imb = state_equations_interface.VanGenuchten(
-    m = m,
-    n = n,
-    alpha = alpha,
-    porosity = s_phase.porosity,
-    e_wr = w_phase.residual_volume_fraction,
-    e_nr = n_phase.residual_volume_fraction,
-    )
+    m=1.0 - (1.0 /6.),
+    n=6.,
+    alpha= 9.e-4,
+    porosity=s_phase.porosity,
+    e_wr=w_phase.residual_volume_fraction,
+    e_nr=n_phase.residual_volume_fraction,
+)
 
-wn_interface_imb.set_pc_function(vg_imb.capillary_pressure)
-wn_interface_imb.set_d_pc_function(vg_imb.d_capillary_pressure)
-wn_interface_imb.set_volume_fraction_function(vg_imb.volume_fraction_w)
-wn_interface_imb.set_d_volume_fraction_function(vg_imb.d_volume_fraction_w)
-
-# Set wn-interface properties drainage
-wn_interface_dr = TCAT2Phase.properties.interface.Interface()
-n = 9.0
-m = 1.0 - (1.0 / n)
-alpha = 6e-4
+wn_interface_imb = TCAT2Phase.properties.interface.TraditionalInterface(vg_imb)
 
 vg_dr = state_equations_interface.VanGenuchten(
-    m = m,
-    n = n,
-    alpha = alpha,
-    porosity = s_phase.porosity,
-    e_wr = w_phase.residual_volume_fraction,
-    e_nr = 0.0,
-    )
-wn_interface_dr.set_pc_function(vg_dr.capillary_pressure)
-wn_interface_dr.set_d_pc_function(vg_dr.d_capillary_pressure)
-wn_interface_dr.set_volume_fraction_function(vg_dr.volume_fraction_w)
-wn_interface_dr.set_d_volume_fraction_function(vg_dr.d_volume_fraction_w)
+    m= 1.0 - (1.0 /9.0),
+    n= 9.0,
+    alpha= 6.e-4,
+    porosity=s_phase.porosity,
+    e_wr=w_phase.residual_volume_fraction,
+    e_nr= 0.,
+)
 
-w_phase.set_rel_perm_function(vg_dr.w_relative_permability)
-n_phase.set_rel_perm_function(vg_dr.n_relative_permability)
+wn_interface_dr = TCAT2Phase.properties.interface.TraditionalInterface(vg_dr)
 
+#set relative permeabilities
+w_phase.set_relative_permeability_function(vg_dr.w_relative_permeability)
+n_phase.set_relative_permeability_function(vg_dr.n_relative_permeability)
 
-# Set hysteresis data and model
+# Set hysteresis data and hysteretic interface
 model.hysteresis = True
 max_reversals = 20
-max_time_steps =100000
+max_time_steps =1000000
 e_wr = w_phase.residual_volume_fraction
-
 
 drainage_process_new  = np.full((nodes), True)
 e_w_reversal         = np.full((nodes,max_reversals), s_phase.porosity)
@@ -139,7 +109,6 @@ p_c_endpoint         = np.full((nodes,max_reversals), wn_interface_dr.pc_functio
 s_nte_reversal       = np.full((nodes,max_reversals), 0.0)
 s_nte_endpoint       = np.full((nodes,max_reversals), 0.0)
 path_is_pdc          = np.full((nodes),True )
-
 
 hysteresis_tol = 1e-6
 switch_condition ='p_c'
@@ -159,14 +128,18 @@ ParkerLenhard_parameters = {'drainage_process_new':drainage_process_new,
                             'max_reversals':max_reversals,
                             'max_time_steps':max_time_steps }
 
-   
-model.interface = state_equations_hysteresis.ParkerLenhard(model, wn_interface_imb, wn_interface_dr, **ParkerLenhard_parameters )
+
+wn_interface = state_equations_hysteresis.ParkerLenhard(model, wn_interface_imb, wn_interface_dr, **ParkerLenhard_parameters )
+
+# Set model phases and interfaces
+TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phase, wn_interface)
 
 # Set initial conditions
-pw_ic = np.full((nodes), -wn_interface_dr.pc_function(0.35))  #-1380.2309339564179
+def pw_ic(x):
+    """wetting phase pressure ic at t=0"""
+    return -wn_interface_dr.pc_function(0.35)
 
-initial_conditions = {'p_w': pw_ic }
-
+initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Set boundary values
@@ -189,16 +162,11 @@ def pw0_bc(t):
     # If t is outside the time range, return None or a default value (optional)
     return pw_values[-1]
 
-
-def pn0_bc(t): return  0.0
-def pnL_bc(t): return  0.0
 def pwL_bc(t): return  -wn_interface_dr.pc_function(0.35)
 
 
-boundary_value = {'p_w': [[ pw0_bc,pwL_bc]],
-                  'p_n': [[ pn0_bc,pnL_bc  ]]}
-
-model.set_boundary_value(boundary_value = boundary_value)
+boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
+model.set_boundary_conditions(boundary_conditions)
 
 # Time
 time_interval = np.array([3000])
@@ -209,23 +177,8 @@ model.set_simulation_time(time_interval)
 # Numerical Parameters
 OptDB = PETSc.Options()
 
-# Time-Stepper Options
-OptDB.setValue('snes_fd_color', None)
-OptDB.setValue('ts_type', 'bdf')
-OptDB.setValue('ts_bdf_order', 5)
-OptDB.setValue('ts_max_steps',100000)
-OptDB.setValue('ts_max_reject',500)
-OptDB.setValue('ts_monitor', None)
-
-# Nonlinear Solver Options
-OptDB.setValue('ts_max_snes_failures',10000)
-
-# Linear Solver Options
-OptDB.setValue('ts_rtol', 1.e-8)
-OptDB.setValue('ts_atol', 1.e-8)
-# Preconditioner Options
-OptDB.setValue('pc_type', 'sor')
-
+# Numerical Parameters
+solver_options.solver_options(max_time_steps=1000000, bdf_order=1, pc_type="sor")
 
 # Solve model and return model.solutions
 # which is a dictionary where
@@ -251,27 +204,65 @@ for n, value in enumerate(pc_range):
     e_w_mpc_dr[n]   = wn_interface_dr.volume_fraction_function(value)
     e_w_mpc_imb[n]  = wn_interface_imb.volume_fraction_function(value)
 
-
 counter_hysteresis=model.interface.data.counter_hysteresis
-
+# First scanning curve
 plt.plot(model.interface.data.ew_hysteresis[0,1:counter_hysteresis],
          model.interface.data.pc_hysteresis[0,1:counter_hysteresis],
-         label='scanning curves',marker='o')
-plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel(r'$\epsilon^w$')
-plt.ylabel(r'$p_c$')
-plt.title('Hysteresis pc-ew curves')
+         label='scanning curves',
+         color='blue',
+         linestyle='solid',
+         linewidth=1.5)
+
+plt.plot(e_w_mpc_imb, pc_range, label="MIC VG", linestyle="dashed")
+plt.plot(e_w_mpc_dr, pc_range, label="MDC VG", linestyle="dashed")
+plt.xlabel(r'$\epsilon^{\overline{\overline{w}}} \, [-]$', fontsize=20)
+plt.ylabel(r'$p^c \, Pa$', fontsize=20)
 plt.legend()
 plt.show()
 
+# Second scanning curve
 plt.plot(model.interface.data.ew_hysteresis[1,1:counter_hysteresis],
          model.interface.data.pc_hysteresis[1,1:counter_hysteresis],
-         label='scanning curves',marker='o')
-plt.plot(e_w_mpc_imb,pc_range,label="MIC VG",linestyle="dashed")
-plt.plot(e_w_mpc_dr,pc_range,label="MDC VG",linestyle="dashed")
-plt.xlabel(r'$\epsilon^w$')
-plt.ylabel(r'$p_c$')
-plt.title('Hysteresis pc-ew curves')
+         label='scanning curves',
+         color='blue',
+         linestyle='solid',
+         linewidth=1.5)
+
+plt.plot(e_w_mpc_imb, pc_range, label="MIC VG", linestyle="dashed")
+plt.plot(e_w_mpc_dr, pc_range, label="MDC VG", linestyle="dashed")
+plt.xlabel(r'$\epsilon^{\overline{\overline{w}}} \, [-]$', fontsize=20)
+plt.ylabel(r'$p^c \, Pa$', fontsize=20)
+plt.legend()
+plt.show()
+
+
+# First scanning curve
+plt.plot(model.interface.data.ew_hysteresis[0,1:counter_hysteresis],
+         model.interface.data.pc_hysteresis[0,1:counter_hysteresis],
+         label='scanning curves',
+         color='blue',
+         linestyle='solid',
+         linewidth=1.0)
+
+plt.plot(e_w_mpc_imb, pc_range, label="MIC VG", linestyle="dashed")
+plt.plot(e_w_mpc_dr, pc_range, label="MDC VG", linestyle="dashed")
+plt.xlabel(r'$\epsilon^{\overline{\overline{w}}} \, [-]$', fontsize=20)
+plt.ylabel(r'$p^c \, Pa$', fontsize=20)
+plt.legend()
+plt.show()
+
+
+# First scanning curve
+plt.plot(model.interface.data.ew_hysteresis[0,1:counter_hysteresis],
+         model.interface.data.pc_hysteresis[0,1:counter_hysteresis],
+         label='scanning curves',
+         color='blue',
+         linestyle='solid',
+         linewidth=0.5)
+
+plt.plot(e_w_mpc_imb, pc_range, label="MIC VG", linestyle="dashed")
+plt.plot(e_w_mpc_dr, pc_range, label="MDC VG", linestyle="dashed")
+plt.xlabel(r'$\epsilon^{\overline{\overline{w}}} \, [-]$', fontsize=20)
+plt.ylabel(r'$p^c \, Pa$', fontsize=20)
 plt.legend()
 plt.show()

@@ -78,6 +78,10 @@ vg = state_equations_interface.VanGenuchten(
 
 wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
 
+#set relative permeabilities
+w_phase.set_relative_permeability_function(vg.w_relative_permeability)
+n_phase.set_relative_permeability_function(vg.n_relative_permeability)
+
 # Set model phases and interfaces
 TCAT2Phase.numerics.model.Model.set_model_phases(
     model, s_phase, w_phase, n_phase, wn_interface
@@ -86,7 +90,7 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return ((200-600)/(1.-0.))*x + 600
+    return ((2000-2500.)/(1.-0.))*x + 2500.
 
 initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
@@ -101,8 +105,8 @@ solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 # Solve model and return model.solutions which is a dictionary where
 # solutions[time][u_name] = np.array
 
-pw0_bc = 600
-pwL_bc = 200
+pw0_bc = 2500.
+pwL_bc = 2000.
 # Set boundary values
 boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 

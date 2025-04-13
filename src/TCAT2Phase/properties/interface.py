@@ -58,7 +58,7 @@ class TraditionalInterface(Interface):
 
     def set_n_relative_permeability(self,n_relative_permeability,**parameters):
         """
-        Set density
+        Set relative permeability of non wetting phase
         """
         return partial(n_relative_permeability,**parameters)
 
