@@ -49,7 +49,7 @@ class BaseResidual:
 
             od   = self.compute_spatial_operator(primary_variables,fluxes,cell)
             self.compute_time_matrix(primary_variables,fluxes)
-            f[n] = self.compute_residual_equations (udot, od)
+            f[n] = self.compute_residual_equations(udot, od)
 
     def compute_primary_variables(self,u):
         """

@@ -83,7 +83,7 @@ TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phas
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return 0.
+    return -300.
 
 def ew_ic(x):
     """non wetting phase pressure ic at t=0"""
@@ -94,7 +94,7 @@ model.set_initial_conditions(initial_conditions)
 
 
 # Set boundary conditions
-ew0_bc = w_phase.residual_volume_fraction +1e-5
+ew0_bc = w_phase.residual_volume_fraction +1e-5 
 ewL_bc = w_phase.residual_volume_fraction +1e-5
 pw0_bc = -wn_interface.pc_function(ew0_bc)
 pwL_bc = -wn_interface.pc_function(ewL_bc)

@@ -97,7 +97,7 @@ model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval = np.array([1,10,100])
+time_interval =np.array([1,10,100])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters

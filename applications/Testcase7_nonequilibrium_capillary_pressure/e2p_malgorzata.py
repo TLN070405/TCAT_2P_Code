@@ -95,10 +95,10 @@ for nodes in (nodes_array):
         # Set boundary values
         ew0_bc = 0.12
         ewL_bc = 0.008
-        pw0_bc = -2113.152788450121
-        pwL_bc = -13706.965861446095
         pn0_bc = 0.0
-        pnL_bc = 0.0
+        pnL_bc = 1000.0
+        pw0_bc = pn0_bc - wn_interface.pc_function(ew0_bc)  #2113.152788450121
+        pwL_bc = pnL_bc - wn_interface.pc_function(ewL_bc)  #13706.965861446095
 
         boundary_conditions = {'e_w': [[ ew0_bc , ewL_bc ]],
                   'p_w': [[ pw0_bc , pwL_bc ]],
@@ -109,21 +109,23 @@ for nodes in (nodes_array):
         # Set initial conditions
         def ew_ic(x):
             """volume fraction ic at t=0""" 
-            return 0.008
-
-        def pw_ic(x):
-            """wetting phase pressure ic at t=0"""
-            return -13706.965861446095
+            return ewL_bc
 
         def pn_ic(x):
             """wetting phase pressure ic at t=0"""
-            return 0.
+            return pnL_bc
+
+        def pw_ic(x):
+            """wetting phase pressure ic at t=0"""
+            return pnL_bc - wn_interface.pc_function(ewL_bc)
+
+
 
         initial_conditions = {'e_w': ew_ic,'p_w': pw_ic,'p_n': pn_ic }
         model.set_initial_conditions(initial_conditions)
 
         # Time
-        time_interval = np.array([20000.])
+        time_interval = np.array([23000.])
         model.set_simulation_time(time_interval)
 
         # Set petsc solver options

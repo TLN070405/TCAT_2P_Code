@@ -10,6 +10,7 @@ from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 nodes_array=[33,65,101]
 tau_array=[0,1e7,1e8]
+
 for nodes in (nodes_array):
     for tau in (tau_array):
         # Domain
@@ -115,7 +116,7 @@ for nodes in (nodes_array):
 
 
         # Time
-        time_interval = np.array([20000.])
+        time_interval = np.array([19000])
         model.set_simulation_time(time_interval)
 
         # Set petsc solver options
@@ -132,5 +133,5 @@ for nodes in (nodes_array):
         file_path = Path(__file__).resolve().parent/ 'outputs'
 
         # Save the data to the correct file path
-        metadata = metadata = {"tau": tau, "nodes":nodes}
+        metadata = {"tau": tau, "nodes":nodes}
         save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)

@@ -30,8 +30,8 @@ for tau in (tau_array):
                     linestyle="dashed")
 
 # Adding axis labels with units and larger font sizes
-plt.xlabel(r"$x\,[m]$", fontsize=20)
-plt.ylabel(r"$\epsilon^w\,[-]$", fontsize=20)
+plt.xlabel(r"$x\,[m]$", fontsize=10)
+plt.ylabel(r"$\epsilon^w\,[-]$", fontsize=10)
 plt.legend(fontsize=12)
 plt.show()
 
@@ -54,5 +54,26 @@ for tau in (tau_array):
 # Adding axis labels with units and larger font sizes
 plt.xlabel(r"$x\,[m]$", fontsize=20)
 plt.ylabel(r"$p^w\,[Pa]$", fontsize=20)
+plt.legend(fontsize=12)
+plt.show()
+
+# --------------- Volume Fraction ------------------#
+plt.figure(figsize=(10, 6))  # Standardize chart dimensions
+for tau in (tau_array):
+    for nodes in (nodes_array):
+        # filenames
+        filename = f"E2P_test_case_7_{nodes}_{tau}.h5"
+
+        # Load the data from the file
+        solutions, mesh_points,metadata = load_solutions_from_hdf5(str(script_dir), filename)
+        # --------------- plot ------------------#
+        for time, variables in solutions.items():
+            plt.plot(mesh_points, variables["p_n"],
+                    label=f"tau={tau:g}, nodes={nodes} ",
+                    linestyle="dashed")
+
+# Adding axis labels with units and larger font sizes
+plt.xlabel(r"$x\,[m]$", fontsize=10)
+plt.ylabel(r"$p^n\,[Pa]$", fontsize=10)
 plt.legend(fontsize=12)
 plt.show()

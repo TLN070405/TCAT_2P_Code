@@ -81,21 +81,22 @@ n_phase.set_relative_permeability_function(vg.n_relative_permeability)
 TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phase, wn_interface)
 
 # Set initial conditions
-def pw_ic(x):
-    """wetting phase pressure ic at t=0"""
-    return -wn_interface.pc_function(0.2)
 
 def ew_ic(x):
     """ volume fraction ic at t=0"""
-    return model.interface.volume_fraction_function(-pw_ic(x))
+    return w_phase.residual_volume_fraction +1e-5
+
+def pw_ic(x):
+    """wetting phase pressure ic at t=0"""
+    return -wn_interface.pc_function(ew_ic(x))
 
 initial_conditions = { 'e_w': ew_ic, 'p_w': pw_ic }
 model.set_initial_conditions(initial_conditions)
 
 # Set boundary conditions
 
-pw0_bc = 0.0
-pwL_bc = 0.0
+pw0_bc = -300.
+pwL_bc = -300.
 ew0_bc = model.interface.volume_fraction_function(-pw0_bc)
 ewL_bc = model.interface.volume_fraction_function(-pwL_bc)
 
@@ -108,7 +109,7 @@ time_interval = np.array([1,10,100])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
-solver_options.solver_options(max_time_steps=100000, bdf_order=1, pc_type="sor")
+solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
 
 
 # Solve model

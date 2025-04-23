@@ -30,8 +30,8 @@ for tau in (tau_array):
                     linestyle="dashed")
 
 # Adding axis labels with units and larger font sizes
-plt.xlabel(r"$x\,[m]$", fontsize=20)
-plt.ylabel(r"$\epsilon^w\,[-]$", fontsize=20)
+plt.xlabel(r"$x\,[m]$", fontsize=10)
+plt.ylabel(r"$\epsilon^w\,[-]$", fontsize=10)
 plt.legend(fontsize=12)
 plt.show()
 
@@ -52,7 +52,7 @@ for tau in (tau_array):
                     linestyle="dashed")
 
 # Adding axis labels with units and larger font sizes
-plt.xlabel(r"$x\,[m]$", fontsize=20)
-plt.ylabel(r"$p^w\,[Pa]$", fontsize=20)
+plt.xlabel(r"$x\,[m]$", fontsize=10)
+plt.ylabel(r"$p^w\,[Pa]$", fontsize=10)
 plt.legend(fontsize=12)
 plt.show()
