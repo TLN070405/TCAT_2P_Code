@@ -148,7 +148,7 @@ initial_conditions = {'e_w': ew_ic,
 model.set_initial_conditions(initial_conditions)
 
 # Time
-time_interval = np.array([1e-5,1e-2,3,1e1,1e2,1e3])
+time_interval = np.array([1e-5,1e-2,3])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options

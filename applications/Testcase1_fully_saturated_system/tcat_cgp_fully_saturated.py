@@ -11,7 +11,7 @@ from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
 
 
-nodes_array=[33,65]
+nodes_array=[33,65,101]
 
 for nodes in (nodes_array):
 
@@ -159,7 +159,7 @@ for nodes in (nodes_array):
     u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
     solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
-"""     # Chart 1: Volume Fraction (ε^w)
+    """     # Chart 1: Volume Fraction (ε^w)
     plt.figure(figsize=(10, 6))
     for time, variable in solutions.items():
         plt.plot(mesh.points, variable['e_w'], label=f'TCAT CGP, t={time}')
@@ -215,13 +215,13 @@ for nodes in (nodes_array):
     plt.ylabel(r'$K^{wn}_n\,[1/m^2]$', fontsize=20)
     plt.legend(fontsize=12)
     plt.show()
- """
+    """
 
 
-# Export results
-filename = f"tcat_cgp_test_case_1_{nodes}.h5"
-file_path = Path(__file__).resolve().parent/ 'outputs'
+    # Export results
+    filename = f"tcat_cgp_test_case_1_{nodes}.h5"
+    file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase1_fully_saturated_system'/'outputs'
 
-# Save the data to the correct file path
-metadata  = { "nodes":nodes}
-save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)
+    # Save the data to the correct file path
+    metadata  = { "nodes":nodes}
+    save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)

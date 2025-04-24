@@ -156,7 +156,7 @@ for nodes in (nodes_array):
 
     # Export results
     filename = f"RE_test_case_3_{nodes}.h5"
-    file_path = Path(__file__).resolve().parent/ 'outputs'
+    file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase3_hydrostatic_equilibrium_perturabation'/'outputs'
 
     # Save the data to the correct file path
     metadata  = { "nodes":nodes}

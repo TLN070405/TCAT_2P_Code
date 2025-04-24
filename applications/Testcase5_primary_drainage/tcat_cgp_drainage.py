@@ -128,7 +128,7 @@ model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval = np.array([1e-7,1e-5,1e-4,1e-3,1e-2,1e-1,1,1e1])
+time_interval = np.array([1e-7,1e-5,1e-4,1e-3,1e-2])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options

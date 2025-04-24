@@ -213,7 +213,7 @@ for nodes in (nodes_array):
 
     # Export results
     filename = f"tcat_cgp_test_case_2_{nodes}.h5"
-    file_path = Path(__file__).resolve().parent/ 'outputs'
+    file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase2_hydrostatic_equilibrium'/'outputs'
 
     # Save the data to the correct file path
     metadata  = { "nodes":nodes}

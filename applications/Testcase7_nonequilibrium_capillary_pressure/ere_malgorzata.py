@@ -130,7 +130,7 @@ for nodes in (nodes_array):
 
         # Export results
         filename = f"ERE_test_case_7_{nodes}_{tau}.h5"
-        file_path = Path(__file__).resolve().parent/ 'outputs'
+        file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase7_nonequilibrium_capillary_pressure'/'outputs'
 
         # Save the data to the correct file path
         metadata = {"tau": tau, "nodes":nodes}

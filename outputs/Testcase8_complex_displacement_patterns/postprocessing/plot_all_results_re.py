@@ -6,7 +6,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import load_solutions_from_hdf5
 
 
-nodes_array=[101]
+nodes_array=[65,101]
 
 
 # Get the directory where the current script (re_test_case_1.py) is located

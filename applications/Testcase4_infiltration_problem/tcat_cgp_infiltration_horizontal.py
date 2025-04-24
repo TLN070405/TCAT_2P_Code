@@ -143,7 +143,7 @@ for nodes in (nodes_array):
     solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
-    # Chart 1: Volume Fraction (ε^w)
+    """     # Chart 1: Volume Fraction (ε^w)
     plt.figure(figsize=(10, 6))
     for time, variable in solutions.items():
         plt.plot(mesh.points, variable['e_w'], label=f'TCAT CGP, t={time}')
@@ -198,11 +198,11 @@ for nodes in (nodes_array):
     plt.ylabel(r'$K^{wn}_n\,[1/m^2]$', fontsize=20)
     plt.legend(fontsize=12)
     plt.show()
-
+    """
 
     # Export results
     filename = f"tcat_cgp_test_case_4_{nodes}.h5"
-    file_path = Path(__file__).resolve().parent/ 'outputs'
+    file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase4_infiltration_problem'/'outputs'
 
     # Save the data to the correct file path
     metadata  = { "nodes":nodes}

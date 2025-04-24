@@ -30,7 +30,8 @@ def pressure_w_exact(x):
 
 def interfacial_area_exact(x):
     """exact solution interfacial area"""
-    return volume_fraction_exact(pressure_w_exact(x))
+    coeff =800
+    return coeff*volume_fraction_exact(pressure_w_exact(x))
 
 def mean_curvature_exact(x):
     """j_wn exact solution """
@@ -81,7 +82,6 @@ for nodes in (nodes_array):
     solutions_re, mesh_points, metadata = load_solutions_from_hdf5(str(script_dir), filename_re)
     solutions_cgp, mesh_points , metadata= load_solutions_from_hdf5(str(script_dir), filename_cgp)
 
-    
     # Plot for RE
     for time, variables in solutions_re.items():
         plt.plot(mesh_points, variables["e_w"],label=f"RE, t={time}, nodes={nodes}",linestyle="dashed")

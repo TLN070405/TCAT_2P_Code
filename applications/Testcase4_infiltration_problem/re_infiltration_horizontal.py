@@ -77,6 +77,10 @@ for nodes in (nodes_array):
 
     wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
 
+    #set relative permeabilities
+    w_phase.set_relative_permeability_function(vg.w_relative_permeability)
+    n_phase.set_relative_permeability_function(vg.n_relative_permeability)
+    
     # Set model phases and interfaces
     TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phase, wn_interface)
 
@@ -117,7 +121,7 @@ for nodes in (nodes_array):
         plt.ylabel(r'$p_w$')
         plt.title('Richards equation infiltration pressure vs space')
         plt.legend()
-    plt.show()
+    #plt.show()
 
 
     e_w=np.zeros([nodes] )
@@ -130,7 +134,7 @@ for nodes in (nodes_array):
         plt.ylabel(r'$\epsilon^w$')
         plt.title('Richards equation infiltration volume fraction vs space')
         plt.legend()
-    plt.show()
+    #plt.show()
 
     for time,variable in solutions.items():
         p_w = variable['p_w']
@@ -146,12 +150,12 @@ for nodes in (nodes_array):
         plt.ylabel(r'$\epsilon^w$')
         plt.title('Volume fraction vs space')
         plt.legend()
-    plt.show()
+    #plt.show()
 
 
     # Export results
     filename = f"RE_test_case_4_{nodes}.h5"
-    file_path = Path(__file__).resolve().parent/ 'outputs'
+    file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase4_infiltration_problem'/'outputs'
 
     # Save the data to the correct file path
     metadata  = { "nodes":nodes}

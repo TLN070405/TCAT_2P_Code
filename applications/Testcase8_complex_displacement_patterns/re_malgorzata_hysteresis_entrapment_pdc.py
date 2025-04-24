@@ -12,7 +12,7 @@ import solver_options
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
-nodes_array=[101]
+nodes_array=[65,101]
 
 for nodes in (nodes_array):
     # Domain
@@ -172,8 +172,7 @@ for nodes in (nodes_array):
     model.set_boundary_conditions(boundary_conditions)
 
     # Time
-    time_interval = np.array([500])
-    #time_interval = np.array([1.0,10.0,20.0,30.0,100.0,200.0,500.0,600.0,700.0])
+    time_interval = np.array([3000])
 
     model.set_simulation_time(time_interval)
 
@@ -250,7 +249,7 @@ for nodes in (nodes_array):
 
     # Export results
     filename = f"RE_test_case_8_{nodes}.h5"
-    file_path = Path(__file__).resolve().parent/ 'outputs'
+    file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase8_complex_displacement_patterns'/'outputs'
 
     # Save the data to the correct file path
     metadata = {"counter":counter_hysteresis, "nodes":nodes}

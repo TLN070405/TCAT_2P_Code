@@ -10,7 +10,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 
-nodes_array=[33,65,101,201,401,801,1601]
+nodes_array=[33,65,101]
 
 for nodes in (nodes_array):
     # Domain
@@ -148,7 +148,7 @@ for nodes in (nodes_array):
 
     # Export results
     filename = f"RE_test_case_1_{nodes}.h5"
-    file_path = Path(__file__).resolve().parent/ 'outputs'
+    file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase1_fully_saturated_system'/'outputs'
 
     # Save the data to the correct file path
     metadata  = { "nodes":nodes}
