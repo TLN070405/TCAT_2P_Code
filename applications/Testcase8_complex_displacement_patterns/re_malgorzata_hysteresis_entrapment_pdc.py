@@ -12,7 +12,7 @@ import solver_options
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
-nodes_array=[65,101]
+nodes_array=[101]
 
 for nodes in (nodes_array):
     # Domain

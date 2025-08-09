@@ -223,11 +223,11 @@ class BrooksCorey:
 
 class TCAT:
     """
-    VanGenuchten Class to hold functions and parameters
+    TCAT Class to hold functions and parameters
     """
     def __init__(self,b1,b2,b3,porosity,e_ss,js_ns,kn_ns):
         """
-        Initialize the VanGenuchten parameters
+        Initialize parameters
         """
         self.data = TCATdata(b1,b2,b3)
         self.porosity = porosity
@@ -253,10 +253,17 @@ class TCAT:
 
     def w_relative_permeability(self,e_w):
         """
-        Relative permeability for w-phase
+        Equivalent Relative permeability for w-phase
         """
         k_wr = e_w * e_w
         return k_wr
+
+    def n_relative_permeability(self,e_n):
+        """
+        Equivalent Relative permeability for n-phase
+        """
+        k_nr = e_n * e_n
+        return k_nr
 
     def gaussian_curvature(self,e_w, e_wn,j_wn):
         """

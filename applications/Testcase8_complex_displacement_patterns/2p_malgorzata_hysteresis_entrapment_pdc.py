@@ -15,7 +15,7 @@ from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
 
 
-nodes_array=[65,101]
+nodes_array=[101]
 
 for nodes in (nodes_array):
     domain_size = np.array([[0.0,1.0]])
@@ -158,9 +158,12 @@ for nodes in (nodes_array):
         Boundary wetting phase pressure using linear interpolation
         """
         # Boundary pressure values corresponding to the time intervals
-        pw_values = [-wn_interface_dr.pc_function(0.35), -1500, 0.0, -1300, -900, -1800, 0.0]
-        time_values = [0, 500, 1000, 1500, 2000, 2500, 3000]
+        #pw_values = [-wn_interface_dr.pc_function(0.35), -1500., -100.0, -4000., 0.0, -1500.]
+        #time_values = [0, 500, 1000, 1500, 2000, 2500] 
 
+
+        pw_values = [-wn_interface_dr.pc_function(0.35), -1500, -100.0, -4000, 0.0, -1500, 0.0]
+        time_values = [0, 500, 1000, 1500, 2000, 2500, 3000]
         # Loop through each time interval to find the appropriate one
         for i in range(1, len(time_values)):
             if time_values[i-1] < t <= time_values[i]:
@@ -182,7 +185,7 @@ for nodes in (nodes_array):
     model.set_boundary_conditions(boundary_conditions)
 
     # Time
-    time_interval = np.array([3000])
+    time_interval = np.array([2500])
 
     model.set_simulation_time(time_interval)
 

@@ -67,7 +67,7 @@ tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
                                       js_ns = 2.00e3,
                                       kn_ns = 1.00e6)
 
-def interfacial_area_equilibrium(x): return 1e-6
+def interfacial_area_equilibrium(x): return 300.
 
 wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
                                                              interfacial_dynamics = 6.398675e-05,
@@ -80,19 +80,19 @@ TCAT2Phase.numerics.model.Model.set_model_phases(
 )
 
 # Set boundary values
-ew0_bc  = 0.369
-pw0_bc  = 1e-7
-ewn0_bc = 1e-6
+ew0_bc  = 0.3
+pw0_bc  = -100.
+ewn0_bc = 300.
 jwn0_bc = -pw0_bc/wn_interface.interfacial_tension
 wwn0_bc = 0.0
 kwn0_bc = model.interface.gaussian_curvature(ew0_bc, ewn0_bc,jwn0_bc)
 
-ewL_bc = 0.369
-pwL_bc = 1e-7
-ewnL_bc = 1e-6
-jwnL_bc = -pwL_bc/wn_interface.interfacial_tension
-wwnL_bc = 0.0
-kwnL_bc = model.interface.gaussian_curvature(ewL_bc, ewnL_bc,jwnL_bc)
+ewL_bc = ew0_bc
+pwL_bc = pw0_bc
+ewnL_bc = ewn0_bc
+jwnL_bc = jwn0_bc
+wwnL_bc = wwn0_bc
+kwnL_bc = kwn0_bc
 
 boundary_conditions= {'e_w': [[ ew0_bc,ewL_bc ]],
                   'p_w': [[ pw0_bc,pwL_bc ]],
@@ -108,17 +108,17 @@ def ew_ic(x):
     """
     volume fraction w initial conditions
     """
-    return 0.25
+    return 0.2746
 def pw_ic(x):
     """
     pressure w initial conditions
     """
-    return -518.5
+    return -300
 def ewn_ic(x):
     """
     interfacial area of wn interface initial conditions
     """
-    return 857.7
+    return 375
 def jwn_ic(x):
     """
     Mean curvature of wn interface initial conditions
@@ -148,7 +148,7 @@ initial_conditions = {'e_w': ew_ic,
 model.set_initial_conditions(initial_conditions)
 
 # Time
-time_interval = np.array([1e-5,1e-2,3])
+time_interval=np.array([1e-8,1e-1,1,10,50,100,200,300]) 
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
@@ -219,7 +219,7 @@ plt.show()
 
 
 # Export results
-filename = "tcat_cgp_test_case_1.h5"
+filename = "tcat_cgp_test_case_6.h5"
 file_path = Path(__file__).resolve().parent/ 'outputs'
 
 # Save the data to the correct file path

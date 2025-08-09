@@ -10,7 +10,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 
-nodes_array=[33,65,101]
+nodes_array=[101]
 
 for nodes in (nodes_array):
     # Domain
@@ -94,13 +94,13 @@ for nodes in (nodes_array):
     # Set initial conditions
     def pw_ic(x):
         """wetting phase pressure ic at t=0"""
-        return ((2000-2500.)/(1.-0.))*x + 2500.
+        return ((2000.-2500.)/(1.-0.))*x + 2500.
 
     initial_conditions = {"p_w": pw_ic}
     model.set_initial_conditions(initial_conditions)
 
     # Time
-    time_interval = np.array([1,5,10])
+    time_interval = np.array([100])
     model.set_simulation_time(time_interval)
 
     # Set petsc solver options

@@ -11,7 +11,7 @@ script_dir = Path(__file__).resolve().parent
 # Navigate up one level and then get the "outputs" folder
 script_dir = script_dir.parent / 'outputs'
 
-nodes_array=[33,65,101]
+nodes_array=[1601]
 tau_array=[0,1e7,1e8]
 
 # --------------- Volume Fraction ------------------#

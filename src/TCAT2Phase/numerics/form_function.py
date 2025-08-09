@@ -6,7 +6,6 @@ from TCAT2Phase.numerics import utils
 def model_formfunction(snes,U,F,model):
     """
     residual function to solve boundary conditions in case we have flux bc
-    tm: stands for traditional model.
     """
     da=snes.getDM()
     localU=da.getLocalVec()

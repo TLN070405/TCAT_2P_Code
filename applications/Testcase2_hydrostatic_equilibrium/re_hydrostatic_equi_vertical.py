@@ -8,7 +8,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
 
-nodes_array=[33,65,101]
+nodes_array=[101]
 
 for nodes in (nodes_array):
 
@@ -110,7 +110,7 @@ for nodes in (nodes_array):
 
 
     # Time
-    time_interval = np.array([10, 20, 50])
+    time_interval = np.array([100])
     model.set_simulation_time(time_interval)
 
     # Set petsc solver options

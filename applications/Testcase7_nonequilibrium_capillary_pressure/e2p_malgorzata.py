@@ -8,7 +8,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 
-nodes_array=[33,65,101]
+nodes_array=[1601]
 tau_array=[0,1e7,1e8]
 
 for nodes in (nodes_array):

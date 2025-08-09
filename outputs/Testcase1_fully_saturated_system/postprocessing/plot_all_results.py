@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import load_solutions_from_hdf5
+import math
 
 def volume_fraction_exact(x):
     """exact solution volume fraction """
@@ -11,7 +12,7 @@ def volume_fraction_exact(x):
 
 def pressure_w_exact(x):
     """exact solution pressure """
-    return ((2000-2500)/(1.-0.))*x + 2500
+    return ((2000.-2500.)/(1.-0.))*x + 2500.
 
 def interfacial_area_exact(x):
     """exact solution interfacial area"""
@@ -44,8 +45,8 @@ script_dir = Path(__file__).resolve().parent
 script_dir = script_dir.parent / 'outputs'
 
 # filenames
-filename_re = "RE_test_case_1.h5"
-filename_cgp = "tcat_cgp_test_case_1.h5"
+filename_re = "RE_test_case_1_101.h5"
+filename_cgp = "tcat_cgp_test_case_1_101.h5"
 
 # Load the data from the file
 solutions_re, mesh_points, metadata = load_solutions_from_hdf5(str(script_dir), filename_re)
@@ -194,3 +195,64 @@ plt.xlabel(r"$x\,[m]$", fontsize=20)
 plt.ylabel(r"$K^{wn}\,[1/m]$", fontsize=20)
 plt.legend(fontsize=12)
 plt.show()
+
+
+
+nodes = len(mesh_points)
+# calculate error cgp
+L2e_ew_cgp =  np.zeros([len(solutions_cgp)] )
+j =-1
+for time, variables in solutions_cgp.items():
+    numerical_e_w = variables["e_w"]
+    j =j+1
+
+    for i, e_w_value in enumerate(numerical_e_w):
+        L2e_ew_cgp[j] = L2e_ew_cgp[j] + ((e_w_exact[i] - e_w_value)/e_w_exact[i]) ** 2
+    
+    L2e_ew_cgp[j] = math.sqrt(L2e_ew_cgp[j]/nodes)
+
+print(" error cgp e_w =",L2e_ew_cgp)
+
+
+L2e_pw_cgp =  np.zeros([len(solutions_cgp)] )
+j =-1
+for time, variables in solutions_cgp.items():
+    numerical_e_w = variables["p_w"]
+    j =j+1
+
+    for i, p_w_value in enumerate(numerical_e_w):
+        L2e_pw_cgp[j] = L2e_pw_cgp[j] + ((p_w_exact[i] - p_w_value)/p_w_exact[i]) ** 2
+    
+    L2e_pw_cgp[j] = math.sqrt(L2e_pw_cgp[j]/nodes)
+
+print(" error cgp p_w =",L2e_pw_cgp)
+
+
+
+# calculate error cgp
+L2e_ew_re =  np.zeros([len(solutions_re)] )
+j =-1
+for time, variables in solutions_re.items():
+    numerical_e_w = variables["e_w"]
+    j =j+1
+
+    for i, e_w_value in enumerate(numerical_e_w):
+        L2e_ew_re[j] = L2e_ew_re[j] + ((e_w_exact[i] - e_w_value)/e_w_exact[i]) ** 2
+    
+    L2e_ew_re[j] = math.sqrt(L2e_ew_re[j]/nodes)
+
+print(" error re e_w =",L2e_ew_re)
+
+
+L2e_pw_re =  np.zeros([len(solutions_re)] )
+j =-1
+for time, variables in solutions_re.items():
+    numerical_e_w = variables["p_w"]
+    j =j+1
+
+    for i, p_w_value in enumerate(numerical_e_w):
+        L2e_pw_re[j] = L2e_pw_re[j] + ((p_w_exact[i] - p_w_value)/p_w_exact[i]) ** 2
+    
+    L2e_pw_re[j] = math.sqrt(L2e_pw_re[j]/nodes)
+
+print(" error re p_w =",L2e_pw_re)

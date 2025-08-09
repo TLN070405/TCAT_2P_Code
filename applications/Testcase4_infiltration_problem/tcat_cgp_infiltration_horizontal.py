@@ -8,11 +8,11 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 
-nodes_array=[33,65,101]
+nodes_array=[101]
 
 for nodes in (nodes_array):
     # Domain
-    domain_size = np.array([[0.0,0.1]])
+    domain_size = np.array([[0.0,10.]])
     domain =  TCAT2Phase.properties.domain.initialize_domain(
                                 dims = 1,
                                 domain_size = domain_size,
@@ -87,8 +87,8 @@ for nodes in (nodes_array):
 
 
     # Set initial conditions
-    def ew_ic(x): return 0.35701796706321004
-    def pw_ic(x): return -402
+    def ew_ic(x): return 0.36827
+    def pw_ic(x): return -1000.
     def ewn_ic(x): return 100.
     def jwn_ic(x): return -pw_ic(x)/wn_interface.interfacial_tension
     def wwn_ic(x): return 0.0
@@ -106,17 +106,17 @@ for nodes in (nodes_array):
 
     # Set boundary conditions
     def ew0_bc(t): return 0.35901615483439936
-    def pw0_bc(t): return -400
+    def pw0_bc(t): return -900.
     def ewn0_bc(t): return 100.
     def jwn0_bc(t): return -pw0_bc(t)/wn_interface.interfacial_tension
     def wwn0_bc(t): return 0.0
     def kwn0_bc(t): return model.interface.gaussian_curvature(ew0_bc(t), ewn0_bc(t), jwn0_bc(t))
 
-    def ewL_bc(t): return ew_ic(domain_size[0][1])
-    def pwL_bc(t): return pw_ic(domain_size[0][1])
-    def ewnL_bc(t): return ewn_ic(domain_size[0][1])
-    def jwnL_bc(t): return jwn_ic(domain_size[0][1])
-    def wwnL_bc(t): return wwn_ic(domain_size[0][1])
+    def ewL_bc(t): return -1000.
+    def pwL_bc(t): return 
+    def ewnL_bc(t): return  
+    def jwnL_bc(t): return 
+    def wwnL_bc(t): return  
     def kwnL_bc(t): return model.interface.gaussian_curvature(ewL_bc(t), ewnL_bc(t), jwnL_bc(t))
 
     boundary_conditions = {'e_w': [[ ew0_bc,ewL_bc ]],
@@ -143,7 +143,7 @@ for nodes in (nodes_array):
     solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
-    """     # Chart 1: Volume Fraction (ε^w)
+    # Chart 1: Volume Fraction (ε^w)
     plt.figure(figsize=(10, 6))
     for time, variable in solutions.items():
         plt.plot(mesh.points, variable['e_w'], label=f'TCAT CGP, t={time}')
@@ -198,7 +198,7 @@ for nodes in (nodes_array):
     plt.ylabel(r'$K^{wn}_n\,[1/m^2]$', fontsize=20)
     plt.legend(fontsize=12)
     plt.show()
-    """
+
 
     # Export results
     filename = f"tcat_cgp_test_case_4_{nodes}.h5"

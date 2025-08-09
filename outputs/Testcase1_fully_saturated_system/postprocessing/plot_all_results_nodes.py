@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import load_solutions_from_hdf5
 
-nodes_array=[33,65,101]
+nodes_array=[101,201]
 
 def volume_fraction_exact(x):
     """exact solution volume fraction """

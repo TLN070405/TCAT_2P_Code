@@ -11,7 +11,7 @@ from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
 
 
-nodes_array=[33,65,101]
+nodes_array=[101,201]
 
 for nodes in (nodes_array):
 
@@ -148,7 +148,7 @@ for nodes in (nodes_array):
     model.set_initial_conditions(initial_conditions)
 
     # Time
-    time_interval = np.array([1,5,10])
+    time_interval = np.array([100])
     model.set_simulation_time(time_interval)
 
     # Set petsc solver options

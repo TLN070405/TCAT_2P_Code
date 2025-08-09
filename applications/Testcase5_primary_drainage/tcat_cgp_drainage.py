@@ -8,7 +8,7 @@ from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
 # Domain
-domain_size = np.array([[0.0,0.1]])
+domain_size = np.array([[0.0,1.0]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
                             dims = 1,
                             domain_size = domain_size,
@@ -51,7 +51,7 @@ s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
 # Set wetting-phase properties
 w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
-                                              momentum_resistance = 3.75e5,#5.10e4,
+                                              momentum_resistance = 3.75e5,
                                               residual_volume_fraction = 0.0687*0.369,
                                               density_function = state_equations.density_exp_pressure,
                                               d_density_function = state_equations.d_density_exp_pressure,
@@ -71,7 +71,7 @@ def interfacial_area_equilibrium(x):
     """
     Equilibrium specific interfacial area function of space
     """
-    e_wn_eq = 1e-3
+    e_wn_eq = 375
     return e_wn_eq
 
 
@@ -85,9 +85,9 @@ TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, None, 
 
 
 # Set initial conditions
-def ew_ic(x): return 0.35
+def ew_ic(x): return 0.3
 def pw_ic(x): return -100
-def ewn_ic(x): return 10
+def ewn_ic(x): return 300
 def jwn_ic(x): return -pw_ic(x)/wn_interface.interfacial_tension
 def wwn_ic(x): return 0.0
 def kwn_ic(x): return model.interface.gaussian_curvature(ew_ic(x), ewn_ic(x), jwn_ic(x))
@@ -103,9 +103,9 @@ model.set_initial_conditions(initial_conditions)
 
 
 # Set boundary conditions
-def ew0_bc(t): return 0.369
-def pw0_bc(t): return 1e-5
-def ewn0_bc(t): return 1e-3
+def ew0_bc(t): return 0.2746   
+def pw0_bc(t): return -300  
+def ewn0_bc(t): return  375
 def jwn0_bc(t): return -pw0_bc(t)/wn_interface.interfacial_tension
 def wwn0_bc(t): return 0.0
 def kwn0_bc(t): return model.interface.gaussian_curvature(ew0_bc(t), ewn0_bc(t), jwn0_bc(t))
@@ -128,7 +128,7 @@ model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval = np.array([1e-7,1e-5,1e-4,1e-3,1e-2])
+time_interval=np.array([1e-8,1e-1,1,10,50,100,200,300])
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
@@ -165,7 +165,6 @@ for time, variable in solutions.items():
     plt.plot(mesh.points, variable['e_wn'], label=f'TCAT CGP, t={time}')
 plt.xlabel(r'$x\,[m]$', fontsize=20)
 plt.ylabel(r'$\epsilon^{wn}\,[-]$', fontsize=20)
-plt.ylim([0, 200])
 plt.legend(fontsize=12)
 plt.show()
 
@@ -184,7 +183,6 @@ for time, variable in solutions.items():
     plt.plot(mesh.points, variable['w_wn'], label=f'TCAT CGP, t={time}')
 plt.xlabel(r'$x\,[m]$', fontsize=20)
 plt.ylabel(r'$w^{wn}\,[-]$', fontsize=20)
-plt.ylim([-2, 2])
 plt.legend(fontsize=12)
 plt.show()
 

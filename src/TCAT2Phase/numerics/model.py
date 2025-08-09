@@ -11,10 +11,13 @@ model_options = [
         'extended_two_phase',
         'Richards',
         'extended_Richards',
-        'cgp-TCAT'
-                ]
+        'cgp-TCAT',
+        'full-TCAT'
+        ]
 
 form_options = {
+        'full-TCAT' : {'sppijgvk': model_types.FullTCAT('sppijgvk')
+                      },
         'cgp-TCAT' : {'spijvk': model_types.CgpTCAT('spijvk')
                       },
         'extended_two_phase' : {'spp': model_types.ExtendedTwoPhase('spp')
