@@ -4,6 +4,10 @@ from TCAT2Phase.state_equations import state_equations
 import solver_options
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
+from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
+
+
 # Domain
 domain_size = np.array([[0. , 1.]])
 domain = TCAT2Phase.properties.domain.initialize_domain(
@@ -32,13 +36,13 @@ model.set_boundary_type(boundary_type)
 s_phase = TCAT2Phase.properties.phase.Solid(
     "s",
     porosity=0.369,
-    permeability=2.67e-9,
+    permeability=(1/3.75e5)*1.0e-3,
     gravity= 0.0,
     dynamic_capillary_pressure_parameter=None,
 )
 
 # Set wetting-phase properties
-w_den_params = {"rho0": 1.0e3, "beta": 1e-8}
+w_den_params = {"rho0": 1.0e3, "beta": 4.5e-10}
 w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
@@ -55,7 +59,7 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
     "n",
     viscosity=1.78e-5,
     momentum_resistance=0.0,
-    residual_volume_fraction= (1.-0.915)*0.369,
+    residual_volume_fraction= 0.0,
     density_function=state_equations.density_linear_pressure,
     d_density_function=state_equations.d_density_linear_pressure,
     **n_den_params,
@@ -83,21 +87,21 @@ TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phas
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return -wn_interface.pc_function(0.2)
+    return -300
 
 initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Set boundary conditions
-pw0_bc = 0.0
-pwL_bc = 0.0
+pw0_bc = -100
+pwL_bc = -100
 
 boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval =np.array([1,10,100])
+time_interval=np.array([1e-8,1e-1,1,10,50,100,200,300])
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters
@@ -110,22 +114,20 @@ solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
 for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.title('Richards Solution imbibition of fully dry soil')
-    plt.legend()
-plt.show()
-
-
-e_w=np.zeros([nodes] )
-for time,variable in solutions.items():
     p_w = variable['p_w']
+    e_w=np.zeros([nodes] )
+    j_wn=np.zeros([nodes] )
     for n in range(0,nodes):
         e_w[n]= model.interface.volume_fraction_function(-p_w[n])
-    plt.plot(mesh.points,e_w,label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title('Richards Solution imbibiion of fully dry  soil')
-    plt.legend()
-plt.show()
+        j_wn[n]= -p_w[n]/ 7.20e-2
+    variable["e_w"] = e_w
+    variable["j_wn"] = j_wn
+
+
+# Export results
+filename = f"RE_test_case_6.h5"
+file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase6_main_imbibition'/'outputs'
+
+# Save the data to the correct file path
+metadata  = { "nodes":nodes}
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)

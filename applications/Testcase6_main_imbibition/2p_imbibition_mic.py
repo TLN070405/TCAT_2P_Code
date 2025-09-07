@@ -4,6 +4,8 @@ from TCAT2Phase.state_equations import state_equations
 import solver_options
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
+from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
 domain_size = np.array([[0.0,1.]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -118,15 +120,19 @@ solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
 for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.legend()
-plt.show()
+    p_w = variable['p_w']
+    e_w = variable['e_w']
+    p_n=np.zeros([nodes] )
+    for n in range(0,nodes):
+        p_n[n]= model.interface.pc_function(e_w[n]) + p_w[n]
+    variable["p_n"] = p_n
 
-for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.legend()
-plt.show()
+
+
+# Export results
+filename = f"2P_test_case_6.h5"
+file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase6_main_imbibition'/'outputs'
+
+# Save the data to the correct file path
+metadata  = { "nodes":nodes}
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)

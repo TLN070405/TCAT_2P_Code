@@ -34,8 +34,7 @@ class ResidualTcatCGP(BaseResidual):
 
         mesh = self.mesh
         gravity = self.model.solid.gravity
-        k = 1./self.model.w_phase.momentum_resistance
-        mu_w = 1.0
+        kw = 1./self.model.w_phase.momentum_resistance
 
         rho_w = utils.cell_center(primary_variables['p_w'], self.model.w_phase.density_function, mesh)
 
@@ -45,7 +44,7 @@ class ResidualTcatCGP(BaseResidual):
 
         rho_w_face = utils.interpolate(rho_w, mesh)
 
-        q_w = state_equations.darcy_velocity(mesh, k, utils.interpolate(k_rw * rho_w, mesh), mu_w, del_pw, rho_w_face, gravity)
+        q_w = state_equations.darcy_velocity(mesh, kw, utils.interpolate(k_rw * rho_w, mesh), 1., del_pw, rho_w_face, gravity)
 
         return {'q_w':q_w,'rho_w':rho_w}
 
@@ -59,12 +58,12 @@ class ResidualTcatCGP(BaseResidual):
         gamma_wn = self.model.interface.interfacial_tension
         k1_wn_hat = self.model.interface.interfacial_area_relaxation
         e_wn_eq  = self.e_wn_eq
-        dx = self.model.domain.domain_length[0]/( self.model.nodes-1)
-        cx= 1/dx
+
         # spatial operator array
         od_dp = self.od_dp
 
         # intermediate calculation parameters
+        cx= 1.0 / cell.length[0]
         cx2 = cx*cx
 
         # primary variables
@@ -74,9 +73,6 @@ class ResidualTcatCGP(BaseResidual):
         j_wn = primary_variables['j_wn']
         w_wn = primary_variables['w_wn']
         k_wn = primary_variables['k_wn']
-
-        # fluxes
-        q_w = fluxes['q_w']
 
         qe_up,qj_up,qe_down,qj_down =self.compute_primary_variables_gradient_lax_friedrichs(e_wn, j_wn, w_wn)
 
@@ -94,10 +90,9 @@ class ResidualTcatCGP(BaseResidual):
 
         #d(e_w)/dx
         d_e_w_d_x = 0.5*cx*(e_w[n+1]-e_w[n-1])
-        
 
         # spatial operators
-        od_w  = cx * (q_w[n + 1] - q_w[n])
+        od_w  = cx * (fluxes['q_w'][n + 1] - fluxes['q_w'][n])
         od_ia = -(k1_wn_hat *( p_w[n] + gamma_wn*j_wn[n] )/p_w[n] ) * (e_wn_eq[n] - e_wn[n]) - d_ewn_wwn_dx
         od_j  = (2./3.) * d2_od_dp - 2. * d_ewn_jwn_wwn_dx
         od_v  = e_w[n] * e_wn[n] * w_wn[n] + od_dp[1] * d_e_w_d_x
@@ -122,17 +117,6 @@ class ResidualTcatCGP(BaseResidual):
         self.time_mat[3, 2] = primary_variables['j_wn'][n]
         self.time_mat[3, 3] = primary_variables['e_wn'][n]
 
-    def compute_primary_variables_gradient(self,e_w, e_wn, j_wn, w_wn):
-        """
-        gradient of primary variables
-        """
-        d_e_w_d_x = utils.gradient(e_w, self.mesh)
-        d_e_wn_d_x = utils.gradient(e_wn, self.mesh)
-        d_j_wn_d_x = utils.gradient(j_wn, self.mesh)
-        d_w_wn_d_x = utils.gradient(w_wn, self.mesh)
-
-        return d_e_w_d_x, d_e_wn_d_x, d_j_wn_d_x, d_w_wn_d_x
-
     def get_equilibrium_interfacial_area_array(self):
         """
         Function to transform the e_wn_eq(x) function to an array to be used directly
@@ -141,9 +125,10 @@ class ResidualTcatCGP(BaseResidual):
         nodes = self.model.nodes
         e_wn_eq  = np.zeros([nodes])
 
-        for n in range(0,nodes):
-            x = self.model.domain.domain_size[0,0] + n* self.model.domain.domain_length[0]/(nodes-1)
-            e_wn_eq[n] = self.model.interface.interfacial_area_equilibrium(x)
+        for cell in self.mesh.cells:
+            x = self.model.domain.domain_size[0,0] + cell.ID * cell.length[0]
+            e_wn_eq[cell.ID] = self.model.interface.interfacial_area_equilibrium(x)
+
         return e_wn_eq
 
     def compute_primary_variables_gradient_lax_friedrichs(self, e_wn, j_wn, w_wn):
@@ -160,7 +145,7 @@ class ResidualTcatCGP(BaseResidual):
         qj_down = 0.5 * (w_wn[n] * e_wn[n] * j_wn[n] + w_wn[n-1] * e_wn[n-1] * j_wn[n-1]) - 0.5 * alpha * (e_wn[n]*j_wn[n] - e_wn[n-1]*j_wn[n-1])
         
         return qe_up,qj_up,qe_down,qj_down
-    
+
     def compute_primary_variables_gradient_upwind(self, e_wn, j_wn, w_wn):
         """
         Function to compute gradient of primary variables and limiting the slope.

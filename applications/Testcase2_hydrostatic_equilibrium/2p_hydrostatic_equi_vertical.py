@@ -4,6 +4,8 @@ from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
 import solver_options
+from pathlib import Path
+from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
 domain_size = np.array([[0.0,0.1]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -121,21 +123,6 @@ u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
-for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.title("two phase hydrostatic equilibirium pressure vs space")
-    plt.legend()
-plt.show()
-
-for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['p_n'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_n$')
-    plt.title("two phase hydrostatic equilibirium pressure vs space")
-    plt.legend()
-plt.show()
 
 for time,variable in solutions.items():
     p_w = variable['p_w']
@@ -145,10 +132,11 @@ for time,variable in solutions.items():
         e_w[n]= model.interface.volume_fraction_function(p_n[n]-p_w[n])
     variable["e_w"] = e_w
 
-    plt.plot(mesh.points,e_w,label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title('Volume fraction vs space')
-    plt.legend()
-plt.show()
- 
+
+# Export results
+filename = f"2P_test_case_2.h5"
+file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase2_hydrostatic_equilibrium'/'outputs'
+
+# Save the data to the correct file path
+metadata  = { "nodes":nodes}
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)

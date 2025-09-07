@@ -11,217 +11,156 @@ from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
 
 
-nodes_array=[101,201]
 
-for nodes in (nodes_array):
+domain_size = np.array([[0.0,1.0]])
+domain =  TCAT2Phase.properties.domain.initialize_domain(
+                            dims = 1,
+                            domain_size = domain_size,
+                            )
 
-    domain_size = np.array([[0.0,1.0]])
-    domain =  TCAT2Phase.properties.domain.initialize_domain(
-                                dims = 1,
-                                domain_size = domain_size,
-                                )
+# Mesh
+nodes =101
+mesh = TCAT2Phase.mesh.grid.Mesh()
+mesh.uniform_mesh_1d(domain,nodes)
 
-    # Mesh
-    mesh = TCAT2Phase.mesh.grid.Mesh()
-    mesh.uniform_mesh_1d(domain,nodes)
+# Boundaries
+model = TCAT2Phase.numerics.model.Model(
+                                model_type = 'cgp-TCAT',
+                                form = 'spijvk',
+                                domain = domain,
+                                nodes = nodes,
+                                mesh = mesh
+                                    )
 
-    # Boundaries
-    model = TCAT2Phase.numerics.model.Model(
-                                    model_type = 'cgp-TCAT',
-                                    form = 'spijvk',
-                                    domain = domain,
-                                    nodes = nodes,
-                                    mesh = mesh
-                                        )
+# Set boundary types: 0 - Dirchlet
+#                     1 - Neumann qw
+#                     2 - Neumann qn
+boundary_type = {'e_w': [[0, 0]],
+                'p_w': [[0, 0]],
+                'e_wn': [[0, 0]],
+                'j_wn': [[0, 0]],
+                'w_wn': [[0, 0]],
+                'k_wn': [[0, 0]]}
 
-    # Set boundary types: 0 - Dirchlet
-    #                     1 - Neumann qw
-    #                     2 - Neumann qn
-    boundary_type = {'e_w': [[0, 0]],
-                    'p_w': [[0, 0]],
-                    'e_wn': [[0, 0]],
-                    'j_wn': [[0, 0]],
-                    'w_wn': [[0, 0]],
-                    'k_wn': [[0, 0]]}
+model.set_boundary_type(boundary_type = boundary_type)
 
-    model.set_boundary_type(boundary_type = boundary_type)
+# Set solid phase properties
+s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
+                                                permeability = None,
+                                                gravity = 0.0,
+                                                dynamic_capillary_pressure_parameter = None)
 
-    # Set solid phase properties
-    s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
-                                                    permeability = None,
-                                                    gravity = 0.0,
-                                                    dynamic_capillary_pressure_parameter = None)
+# Set wetting-phase properties
+w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
+w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
+                                            momentum_resistance = 3.75e5,#5.10e4,
+                                            residual_volume_fraction = 0.0687*0.369,
+                                            density_function = state_equations.density_exp_pressure,
+                                            d_density_function = state_equations.d_density_exp_pressure,
+                                            **w_den_params)
 
-    # Set wetting-phase properties
-    w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
-    w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
-                                                momentum_resistance = 3.75e5,#5.10e4,
-                                                residual_volume_fraction = 0.0687*0.369,
-                                                density_function = state_equations.density_exp_pressure,
-                                                d_density_function = state_equations.d_density_exp_pressure,
-                                                **w_den_params)
+# Set w-n interphase properties
+tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
+                                    b2 = -2.08e-3,
+                                    b3 = 5.33e-2/(4.0 * 3.141592653589793),
+                                    porosity = s_phase.porosity,
+                                    e_ss = 1.89e3 ,
+                                    js_ns = 2.00e3,
+                                    kn_ns = 1.00e6)
 
-    # Set w-n interphase properties
-    tcat = state_equations_interface.TCAT(b1 = 1.47e-1,
-                                        b2 = -2.08e-3,
-                                        b3 = 5.33e-2/(4.0 * 3.141592653589793),
-                                        porosity = s_phase.porosity,
-                                        e_ss = 1.89e3 ,
-                                        js_ns = 2.00e3,
-                                        kn_ns = 1.00e6)
+def interfacial_area_equilibrium(x): return 1e-3
 
-    def interfacial_area_equilibrium(x): return 1e-3
+wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
+                                                            interfacial_dynamics = 6.398675e-05, #7.35e-10,
+                                                            interfacial_tension = 7.20e-2,
+                                                            interfacial_area_relaxation =  1.003597e-10 ,#3.64e-3,
+                                                            interfacial_area_equilibrium = interfacial_area_equilibrium)
 
-    wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
-                                                                interfacial_dynamics = 6.398675e-05, #7.35e-10,
-                                                                interfacial_tension = 7.20e-2,
-                                                                interfacial_area_relaxation =  1.003597e-10 ,#3.64e-3,
-                                                                interfacial_area_equilibrium = interfacial_area_equilibrium)
+TCAT2Phase.numerics.model.Model.set_model_phases(
+    model, s_phase, w_phase, None, wn_interface
+)
 
-    TCAT2Phase.numerics.model.Model.set_model_phases(
-        model, s_phase, w_phase, None, wn_interface
-    )
+# Set boundary values
+ew0_bc  = 0.369
+pw0_bc  = 2500
+ewn0_bc = 1e-3
+jwn0_bc = -pw0_bc/wn_interface.interfacial_tension
+wwn0_bc = 0.0
+kwn0_bc = model.interface.gaussian_curvature(ew0_bc, ewn0_bc,jwn0_bc)
 
-    # Set boundary values
-    ew0_bc  = 0.369
-    pw0_bc  = 2500
-    ewn0_bc = 1e-3
-    jwn0_bc = -pw0_bc/wn_interface.interfacial_tension
-    wwn0_bc = 0.0
-    kwn0_bc = model.interface.gaussian_curvature(ew0_bc, ewn0_bc,jwn0_bc)
+ewL_bc = 0.369
+pwL_bc = 2000
+ewnL_bc = 1e-3
+jwnL_bc = -pwL_bc/wn_interface.interfacial_tension
+wwnL_bc = 0.0
+kwnL_bc = model.interface.gaussian_curvature(ewL_bc, ewnL_bc,jwnL_bc)
 
-    ewL_bc = 0.369
-    pwL_bc = 2000
-    ewnL_bc = 1e-3
-    jwnL_bc = -pwL_bc/wn_interface.interfacial_tension
-    wwnL_bc = 0.0
-    kwnL_bc = model.interface.gaussian_curvature(ewL_bc, ewnL_bc,jwnL_bc)
+boundary_conditions= {'e_w': [[ ew0_bc,ewL_bc ]],
+                'p_w': [[ pw0_bc,pwL_bc ]],
+                'e_wn': [[ ewn0_bc,ewnL_bc ]],
+                'j_wn': [[ jwn0_bc,jwnL_bc ]],
+                'w_wn': [[ wwn0_bc,wwnL_bc ]],
+                'k_wn': [[ kwn0_bc,kwnL_bc ]]}
 
-    boundary_conditions= {'e_w': [[ ew0_bc,ewL_bc ]],
-                    'p_w': [[ pw0_bc,pwL_bc ]],
-                    'e_wn': [[ ewn0_bc,ewnL_bc ]],
-                    'j_wn': [[ jwn0_bc,jwnL_bc ]],
-                    'w_wn': [[ wwn0_bc,wwnL_bc ]],
-                    'k_wn': [[ kwn0_bc,kwnL_bc ]]}
+model.set_boundary_conditions(boundary_conditions)
 
-    model.set_boundary_conditions(boundary_conditions)
-
-    # Set initial conditions
-    def ew_ic(x):
-        """
-        volume fraction w initial conditions
-        """
-        return 0.369
-    def pw_ic(x):
-        """
-        pressure w initial conditions
-        """
-        return ((2000-2500.)/(1.-0.))*x + 2500.
-    def ewn_ic(x):
-        """
-        interfacial area of wn interface initial conditions
-        """
-        return 1e-3
-    def jwn_ic(x):
-        """
-        Mean curvature of wn interface initial conditions
-        """
-        return -pw_ic(x)/wn_interface.interfacial_tension
-    def wwn_ic(x):
-        """
-        velocity of wn interface initial conditions
-        """
-        return 0.0
-    def kwn_ic(x):
-        """
-        Gaussian curvature of wn interface initial conditions
-        """
-        return model.interface.gaussian_curvature(ew_ic(x), ewn_ic(x),jwn_ic(x))
-
-    initial_conditions = {'e_w': ew_ic,
-                        'p_w': pw_ic,
-                        'e_wn': ewn_ic,
-                        'j_wn': jwn_ic,
-                        'w_wn': wwn_ic,
-                        'k_wn': kwn_ic}
-
-    model.set_initial_conditions(initial_conditions)
-
-    # Time
-    time_interval = np.array([100])
-    model.set_simulation_time(time_interval)
-
-    # Set petsc solver options
-    solver_options.solver_options(max_time_steps=100000,bdf_order=5,pc_type='sor')
-
-    # Solve model and return model.solutions which is a dictionary where
-    # solutions[time][u_name] = np.array
-    u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
-    solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
-
-    """     # Chart 1: Volume Fraction (ε^w)
-    plt.figure(figsize=(10, 6))
-    for time, variable in solutions.items():
-        plt.plot(mesh.points, variable['e_w'], label=f'TCAT CGP, t={time}')
-    plt.xlabel(r'$x\,[m]$', fontsize=20)
-    plt.ylabel(r'$\epsilon^w\,[-]$', fontsize=20)
-    plt.ylim([0, 0.4])
-    plt.legend(fontsize=12)
-    plt.show()
-
-    # Chart 2: Pressure (p^w)
-    plt.figure(figsize=(10, 6))
-    for time, variable in solutions.items():
-        plt.plot(mesh.points, variable['p_w'], label=f'TCAT CGP, t={time}')
-    plt.xlabel(r'$x\,[m]$', fontsize=20)
-    plt.ylabel(r'$p^w\,[Pa]$', fontsize=20)
-    plt.legend(fontsize=12)
-    plt.show()
-
-    # Chart 3: ε^{wn} with y-axis scale [-2,2]
-    plt.figure(figsize=(10, 6))
-    for time, variable in solutions.items():
-        plt.plot(mesh.points, variable['e_wn'], label=f'TCAT CGP, t={time}')
-    plt.xlabel(r'$x\,[m]$', fontsize=20)
-    plt.ylabel(r'$\epsilon^{wn}\,[-]$', fontsize=20)
-    plt.ylim([-2, 2])
-    plt.legend(fontsize=12)
-    plt.show()
-
-    # Chart 4: J^{wn}_n with units [1/m]
-    plt.figure(figsize=(10, 6))
-    for time, variable in solutions.items():
-        plt.plot(mesh.points, variable['j_wn'], label=f'TCAT CGP, t={time}')
-    plt.xlabel(r'$x\,[m]$', fontsize=20)
-    plt.ylabel(r'$J^{wn}_n\,[1/m]$', fontsize=20)
-    plt.legend(fontsize=12)
-    plt.show()
-
-    # Chart 5: w^{wn} with y-axis scale [-2,2]
-    plt.figure(figsize=(10, 6))
-    for time, variable in solutions.items():
-        plt.plot(mesh.points, variable['w_wn'], label=f'TCAT CGP, t={time}')
-    plt.xlabel(r'$x\,[m]$', fontsize=20)
-    plt.ylabel(r'$w^{wn}\,[-]$', fontsize=20)
-    plt.ylim([-2, 2])
-    plt.legend(fontsize=12)
-    plt.show()
-
-    # Chart 6: K^{wn}_n with units [1/m^2] overwritten to be zero for all space and time
-    plt.figure(figsize=(10, 6))
-    for time, variable in solutions.items():
-        plt.plot(mesh.points, np.zeros_like(mesh.points), label=f'TCAT CGP, t={time}')
-    plt.xlabel(r'$x\,[m]$', fontsize=20)
-    plt.ylabel(r'$K^{wn}_n\,[1/m^2]$', fontsize=20)
-    plt.legend(fontsize=12)
-    plt.show()
+# Set initial conditions
+def ew_ic(x):
     """
+    volume fraction w initial conditions
+    """
+    return 0.369
+def pw_ic(x):
+    """
+    pressure w initial conditions
+    """
+    return ((2000-2500.)/(1.-0.))*x + 2500.
+def ewn_ic(x):
+    """
+    interfacial area of wn interface initial conditions
+    """
+    return 1e-3
+def jwn_ic(x):
+    """
+    Mean curvature of wn interface initial conditions
+    """
+    return -pw_ic(x)/wn_interface.interfacial_tension
+def wwn_ic(x):
+    """
+    velocity of wn interface initial conditions
+    """
+    return 0.0
+def kwn_ic(x):
+    """
+    Gaussian curvature of wn interface initial conditions
+    """
+    return model.interface.gaussian_curvature(ew_ic(x), ewn_ic(x),jwn_ic(x))
 
+initial_conditions = {'e_w': ew_ic,
+                    'p_w': pw_ic,
+                    'e_wn': ewn_ic,
+                    'j_wn': jwn_ic,
+                    'w_wn': wwn_ic,
+                    'k_wn': kwn_ic}
 
-    # Export results
-    filename = f"tcat_cgp_test_case_1_{nodes}.h5"
-    file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase1_fully_saturated_system'/'outputs'
+model.set_initial_conditions(initial_conditions)
 
-    # Save the data to the correct file path
-    metadata  = { "nodes":nodes}
-    save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)
+# Time
+time_interval = np.array([100])
+model.set_simulation_time(time_interval)
+
+# Set petsc solver options
+solver_options.solver_options(max_time_steps=100000,bdf_order=5,pc_type='sor')
+
+# Solve model and return model.solutions which is a dictionary where
+# solutions[time][u_name] = np.array
+u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
+solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
+
+# Export results
+filename = f"tcat_cgp_test_case_1.h5"
+file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase1_fully_saturated_system'/'outputs'
+
+# Save the data to the correct file path
+metadata  = { "nodes":nodes}
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)

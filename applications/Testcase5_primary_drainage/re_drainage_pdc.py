@@ -4,128 +4,145 @@ from TCAT2Phase.state_equations import state_equations
 import solver_options
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
+from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
-domain_size = np.array([[0. , 1.]])
-domain = TCAT2Phase.properties.domain.initialize_domain(
-                                                        dims=1,
-                                                        domain_size=domain_size,
-                                                        )
+nodes_array=[101]
 
-# Mesh
-nodes = 101
-mesh = TCAT2Phase.mesh.grid.Mesh()
-mesh.uniform_mesh_1d(domain, nodes)
+for nodes in (nodes_array):
+    domain_size = np.array([[0. , 1.]])
+    domain = TCAT2Phase.properties.domain.initialize_domain(
+                                                            dims=1,
+                                                            domain_size=domain_size,
+                                                            )
 
-# Boundaries
-model = TCAT2Phase.numerics.model.Model(
-                                        model_type="Richards", form="pr", domain=domain, nodes=nodes, mesh=mesh
-                                        )
+    # Mesh
 
-# Set boundary types: 0 - Dirchlet
-#                     1 - Neumann qw
-#                     2 - Neumann qn
-boundary_type = {"p_w": [[0, 0]]}
+    mesh = TCAT2Phase.mesh.grid.Mesh()
+    mesh.uniform_mesh_1d(domain, nodes)
 
-model.set_boundary_type(boundary_type)
+    # Boundaries
+    model = TCAT2Phase.numerics.model.Model(
+                                            model_type="Richards", form="pr", domain=domain, nodes=nodes, mesh=mesh
+                                            )
 
-# Set solid phase properties
-s_phase = TCAT2Phase.properties.phase.Solid(
-    "s",
-    porosity=0.369,
-    permeability=2.67e-9,
-    gravity= 0.0,
-    dynamic_capillary_pressure_parameter=None,
-)
+    # Set boundary types: 0 - Dirchlet
+    #                     1 - Neumann qw
+    #                     2 - Neumann qn
+    boundary_type = {"p_w": [[0, 0]]}
 
-# Set wetting-phase properties
-w_den_params = {"rho0": 1.0e3, "beta": 1e-8}
-w_phase = TCAT2Phase.properties.phase.Fluid(
-    "w",
-    viscosity=1.0e-3,
-    momentum_resistance=0.0,
-    residual_volume_fraction=0.0687*0.369,
-    density_function=state_equations.density_exp_pressure,
-    d_density_function=state_equations.d_density_exp_pressure,
-    **w_den_params,
-)
+    model.set_boundary_type(boundary_type)
 
-# Set nonwetting-phase properties
-n_den_params = {"rho0": 1.2, "alpha": 1.189e-5}
-n_phase = TCAT2Phase.properties.phase.Fluid(
-    "n",
-    viscosity=1.78e-5,
-    momentum_resistance=0.0,
-    residual_volume_fraction=0.0,
-    density_function=state_equations.density_linear_pressure,
-    d_density_function=state_equations.d_density_linear_pressure,
-    **n_den_params,
-)
+    # Set solid phase properties
+    s_phase = TCAT2Phase.properties.phase.Solid(
+        "s",
+        porosity=0.369,
+        permeability=(1/3.75e5)*1.0e-3 ,
+        gravity= 0.0,
+        dynamic_capillary_pressure_parameter=None,
+    )
 
-# Set w-n interphase properties
-vg = state_equations_interface.VanGenuchten(
-    m=1.0 - (1.0 /37.8),
-    n=37.8,
-    alpha=2.28e-3,
-    porosity=s_phase.porosity,
-    e_wr=w_phase.residual_volume_fraction,
-    e_nr=n_phase.residual_volume_fraction,
-)
+    # Set wetting-phase properties
+    w_den_params = {"rho0": 1.0e3, "beta": 4.5e-10}
+    w_phase = TCAT2Phase.properties.phase.Fluid(
+        "w",
+        viscosity=1.0e-3,
+        momentum_resistance=0.0,
+        residual_volume_fraction=0.0687*0.369,
+        density_function=state_equations.density_exp_pressure,
+        d_density_function=state_equations.d_density_exp_pressure,
+        **w_den_params,
+    )
 
-wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
+    # Set nonwetting-phase properties
+    n_den_params = {"rho0": 1.2, "alpha": 1.189e-5}
+    n_phase = TCAT2Phase.properties.phase.Fluid(
+        "n",
+        viscosity=1.78e-5,
+        momentum_resistance=0.0,
+        residual_volume_fraction=0.0,
+        density_function=state_equations.density_linear_pressure,
+        d_density_function=state_equations.d_density_linear_pressure,
+        **n_den_params,
+    )
 
-#set relative permeabilities
-w_phase.set_relative_permeability_function(vg.w_relative_permeability)
-n_phase.set_relative_permeability_function(vg.n_relative_permeability)
+    # Set w-n interphase properties
+    vg = state_equations_interface.VanGenuchten(
+        m=1.0 - (1.0 /37.8),
+        n=37.8,
+        alpha=2.28e-3,
+        porosity=s_phase.porosity,
+        e_wr=w_phase.residual_volume_fraction,
+        e_nr=n_phase.residual_volume_fraction,
+    )
 
-# Set model phases and interfaces
-TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phase, wn_interface)
+    wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
 
-# Set initial conditions
-def pw_ic(x):
-    """wetting phase pressure ic at t=0"""
-    return 0.
+    #set relative permeabilities
+    w_phase.set_relative_permeability_function(vg.w_relative_permeability)
+    n_phase.set_relative_permeability_function(vg.n_relative_permeability)
 
-initial_conditions = {"p_w": pw_ic}
-model.set_initial_conditions(initial_conditions)
+    # Set model phases and interfaces
+    TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phase, wn_interface)
 
-# Set boundary conditions
-pw0_bc = -wn_interface.pc_function(w_phase.residual_volume_fraction +1e-5)
-pwL_bc = -wn_interface.pc_function(w_phase.residual_volume_fraction +1e-5)
+    # Set initial conditions
+    def pw_ic(x):
+        """wetting phase pressure ic at t=0"""
+        return -100
 
-boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
-model.set_boundary_conditions(boundary_conditions)
+    initial_conditions = {"p_w": pw_ic}
+    model.set_initial_conditions(initial_conditions)
 
+    # Set boundary conditions
+    pw0_bc =-300 #-wn_interface.pc_function(w_phase.residual_volume_fraction +1e-5)
+    pwL_bc =-300 #-wn_interface.pc_function(w_phase.residual_volume_fraction +1e-5)
 
-# Time
-time_interval = np.array([1,10,100])
-model.set_simulation_time(time_interval)
-
-# Numerical Parameters
-solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
+    boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
+    model.set_boundary_conditions(boundary_conditions)
 
 
-# Solve model
-u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
-solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
+    # Time
+    time_interval=np.array([1e-8,1e-1,1,10,50,100,200,300])
+    model.set_simulation_time(time_interval)
+
+    # Numerical Parameters
+    solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
+    # Solve model
+    u,ts = TCAT2Phase.numerics.solver.setup_solver(model)
+    solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
-for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.title('Richards Solution drainage of fully water saturated soil')
-    plt.legend()
-plt.show()
+    for time, variable in solutions.items():
+        plt.plot(mesh.points, variable["p_w"], label=f"t={time}")
+        plt.xlabel(r"$x\, (m)$")
+        plt.ylabel(r"$p_w$")
+        plt.title("equilibrium Solution")
+        plt.legend()
+    #plt.show()
 
 
-e_w=np.zeros([nodes] )
-for time,variable in solutions.items():
-    p_w = variable['p_w']
-    for n in range(0,nodes):
-        e_w[n]= model.interface.volume_fraction_function(-p_w[n])
-    plt.plot(mesh.points,e_w,label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title('Richards Solution drainage of fully water saturated soil')
-    plt.legend()
-plt.show()
+    for time,variable in solutions.items():
+        p_w = variable['p_w']
+        e_w=np.zeros([nodes] )
+        j_wn=np.zeros([nodes] )
+        for n in range(0,nodes):
+            e_w[n]= model.interface.volume_fraction_function(-p_w[n])
+            j_wn[n]= -p_w[n]/ 7.20e-2
+        variable["e_w"] = e_w
+        variable["j_wn"] = j_wn
+        plt.plot(mesh.points,e_w,label=f't={time}')
+        plt.xlabel(r'$x\, (m)$')
+        plt.ylabel(r'$\epsilon^w$')
+        plt.title('Volume fraction vs space')
+        plt.legend()
+    #plt.show()
+
+
+
+    # Export results
+    filename = f"RE_test_case_5_{nodes}.h5"
+    file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase5_primary_drainage'/'outputs'
+
+    # Save the data to the correct file path
+    metadata  = { "nodes":nodes}
+    save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)

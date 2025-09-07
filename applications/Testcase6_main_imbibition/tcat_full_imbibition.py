@@ -161,76 +161,10 @@ solver_options.solver_options(max_time_steps=100000,bdf_order=5,pc_type='sor')
 u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
+# Export results
+filename = f"tcat_full_test_case_6.h5"
+file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase6_main_imbibition'/'outputs'
 
-# Chart 1: Volume Fraction (ε^w)
-plt.figure(figsize=(10, 6))
-for time, variable in solutions.items():
-    plt.plot(mesh.points, variable['e_w'], label=f'FULL TCAT, t={time}')
-plt.xlabel(r'$x\,[m]$', fontsize=20)
-plt.ylabel(r'$\epsilon^w\,[-]$', fontsize=20)
-plt.legend(fontsize=12)
-plt.show()
-
-# Chart 2: Pressure (p^w)
-plt.figure(figsize=(10, 6))
-for time, variable in solutions.items():
-    plt.plot(mesh.points, variable['p_w'], label=f'FULL TCAT, t={time}')
-plt.xlabel(r'$x\,[m]$', fontsize=20)
-plt.ylabel(r'$p^w\,[Pa]$', fontsize=20)
-plt.legend(fontsize=12)
-plt.show()
-
-# Chart 3: Pressure (p^n)
-plt.figure(figsize=(10, 6))
-for time, variable in solutions.items():
-    plt.plot(mesh.points, variable['p_n'], label=f'FULL TCAT, t={time}')
-plt.xlabel(r'$x\,[m]$', fontsize=20)
-plt.ylabel(r'$p^n\,[Pa]$', fontsize=20)
-plt.legend(fontsize=12)
-plt.show()
-
-
-# Chart 4: ε^{wn} with y-axis scale [-2,2]
-plt.figure(figsize=(10, 6))
-for time, variable in solutions.items():
-    plt.plot(mesh.points, variable['e_wn'], label=f'FULL TCAT, t={time}')
-plt.xlabel(r'$x\,[m]$', fontsize=20)
-plt.ylabel(r'$\epsilon^{wn}\,[-]$', fontsize=20)
-plt.legend(fontsize=12)
-plt.show()
-
-# Chart 5: J^{wn}_n with units [1/m]
-plt.figure(figsize=(10, 6))
-for time, variable in solutions.items():
-    plt.plot(mesh.points, variable['j_wn'], label=f'FULL TCAT, t={time}')
-plt.xlabel(r'$x\,[m]$', fontsize=20)
-plt.ylabel(r'$J^{wn}_n\,[1/m]$', fontsize=20)
-plt.legend(fontsize=12)
-plt.show()
-
-# Chart 6: G^{wn}_n
-plt.figure(figsize=(10, 6))
-for time, variable in solutions.items():
-    plt.plot(mesh.points, variable['g_wn'], label=f'FULL TCAT, t={time}')
-plt.xlabel(r'$x\,[m]$', fontsize=20)
-plt.ylabel(r'$G^{wn}_n\,[-]$', fontsize=20)
-plt.legend(fontsize=12)
-plt.show()
-
-# Chart 7: w^{wn}
-plt.figure(figsize=(10, 6))
-for time, variable in solutions.items():
-    plt.plot(mesh.points, variable['w_wn'], label=f'FULL TCAT, t={time}')
-plt.xlabel(r'$x\,[m]$', fontsize=20)
-plt.ylabel(r'$w^{wn}\,[-]$', fontsize=20)
-plt.legend(fontsize=12)
-plt.show()
-
-# Chart 8: K^{wn}_n with units [1/m^2] overwritten to be zero for all space and time
-plt.figure(figsize=(10, 6))
-for time, variable in solutions.items():
-    plt.plot(mesh.points, variable['k_wn'], label=f'FULL TCAT, t={time}')
-plt.xlabel(r'$x\,[m]$', fontsize=20)
-plt.ylabel(r'$K^{wn}_n\,[1/m^2]$', fontsize=20)
-plt.legend(fontsize=12)
-plt.show()
+# Save the data to the correct file path
+metadata  = { "nodes":nodes}
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)

@@ -7,6 +7,9 @@ from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 import matplotlib.pyplot as plt
 import solver_options
+from pathlib import Path
+from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
+
 # Domain
 domain_size = np.array([[0.0,1.]])
 domain =  TCAT2Phase.properties.domain.initialize_domain(
@@ -78,6 +81,10 @@ vg = state_equations_interface.VanGenuchten(
 
 wn_interface = TCAT2Phase.properties.interface.TraditionalInterface(vg)
 
+#set relative permeabilities
+w_phase.set_relative_permeability_function(vg.w_relative_permeability)
+n_phase.set_relative_permeability_function(vg.n_relative_permeability)
+
 # Set model phases and interfaces
 TCAT2Phase.numerics.model.Model.set_model_phases(
     model, s_phase, w_phase, n_phase, wn_interface
@@ -100,8 +107,7 @@ pw0_bc = -900.
 pwL_bc = -1000.
 ew0_bc = model.interface.volume_fraction_function(-pw0_bc)
 ewL_bc = model.interface.volume_fraction_function(-pwL_bc)
-print(ew0_bc)
-print(ewL_bc)
+
 boundary_conditions = {'e_w': [[ ew0_bc, ewL_bc ]], 'p_w': [[ pw0_bc, pwL_bc  ]]}
 
 model.set_boundary_conditions(boundary_conditions)
@@ -119,17 +125,19 @@ u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['p_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$p_w$')
-    plt.title("two phase infiltration pressure vs space")
-    plt.legend()
-plt.show()
+    p_w = variable['p_w']
+    e_w = variable['e_w']
+    p_n=np.zeros([nodes] )
+    for n in range(0,nodes):
+        p_n[n]= model.interface.pc_function(e_w[n]) + p_w[n]
+    variable["p_n"] = p_n
 
-for time,variable in solutions.items():
-    plt.plot(mesh.points,variable['e_w'],label=f't={time}')
-    plt.xlabel(r'$x\, (m)$')
-    plt.ylabel(r'$\epsilon^w$')
-    plt.title("two phase infiltration volume fraction vs space")
-    plt.legend()
-plt.show()
+
+
+# Export results
+filename = f"2P_test_case_4.h5"
+file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase4_infiltration_problem'/'outputs'
+
+# Save the data to the correct file path
+metadata  = { "nodes":nodes}
+save_solutions_to_hdf5(str(file_path), filename,mesh, solutions,metadata)
