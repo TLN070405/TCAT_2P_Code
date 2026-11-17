@@ -14,6 +14,7 @@ def save_solutions_to_hdf5(path, filename, mesh, solutions, metadata=None):
     - metadata: (optional) dictionary with extra information to store
     """
     path = Path(path)
+    path.mkdir(parents=True, exist_ok=True)
     file_path = path / filename
     print(f"Saving file to: {file_path}")
 

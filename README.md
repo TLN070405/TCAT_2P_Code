@@ -1,35 +1,149 @@
+# TCAT2Phase
 
-DESCRIPTION:
------------
-This code is an implementation of 3 models:
-1- the traditional two-phase model using three formulations from Kees paper: SP (2 equations), PP (2 equations), and SPP formulation (SPP includes an additional equation, which is the dynamic capillary pressure equation).
-2- Richards' equation uses the PR formulation (PR stands for pressure, and the model includes one equation).
-3- The TCAT CGP model corresponds to the RE model; the system has six equations against six unknowns.
+One-dimensional simulators for two-fluid flow in porous media. The package implements and compares:
 
-HOW TO RUN CODE:
------------
-The code can be efficiently executed using the Python scripts file.
+| Model | What it is | Driver prefix |
+|---|---|---|
+| **RE** | Richards' equation (pressure formulation) | `re_` |
+| **2P-TM** | Traditional two-phase model (saturation-pressure or pressure-pressure formulations) | `2p_` |
+| **ERE / E2P** | Richards' equation and the two-phase model extended with dynamic (non-equilibrium) capillary pressure | `ere_`, `e2p_` |
+| **TCAT CGP** | Thermodynamically Constrained Averaging Theory model with constant gas-phase pressure (six equations, six unknowns) | `tcat_cgp_` |
+| **Full TCAT** | Full two-phase TCAT model | `tcat_full_` |
 
-The script_build.py file is used only to build cython files. If the files are already built, there is no need to redo it.
+All models are solved with [PETSc](https://petsc.org) through `petsc4py`: finite-volume discretization in space, implicit BDF time stepping, Newton's method (SNES), and GMRES with SOR preconditioning.
 
-The script_running.py file is used to get results from the three models. The variables defined inside the script enable the user to choose which model and test problem to solve. Also, the visualization can be turned on if desired.
+The eight test cases in `applications/` are the ones in T. M. Nelson, *On the Macroscale Modeling of Two-Fluid Flow in Porous Medium Systems Using the Thermodynamically Constrained Averaging Theory*, PhD dissertation, UNC Chapel Hill, 2025 (Chapters 4 and 5).
 
-In the running commands such as "python run_TCAT_CGP.py -snes_fd_color_use_mat -ts_bdf_order 1 -pc_type sor -ts_monitor -Test_Case $Test_Case -filenumber 1", the filenumber is used to name the output files, so if for example, we solve TCAT CGP test_case1 with Nx=101, we get a file named "..._File1" (of course filenumber is set to 1 in the command). If I want to get another output with Nx=201 and save the old output file, I just set "file number 2 in the command."
+---
 
-Another Python script named "script_Multiple_Plots" is used to plot RE and CGP results in the same plot. The command is "python ./Multiple_Plots/Visualization.py -Test_Case $Test_Case -filenumber_RE 1 -filenumber_CGP 1 " this means that the code will look for the RE output file that its name contains (RE, Test_case, and filenumber_RE=1). On the other hand, it will look for the other output file corresponding to the CGP model; its name contains (TCAT_CGP, Test_Case, and filenumber_CGP=1). Of course, the output files should exist before running the multiple plot script.
+## 1. Install
 
-Another example of multiple plots is: let's suppose that we run RE code from script_running.py  file with Test_Case="Test_Case1" and "filenumber_RE 2", then we get an output file named "Outputs_RE_1_file2.txt". We again run the CGP code with Test_Case="Test_Case1" and "filenumber_CGP 1". If we want to plot in the same window this two files we just run the "script_Multiple_Plots.py" with the command:
+You need a terminal, `git`, and a conda distribution ([Miniforge](https://github.com/conda-forge/miniforge) is recommended; Anaconda also works). PETSc is hard to build by hand, so install it from conda-forge rather than with `pip`.
 
-python ./Multiple_Plots/Visualization.py -Test_Case $Test_Case -filenumber_RE 2 -filenumber_CGP 1
+```bash
+# Get the code
+git clone https://github.com/TLN070405/TCAT_2P_Code.git
+cd TCAT_2P_Code
 
-CODE USAGE SUMMARY (TEST CASE 8: HYSTERESIS AND ENTRAPMENT):
------------
-This Python code runs the TCAT2Phase simulation framework to model two-phase flow with hysteresis and entrapment effects. To use it, install Python 3, petsc4py, mpi4py, numpy, h5py, and matplotlib. Then clone the TCAT_2P_Code repository from GitHub and install the package from the repo root:
+# Create an environment with PETSc and the other dependencies
+conda create -n tcat2p -c conda-forge python=3.9 petsc4py mpi4py "numpy<2" h5py matplotlib pytest
+conda activate tcat2p
 
+# Install this package in editable mode, so edits to src/ take effect immediately
 pip install -e .
+```
 
-Open the project in VS Code and go to applications/Testcase8_complex_displacement_patterns/. Run either the two-phase driver (2p_malgorzata_hysteresis_entrapment_pdc.py) or the Richards equation driver (re_malgorzata_hysteresis_entrapment_pdc.py) with the Run button in the upper right. The solver writes .h5 output files to outputs/Testcase8_complex_displacement_patterns/outputs/.
+Check that it worked:
 
-To visualize results, run plot_results_2p.py or plot_results_re.py from outputs/Testcase8_complex_displacement_patterns/postprocessing/. These produce plots of the key variables.
+```bash
+python -c "import petsc4py, TCAT2Phase; print('petsc4py', petsc4py.__version__, '- TCAT2Phase OK')"
+```
 
-The model uses Parker-Lenhard hysteresis, van Genuchten closure relations, and Land's model for entrapment. Parameters such as porosity, permeability, and boundary and initial conditions can be changed directly in the driver script to fit other cases or materials.
+> **Tested setup:** Python 3.9, petsc4py 3.16, numpy 1.26, mpi4py 3.1, h5py 3.13, matplotlib 3.5 on macOS. Newer versions may work but have not been tested; numpy 2 in particular prints deprecation warnings from `src/TCAT2Phase/numerics/utils.py`.
+
+Run `conda activate tcat2p` in every new terminal before using the code.
+
+## 2. Run your first simulation
+
+Each driver script is self-contained: run it **from inside its own folder**, because it imports the `solver_options.py` that sits next to it.
+
+```bash
+cd applications/Testcase1_fully_saturated_system
+python re_fully_saturated.py
+```
+
+It should finish in under 10 seconds. The last line printed is where it saved its results:
+
+```
+Saving file to: .../outputs/Testcase1_fully_saturated_system/outputs/RE_test_case_1.h5
+```
+
+From VS Code: open the repo folder, choose the `tcat2p` interpreter (Command Palette → *Python: Select Interpreter*), open a driver, and click the ▷ Run button in the upper right. VS Code runs the file from its own folder, so the import works.
+
+## 3. Test cases
+
+Every row ran to completion on the tested setup. Times are wall-clock on a quad-core Intel Core i5 Mac.
+
+| Test case (folder in `applications/`) | Drivers | Approx. run time |
+|---|---|---|
+| 1 Fully saturated system | `re_fully_saturated.py`, `2p_fully_saturated.py`, `tcat_cgp_fully_saturated.py` | < 10 s each |
+| 2 Hydrostatic equilibrium | `re_…`, `2p_…`, `tcat_cgp_hydrostatic_equi_vertical.py` | 3–25 s |
+| 3 Hydrostatic equilibrium with perturbation | `re_equilibrium_perturbation.py`, `2p_…`, `tcat_cgp_…_perturbation.py` | 20–75 s |
+| 4 Infiltration | `re_infiltration_horizontal.py`, `2p_…`, `tcat_cgp_…` | 10–25 s |
+| 5 Primary drainage | `re_drainage_pdc.py`, `2p_drainage_pdc.py`, `tcat_cgp_drainage.py`, `tcat_full_drainage.py` | 30 s – 1.5 min; full TCAT ≈ 7 min |
+| 6 Main imbibition | `re_imbibition_mic.py`, `2p_imbibition_mic.py`, `tcat_cgp_imbibition.py`, `tcat_full_imbibition.py` | 1–4 min; full TCAT ≈ 8 min |
+| 7 Non-equilibrium capillary pressure | `ere_malgorzata.py`, `e2p_malgorzata.py` (each runs three values of τ) | 7–14 min |
+| 8 Hysteresis and entrapment | `re_malgorzata_hysteresis_entrapment_pdc.py`, `2p_malgorzata_hysteresis_entrapment_pdc.py` | **very long** (see below) |
+
+Start with Test Cases 1–4 to confirm everything works before trying the longer runs.
+
+**Test Case 8** simulates 3000 s of repeated drainage and imbibition, with Parker–Lenhard hysteresis, van Genuchten closure relations, and Land's model for entrapment. The solver takes very small time steps (about 0.002 s early in the run), so a full run takes well over 15 minutes (it was not run to completion when these instructions were tested), and its output file is large (the 2P result is about 160 MB). To try it quickly, shorten the run by editing `time_values` and `pw_values` in `pw0_bc()` and the simulation times passed to `model.set_simulation_time(...)`.
+
+## 4. Results and plots
+
+Each driver writes an HDF5 file to
+
+```
+outputs/<TestCase folder>/outputs/<MODEL>_test_case_<N>.h5
+```
+
+The folder is created automatically. Running a driver again **overwrites** its previous file, so rename or copy results you want to keep.
+
+Plotting scripts live in `outputs/<TestCase folder>/postprocessing/` (`plot_results_re.py`, `plot_results_2p.py`, and so on). Run them after the matching driver has written its `.h5` file, for example:
+
+```bash
+cd outputs/Testcase8_complex_displacement_patterns/postprocessing
+python plot_results_re.py
+```
+
+Each opens its figures in a window. To read results in your own code:
+
+```python
+from TCAT2Phase.io.hdf5_io import load_solutions_from_hdf5
+```
+
+> **Note:** the `plot_all_results*.py` scripts compare several grid resolutions and expect files named like `RE_test_case_1_101.h5` (node count appended). The drivers currently write files without the node count, so these scripts need their filenames edited before they will run.
+
+## 5. Changing a simulation
+
+Everything that defines a run is set in the driver script itself; there are no input files or command-line options. Near the top of each driver you will find:
+
+- **Domain and grid:** `domain_size` and `nodes`
+- **Material properties:** porosity, permeability, and fluid densities and viscosities
+- **Closure relations:** van Genuchten parameters (`VanGenuchten(...)`) and, for Test Case 8, the Parker–Lenhard settings
+- **Initial and boundary conditions:** the `*_ic` and `*_bc` functions
+- **Output times:** the array passed to `model.set_simulation_time(...)`
+- **Solver settings:** the `solver_options.solver_options(...)` call (BDF order, preconditioner, maximum number of steps). Any other PETSc option can be added in that folder's `solver_options.py`.
+
+## 6. Repository layout
+
+```
+src/TCAT2Phase/     the package
+  numerics/           model setup, residuals for each model, PETSc solver driver
+  properties/         domain, phase, and interface objects
+  state_equations/    equations of state, van Genuchten, Parker–Lenhard hysteresis
+  mesh/               1D mesh
+  io/                 HDF5 save/load
+applications/       one folder per test case, each with driver scripts and solver_options.py
+outputs/            results (.h5) and plotting scripts, one folder per test case
+tests/              pytest unit tests
+HysteresisCharts/   scripts for the hysteresis figures in the dissertation
+```
+
+## 7. Tests
+
+```bash
+pytest tests
+```
+
+Only `test_mesh.py` and `test_utils.py` currently pass. The other three test files were written against an older version of the phase and interface classes and fail during setup with `TypeError: __init__() missing ... 'porosity', 'permeability', ...`. They need updating.
+
+## 8. Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| `ModuleNotFoundError: No module named 'petsc4py'` | The conda environment isn't active. Run `conda activate tcat2p`. |
+| `ModuleNotFoundError: No module named 'TCAT2Phase'` | Run `pip install -e .` from the repo root with the environment active. |
+| `ModuleNotFoundError: No module named 'solver_options'` | You ran a driver from a different folder. `cd` into its test-case folder first. |
+| `FileNotFoundError` from a plotting script | Run the matching driver first, and check that the filename in the script matches the `.h5` file in the `outputs/` folder. |
+| A run seems frozen | Watch the `TS dt ... time ...` lines it prints. If time is still increasing, it is working, just slowly (see Test Case 8). |
