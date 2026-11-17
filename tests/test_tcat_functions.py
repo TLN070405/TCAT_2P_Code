@@ -49,15 +49,18 @@ def test_relative_permeability_is_square_of_volume_fraction(tcat):
     assert tcat.n_relative_permeability(0.1) == pytest.approx(0.01)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "TCAT.volume_fraction_w and TCAT.gaussian_curvature use different forms of the "
-        "geometric relation, so one is not the inverse of the other. The solvers only call "
-        "gaussian_curvature; confirm which form volume_fraction_w should use."
-    ),
-)
-def test_volume_fraction_inverts_gaussian_curvature(tcat):
-    e_w, e_wn, j_wn = 0.3, 500.0, 2000.0
+@pytest.mark.parametrize("e_w,e_wn,j_wn", [(0.3, 500.0, 2000.0), (0.2, 1200.0, 800.0)])
+def test_volume_fraction_inverts_gaussian_curvature(tcat, e_w, e_wn, j_wn):
     k_wn = tcat.gaussian_curvature(e_w, e_wn, j_wn)
-    assert tcat.volume_fraction_w(e_wn, j_wn, k_wn) == pytest.approx(e_w, rel=1e-8)
+    assert tcat.volume_fraction_w(e_wn, j_wn, k_wn) == pytest.approx(e_w, rel=1e-10)
+
+
+def test_finney_pack_parameters_round_trip():
+    """Parameters used by the Test Case 1-8 TCAT drivers (dissertation Table 4.4)."""
+    import math
+    t = state_equations_interface.TCAT(
+        b1=1.47e-1, b2=-2.08e-3, b3=5.33e-2 / (4.0 * math.pi), porosity=0.369,
+        e_ss=1.89e3, js_ns=2.00e3, kn_ns=1.00e6)
+    assert t.D == pytest.approx(1.17e-3, rel=2e-3)  # Sauter mean diameter
+    k_wn = t.gaussian_curvature(0.2746, 375.0, 300.0 / 0.072)
+    assert t.volume_fraction_w(375.0, 300.0 / 0.072, k_wn) == pytest.approx(0.2746, rel=1e-10)

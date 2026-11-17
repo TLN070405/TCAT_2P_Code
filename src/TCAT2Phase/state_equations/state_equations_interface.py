@@ -243,12 +243,24 @@ class TCAT:
 
     def volume_fraction_w(self,e_wn,j_wn,k_wn):
         """
-        Volume fraction of w phase from linear geometric relation
+        Volume fraction of w phase from the linear geometric state equation
+        (dissertation Eqn 3.51), the same relation gaussian_curvature solves:
+
+            porosity - e_w = e_wn * W + e_ns * N
+            W = b1 D - b2 D^2 J_wn + b3 D^3 K_wn
+            N = b1 D + b2 D^2 J_ns + b3 D^3 K_ns
+            e_ns = e_ss * (1 - e_w / porosity)
+
+        Solving for e_w gives e_w = porosity - e_wn * W / (1 - e_ss * N / porosity),
+        so this function is the exact inverse of gaussian_curvature.
+
+        Note: the result is sensitive to K_wn when e_ss * N is close to the porosity
+        (about 89% of it for the Finney pack parameters).
         """
         wn_term = self.b1D - self.b2D2 * j_wn + self.b3D3 * k_wn
         ns_term = self.b1D + self.b2D2 * self.js_ns + self.b3D3 * self.kn_ns
 
-        e_w= self.porosity * ( 1- (e_wn * wn_term)/(self.e_ss * ns_term) )
+        e_w = self.porosity - e_wn * wn_term / (1.0 - self.e_ss * ns_term / self.porosity)
         return e_w
 
     def w_relative_permeability(self,e_w):
