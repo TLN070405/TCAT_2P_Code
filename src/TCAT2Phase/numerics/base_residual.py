@@ -130,11 +130,11 @@ class BaseResidual:
                     bc_type[n]  = 0
                 elif boundary_type[u_names[n]][0][i] == 1:
                     # If bc type is 1 or 2 (Neumman) than compute the correspendant flux
-                    bc_flux[n] = self.compute_boundary_flux(self.model.w_phase,u)
+                    bc_flux[n] = self.compute_boundary_flux(self.model.w_phase, u, i)
                     bc_type[n]  = 1
                 elif boundary_type[u_names[n]][0][i] == 2:
                     # Same as line above, just compute q_n flux instead of q_w
-                    bc_flux[n] = self.compute_boundary_flux(self.model.n_phase,u)
+                    bc_flux[n] = self.compute_boundary_flux(self.model.n_phase, u, i)
                     bc_type[n]  = 1
                 elif boundary_type[u_names[n]][0][i] == 3:
                     # Same as line above, just compute q_n flux instead of q_w
@@ -144,34 +144,26 @@ class BaseResidual:
                     print("Boundary type non supported")
             f[:][j]= (1-bc_type) * u[:][j] + bc_type * bc_flux - bc_values
 
-    def compute_boundary_flux(self,phase,u):
+    def compute_boundary_flux(self, phase, u, side):
         """
-        function to compute phases fluxes at boundary points
-        """
-        # get primary variables
-        primary_variables  = self.compute_primary_variables(u)
+        Mass flux of a phase next to a boundary, for flux (Neumann) boundary conditions.
 
-        # Cell Centered Variables
-        if phase.phase =='w':
-            rho = utils.cell_center(primary_variables['p_w'], self.model.w_phase.density_function, self.mesh.boundary)
-            k_r = utils.cell_center(primary_variables['p_c'], self.model.interface.w_relative_permeability, self.mesh.boundary)
-            del_p = utils.gradient(primary_variables['p_w'], self.mesh.boundary)
-        elif phase.phase =='n':
-            rho = utils.cell_center(primary_variables['p_n'], self.model.n_phase.density_function, self.mesh.boundary)
-            k_r = utils.cell_center(primary_variables['p_c'], self.model.interface.n_relative_permeability, self.mesh.boundary)
-            del_p = utils.gradient(primary_variables['p_n'], self.mesh.boundary)
-        else:
-            print("phase should be 'n' or 'w'")
-        # Flux
-        q =  state_equations.darcy_velocity(
-                self.mesh.boundary,
-                self.model.solid.permeability,
-                k_r*rho,
-                self.model.phase.viscosity,
-                del_p,
-                rho,
-                self.model.solid.gravity)
-        return  q
+        side: 0 for the left boundary (x = x0), 1 for the right boundary (x = xL).
+
+        Returns the flux at the face between the boundary node and its neighbor,
+        computed exactly as in the interior residual (compute_phases_fluxes), so
+        it uses the same sign convention: q = rho k k_r / mu (dp/dx + rho g).
+        A prescribed value of 0 gives a no-flow boundary.
+        """
+        primary_variables = self.compute_primary_variables(u)
+        fluxes = self.compute_phases_fluxes(primary_variables)
+
+        key = 'q_' + phase.phase
+        if key not in fluxes:
+            raise ValueError(f"This model does not compute a flux for phase '{phase.phase}'")
+
+        face = 1 if side == 0 else self.model.nodes - 1
+        return fluxes[key][face]
 
     def check_callable_boundary_conditions(self,boundary_conditions,t):
         """

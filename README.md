@@ -151,7 +151,7 @@ pytest -m slow    # also runs the Test Case 1-4 driver scripts, about 5-10 minut
 | `test_solver.py` | Small RE and two-phase problems solved with PETSc, checked against hydrostatic equilibrium |
 | `test_drivers.py` (slow) | Runs the real driver scripts in a temporary folder, so `outputs/` is never overwritten |
 
-Four tests are marked **xfail** (expected to fail). Each documents a known problem in code that the current drivers don't use; the reason is printed with `pytest -rx`. If one of them is fixed, pytest reports it as an unexpected pass, and its `xfail` marker should be removed.
+One test is marked **xfail** (expected to fail): it documents a known inconsistency in the TCAT closure relations that the current solvers don't depend on; the reason is printed with `pytest -rx`. If one of them is fixed, pytest reports it as an unexpected pass, and its `xfail` marker should be removed.
 
 Add a test whenever you change the library. In particular, compare any new analytic derivative against a finite difference, as the existing tests do.
 

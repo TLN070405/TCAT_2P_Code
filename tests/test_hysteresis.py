@@ -94,10 +94,6 @@ def test_pc_function_inverts_volume_fraction_on_pdc(pl, p_c):
     assert pl.pc_function(pl.volume_fraction_function(p_c)) == pytest.approx(p_c, rel=1e-10)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "ParkerLenhard.d_pc_function passes the apparent saturation to interface.d_pc_function, "
-    "which expects a volume fraction (pc_function passes sa*e_ws + e_wr). Returns 0. "
-    "Not used by the Test Case 8 drivers (pressure formulations)."))
 def test_d_pc_function_matches_finite_difference_on_pdc(pl, fd):
     e_w = pl.volume_fraction_function(1500.0)
     assert pl.d_pc_function(e_w) == pytest.approx(fd(pl.pc_function, e_w, 1e-7), rel=1e-5)
@@ -156,14 +152,26 @@ def test_d_volume_fraction_matches_finite_difference_on_scanning_curve(pl, fd, p
         fd(pl.volume_fraction_function, p_c, 1e-2), rel=1e-6)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "linear_effective_entrapped_saturation_nw_ew computes its intercept with sa_endpoint "
-    "instead of ew_endpoint, so pc_function is not the inverse of volume_fraction_function "
-    "on scanning curves. Not used by the Test Case 8 drivers (pressure formulations)."))
-def test_pc_function_inverts_volume_fraction_on_scanning_curve(pl):
+@pytest.mark.parametrize("p_c", [1400.0, 800.0, 200.0])
+def test_pc_function_inverts_volume_fraction_on_scanning_curve(pl, p_c):
     reverse_to_imbibition(pl, 1500.0)
+    e_w = pl.volume_fraction_function(p_c)
+    assert pl.pc_function(e_w) == pytest.approx(p_c, rel=1e-8)
+
+
+@pytest.mark.parametrize("p_c", [1200.0, 800.0])
+def test_d_pc_function_matches_finite_difference_on_scanning_curve(pl, fd, p_c):
+    reverse_to_imbibition(pl, 1500.0)
+    e_w = pl.volume_fraction_function(p_c)
+    assert pl.d_pc_function(e_w) == pytest.approx(fd(pl.pc_function, e_w, 1e-7), rel=1e-5)
+
+
+def test_entrapment_in_ew_matches_entrapment_in_sa(pl):
+    reverse_to_imbibition(pl, 1500.0)
+    sa = pl.apparent_saturation_function(800.0)
     e_w = pl.volume_fraction_function(800.0)
-    assert pl.pc_function(e_w) == pytest.approx(800.0, rel=1e-8)
+    assert pl.linear_effective_entrapped_saturation_nw_ew(e_w) == pytest.approx(
+        pl.linear_effective_entrapped_saturation_nw(sa), rel=1e-12)
 
 
 # --- Process switching ---------------------------------------------------------

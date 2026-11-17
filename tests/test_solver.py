@@ -115,12 +115,38 @@ def test_two_phase_pp_preserves_hydrostatic_equilibrium():
     np.testing.assert_allclose(solutions[1000.0]["p_n"], -rho_n * G * x_points(), atol=1e-2)
 
 
-@pytest.mark.xfail(strict=True, raises=(AttributeError, IndexError), reason=(
-    "Flux boundary types 1 and 2 are broken: BaseResidual.compute_boundary_flux applies "
-    "full-mesh indexing to the two-cell boundary mesh and reads self.model.phase (no such "
-    "attribute). No driver uses these types; Dirichlet (0) and zero-gradient (3) work. "
-    "Called directly because inside a PETSc solve the exception aborts the interpreter."))
-def test_re_flux_boundary_condition():
-    model = build_model("Richards", "pr", hydrostatic, RE_BCS, {"p_w": [[0, 1]]})
+def test_re_no_flow_top_boundary_relaxes_to_hydrostatic():
+    """
+    Flux boundary type 1 with a value of 0 is a no-flow boundary. With the bottom
+    pressure fixed and no flow through the top, a saturated column must relax to
+    the hydrostatic profile anchored at the bottom.
+    """
+    p0 = 600.0
+
+    def perturbed(x):
+        return hydrostatic(x, p0) + 50.0 * np.sin(0.5 * np.pi * x / LENGTH)
+
+    bcs = {"p_w": [[hydrostatic(0.0, p0), 0.0]]}
+    model = build_model("Richards", "pr", perturbed, bcs, {"p_w": [[0, 1]]})
+    solutions = solve(model, [100.0])
+    np.testing.assert_allclose(solutions[100.0]["p_w"], hydrostatic(x_points(), p0), atol=1e-2)
+
+
+def test_boundary_flux_matches_interior_flux():
+    model = build_model("Richards", "pr", hydrostatic, RE_BCS, {"p_w": [[0, 0]]})
     residual = TCAT2Phase.numerics.residual_re_pr.ResidualRePR(model)
-    residual.compute_boundary_flux(model.w_phase, hydrostatic(x_points()))
+    p_w = hydrostatic(x_points()) + 10.0 * x_points()  # not hydrostatic, so flux is non-zero
+    fluxes = residual.compute_phases_fluxes(residual.compute_primary_variables(p_w))
+    left = residual.compute_boundary_flux(model.w_phase, p_w, 0)
+    right = residual.compute_boundary_flux(model.w_phase, p_w, 1)
+    assert left == pytest.approx(fluxes["q_w"][1]) and left != 0.0
+    assert right == pytest.approx(fluxes["q_w"][NODES - 1])
+
+
+def test_boundary_flux_is_zero_at_hydrostatic_equilibrium():
+    model = build_model("Richards", "pr", hydrostatic, RE_BCS, {"p_w": [[0, 0]]})
+    residual = TCAT2Phase.numerics.residual_re_pr.ResidualRePR(model)
+    p_w = hydrostatic(x_points(), 600.0)
+    # Water density varies with pressure by ~1e-5, so this linear profile is only
+    # hydrostatic to that order: residual flux ~1e-4, versus ~3e-2 for a 10 Pa/m perturbation.
+    assert residual.compute_boundary_flux(model.w_phase, p_w, 1) == pytest.approx(0.0, abs=1e-3)

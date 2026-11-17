@@ -127,7 +127,7 @@ class ParkerLenhard:
         dsa             = 1./(self.model.solid.porosity-e_wr) +  dsnte
         dsa_hysteretic  = ((sa_reversal_mpc-sa_endpoint_mpc)/(sa_reversal-sa_endpoint))*dsa
 
-        d_pc_hysteretic = e_ws*dsa_hysteretic*interface.d_pc_function(sa_hysteretic)
+        d_pc_hysteretic = e_ws*dsa_hysteretic*interface.d_pc_function(sa_hysteretic * e_ws + e_wr)
 
         return d_pc_hysteretic
 
@@ -234,15 +234,16 @@ class ParkerLenhard:
 
     def linear_effective_entrapped_saturation_nw_ew(self,ew):
         """
-        Linear evolution of effective entrapped nw saturation from Parker Lenhard formula  snt_eff = a * ew + b
+        Effective entrapped nw saturation as a function of the w-phase volume fraction.
+
+        Uses the same linear Parker-Lenhard relation in apparent saturation as
+        linear_effective_entrapped_saturation_nw, snte = a * sa + b, combined with
+        ew = (sa - snte) * (porosity - e_wr) + e_wr. Solving for sa gives
+        snte = (a * x + b) / (1 - a) with x = (ew - e_wr) / (porosity - e_wr),
+        so pc_function is the exact inverse of volume_fraction_function.
         """
-        drainage_process,sa_reversal,sa_endpoint,pc_reversal,pc_endpoint,snte_reversal,snte_endpoint,ew_reversal,ew_endpoint = self.get_data_hysteresis()
-
-        a = (snte_endpoint-snte_reversal)/(ew_endpoint-ew_reversal)
-        b = snte_endpoint - a * sa_endpoint
-        snte = a * ew + b
-
-        return snte
+        a, b, x = self._entrapment_line_in_ew(ew)
+        return (a * x + b) / (1.0 - a)
 
     def d_linear_effective_entrapped_saturation_nw(self,dsa):
         """
@@ -258,16 +259,25 @@ class ParkerLenhard:
 
     def dlinear_effective_entrapped_saturation_nw_ew(self,ew):
         """
-        Linear evolution of effective entrapped nw saturation from Parker Lenhard formula  snt_eff = a * ew + b
-        sa : apparent saturation
+        Derivative of linear_effective_entrapped_saturation_nw_ew with respect to ew.
+        """
+        a, _, _ = self._entrapment_line_in_ew(ew)
+        porosity = self.model.solid.porosity
+        e_wr = self.model.w_phase.residual_volume_fraction
+        return a / ((1.0 - a) * (porosity - e_wr))
+
+    def _entrapment_line_in_ew(self, ew):
+        """
+        Slope a and intercept b of snte = a * sa + b, and x = (ew - e_wr) / (porosity - e_wr).
         """
         drainage_process,sa_reversal,sa_endpoint,pc_reversal,pc_endpoint,snte_reversal,snte_endpoint,ew_reversal,ew_endpoint = self.get_data_hysteresis()
+        porosity = self.model.solid.porosity
+        e_wr = self.model.w_phase.residual_volume_fraction
 
-        a = (snte_endpoint-snte_reversal)/(ew_endpoint-ew_reversal)
+        a = (snte_endpoint-snte_reversal)/(sa_endpoint-sa_reversal)
         b = snte_endpoint - a * sa_endpoint
-        dsnte = a
-
-        return dsnte
+        x = (ew - e_wr) / (porosity - e_wr)
+        return a, b, x
 
     def get_data_hysteresis(self):
         """
