@@ -132,11 +132,28 @@ HysteresisCharts/   scripts for the hysteresis figures in the dissertation
 
 ## 7. Tests
 
+From the repo root, with the environment active:
+
 ```bash
-pytest tests
+pytest            # unit and solver tests, about 15 seconds
+pytest -m slow    # also runs the Test Case 1-4 driver scripts, about 5-10 minutes
 ```
 
-Only `test_mesh.py` and `test_utils.py` currently pass. The other three test files were written against an older version of the phase and interface classes and fail during setup with `TypeError: __init__() missing ... 'porosity', 'permeability', ...`. They need updating.
+| File | What it checks |
+|---|---|
+| `test_mesh.py`, `test_utils.py` | Mesh geometry and connectivity; face gradients and interpolation |
+| `test_phase_functions.py` | Densities and their derivatives, phase objects, Darcy flux |
+| `test_vg_functions.py`, `test_bc_functions.py` | Van Genuchten and Brooks–Corey: known values, analytic formulas, inverse consistency, derivatives against finite differences, limits and monotonicity |
+| `test_tcat_functions.py` | TCAT geometric closure relations |
+| `test_hysteresis.py` | Parker–Lenhard hysteresis and Land's entrapment, as used in Test Case 8 |
+| `test_interface.py`, `test_model.py` | Interface wiring; every model/formulation selects the right unknowns and residual |
+| `test_hdf5_io.py` | Saving and loading results |
+| `test_solver.py` | Small RE and two-phase problems solved with PETSc, checked against hydrostatic equilibrium |
+| `test_drivers.py` (slow) | Runs the real driver scripts in a temporary folder, so `outputs/` is never overwritten |
+
+Four tests are marked **xfail** (expected to fail). Each documents a known problem in code that the current drivers don't use; the reason is printed with `pytest -rx`. If one of them is fixed, pytest reports it as an unexpected pass, and its `xfail` marker should be removed.
+
+Add a test whenever you change the library. In particular, compare any new analytic derivative against a finite difference, as the existing tests do.
 
 ## 8. Troubleshooting
 
