@@ -21,3 +21,15 @@ Another Python script named "script_Multiple_Plots" is used to plot RE and CGP r
 Another example of multiple plots is: let's suppose that we run RE code from script_running.py  file with Test_Case="Test_Case1" and "filenumber_RE 2", then we get an output file named "Outputs_RE_1_file2.txt". We again run the CGP code with Test_Case="Test_Case1" and "filenumber_CGP 1". If we want to plot in the same window this two files we just run the "script_Multiple_Plots.py" with the command:
 
 python ./Multiple_Plots/Visualization.py -Test_Case $Test_Case -filenumber_RE 2 -filenumber_CGP 1
+
+CODE USAGE SUMMARY (TEST CASE 8: HYSTERESIS AND ENTRAPMENT):
+-----------
+This Python code runs the TCAT2Phase simulation framework to model two-phase flow with hysteresis and entrapment effects. To use it, install Python 3, petsc4py, mpi4py, numpy, h5py, and matplotlib. Then clone the TCAT_2P_Code repository from GitHub and install the package from the repo root:
+
+pip install -e .
+
+Open the project in VS Code and go to applications/Testcase8_complex_displacement_patterns/. Run either the two-phase driver (2p_malgorzata_hysteresis_entrapment_pdc.py) or the Richards equation driver (re_malgorzata_hysteresis_entrapment_pdc.py) with the Run button in the upper right. The solver writes .h5 output files to outputs/Testcase8_complex_displacement_patterns/outputs/.
+
+To visualize results, run plot_results_2p.py or plot_results_re.py from outputs/Testcase8_complex_displacement_patterns/postprocessing/. These produce plots of the key variables.
+
+The model uses Parker-Lenhard hysteresis, van Genuchten closure relations, and Land's model for entrapment. Parameters such as porosity, permeability, and boundary and initial conditions can be changed directly in the driver script to fit other cases or materials.
