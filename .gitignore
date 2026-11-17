@@ -4,3 +4,11 @@
 *.html
 *.DS_Store
 *.so
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+*.icloud
+# simulation results: regenerate by running the drivers
+outputs/*/outputs/

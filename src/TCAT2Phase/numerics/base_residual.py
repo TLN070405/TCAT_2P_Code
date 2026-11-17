@@ -49,7 +49,7 @@ class BaseResidual:
 
             od   = self.compute_spatial_operator(primary_variables,fluxes,cell)
             self.compute_time_matrix(primary_variables,fluxes)
-            f[n] = self.compute_residual_equations(udot, od)
+            f[n] = utils.petsc_value(self.compute_residual_equations(udot, od))
 
     def compute_primary_variables(self,u):
         """
@@ -142,7 +142,7 @@ class BaseResidual:
                     bc_type[n]  = 1
                 else:
                     print("Boundary type non supported")
-            f[:][j]= (1-bc_type) * u[:][j] + bc_type * bc_flux - bc_values
+            f[:][j]= utils.petsc_value((1-bc_type) * u[:][j] + bc_type * bc_flux - bc_values)
 
     def compute_boundary_flux(self, phase, u, side):
         """

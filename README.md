@@ -39,7 +39,7 @@ Check that it worked:
 python -c "import petsc4py, TCAT2Phase; print('petsc4py', petsc4py.__version__, '- TCAT2Phase OK')"
 ```
 
-> **Tested setup:** Python 3.9, petsc4py 3.16, numpy 1.26, mpi4py 3.1, h5py 3.13, matplotlib 3.5 on macOS. Newer versions may work but have not been tested; numpy 2 in particular prints deprecation warnings from `src/TCAT2Phase/numerics/utils.py`.
+> **Tested setup:** Python 3.9, petsc4py 3.16, numpy 1.26, h5py 3.13, matplotlib 3.5 on macOS. Python 3.9 or newer is required. Newer package versions should work but have not been tested.
 
 Run `conda activate tcat2p` in every new terminal before using the code.
 

@@ -34,7 +34,7 @@ def model_formfunction_internal(f,u,model):
         for n_u,u_name in enumerate(model.model.u_names):
             initial_conditions[n_u] = model.initial_conditions[u_name](x)
 
-        f[n] = u[:][n] - initial_conditions
+        f[n] = utils.petsc_value(u[:][n] - initial_conditions)
 
 
 

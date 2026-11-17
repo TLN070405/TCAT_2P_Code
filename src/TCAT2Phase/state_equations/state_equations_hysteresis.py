@@ -355,7 +355,7 @@ class ParkerLenhard:
             self.data.snte_endpoint[n][0] = self.lands_residual_effective_saturation_nw()
             self.data.snte_reversal[n][0] = 0.0
         # if we are on a scanning curve just do "endpoint=reversal" and "reversal= snte calculated from results of ts solver"
-        elif current_path_index is not 0 or 1:
+        else:
             self.data.snte_endpoint[n][0] = self.data.snte_reversal[n][0]
             self.data.snte_reversal[n][0] = snte
 

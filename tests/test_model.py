@@ -72,3 +72,9 @@ def test_set_model_phases():
     model = make_model("Richards", "pr")
     model.set_model_phases("s", "w", "n", "iface")
     assert (model.solid, model.w_phase, model.n_phase, model.interface) == ("s", "w", "n", "iface")
+
+
+@pytest.mark.parametrize("model_type,form", [("Richard", "pr"), ("Richards", "sp"), ("cgp-TCAT", "pp")])
+def test_invalid_model_or_form_raises(model_type, form):
+    with pytest.raises(ValueError, match="Unknown"):
+        make_model(model_type, form)
