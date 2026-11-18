@@ -58,7 +58,7 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
     "n",
     viscosity=1.78e-5,
     momentum_resistance=0.0,
-    residual_volume_fraction= 0.0,
+    residual_volume_fraction=(1.0 - 0.913) * 0.369,  # S_ws = 0.913 on the MIC
     density_function=state_equations.density_linear_pressure,
     d_density_function=state_equations.d_density_linear_pressure,
     **n_den_params,
@@ -86,21 +86,21 @@ TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phas
 # Set initial conditions
 def pw_ic(x):
     """wetting phase pressure ic at t=0"""
-    return -300
+    return -wn_interface.pc_function(0.0254)  # e_w = 0.0254, Table 4.24
 
 initial_conditions = {"p_w": pw_ic}
 model.set_initial_conditions(initial_conditions)
 
 # Set boundary conditions
-pw0_bc = -100
-pwL_bc = -100
+pw0_bc = 0.0  # e_w = 0.337, Table 4.24
+pwL_bc = 0.0
 
 boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
 model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval=np.array([1e-8,1e-1,1,10,50,100,200,300])
+time_interval=np.array([1., 10., 20., 30., 40., 50.])  # Fig 4.16
 model.set_simulation_time(time_interval)
 
 # Numerical Parameters

@@ -61,20 +61,36 @@ From VS Code: open the repo folder, choose the `tcat2p` interpreter (Command Pal
 
 ## 3. Test cases
 
-Every row ran to completion on the tested setup. Times are wall-clock on a quad-core Intel Core i5 Mac.
+Every row ran to completion on the tested setup except the Test Case 4 TCAT CGP driver (see [Known issues](#8-known-issues)). Times are wall-clock on a quad-core Intel Core i5 Mac.
 
 | Test case (folder in `applications/`) | Drivers | Approx. run time |
 |---|---|---|
 | 1 Fully saturated system | `re_fully_saturated.py`, `2p_fully_saturated.py`, `tcat_cgp_fully_saturated.py` | < 10 s each |
 | 2 Hydrostatic equilibrium | `re_…`, `2p_…`, `tcat_cgp_hydrostatic_equi_vertical.py` | 3–25 s |
 | 3 Hydrostatic equilibrium with perturbation | `re_equilibrium_perturbation.py`, `2p_…`, `tcat_cgp_…_perturbation.py` | 20–75 s |
-| 4 Infiltration | `re_infiltration_horizontal.py`, `2p_…`, `tcat_cgp_…` | 10–25 s |
+| 4 Infiltration | `re_infiltration_horizontal.py`, `2p_…`, `tcat_cgp_…` | 10–25 s; TCAT CGP stops at 0.52 s after ~3 min |
 | 5 Primary drainage | `re_drainage_pdc.py`, `2p_drainage_pdc.py`, `tcat_cgp_drainage.py`, `tcat_full_drainage.py` | 30 s – 1.5 min; full TCAT ≈ 7 min |
-| 6 Main imbibition | `re_imbibition_mic.py`, `2p_imbibition_mic.py`, `tcat_cgp_imbibition.py`, `tcat_full_imbibition.py` | 1–4 min; full TCAT ≈ 8 min |
+| 6 Main imbibition | `re_imbibition_mic.py`, `2p_imbibition_mic.py`, `tcat_cgp_imbibition.py`, `tcat_full_imbibition.py` | 2–5 min; full TCAT ≈ 8 min |
 | 7 Non-equilibrium capillary pressure | `ere_malgorzata.py`, `e2p_malgorzata.py` (each runs three values of τ) | 7–14 min |
 | 8 Hysteresis and entrapment | `re_malgorzata_hysteresis_entrapment_pdc.py`, `2p_malgorzata_hysteresis_entrapment_pdc.py` | **very long** (see below) |
 
 Start with Test Cases 1–4 to confirm everything works before trying the longer runs.
+
+**Parameters follow the dissertation tables.** The regular drivers use the values in the dissertation's Chapter 4 and 5 tables:
+
+- **Water compressibility:** βw = 4.5×10⁻¹⁰ Pa⁻¹ in every driver (Tables 4.2 and 5.6).
+- **Test Case 1, TCAT CGP:** R̂ = ε²μ/k = 5.10×10⁴ (Table 4.7, Eqn 4.19).
+- **Test Case 4:** a horizontal 10 m domain with pw = −900 / −1000 Pa, run to 1.5×10⁵ s (Tables 4.13–4.16). RE uses the MIC van Genuchten parameters (Table 4.3).
+- **Test Case 5, RE:** drains from saturation to εw = 0.0254 (Tables 4.17–4.18; output times as in Fig 4.5).
+- **Test Case 6, RE:** imbibes from εw = 0.0254 to 0.337, with S_ws = 0.913 on the MIC (Tables 4.23–4.24; Fig 4.16).
+- **Test Cases 5 and 6, TCAT CGP:** 201 nodes, the resolution the dissertation found sufficient.
+
+Two exceptions:
+
+- The `*_defense.py` drivers keep the values of the original codes, so the defense slides still reproduce.
+- The Tocci and Helmig validation drivers use their papers' values.
+
+Remaining gaps are listed under [Known issues](#8-known-issues).
 
 **Defense scenarios (Test Cases 5 and 6).** The regular Test Case 5 and 6 drivers run a short 300 s case. The scenarios shown in the May 2025 defense and in the dissertation (drainage from εw = 0.337 to 0.240 over 8000 s; imbibition from 0.325 to 0.337 over 250 s) are in the `*_defense.py` drivers:
 
@@ -171,11 +187,14 @@ Add a test whenever you change the library. In particular, compare any new analy
 
 ## 8. Known issues
 
-- **Sign of the Gaussian-curvature term in the TCAT curvature equation.** The code has −2K·∂εw/∂t (`residual_tcat_cgp.py`, `residual_full_tcat.py`), as did the original code behind the published results. The Overleaf design notes and dissertation Eq. 3.49 give +2K when written with the non-wetting-side curvature Jn that the code uses. With +2K, the Test Case 5 defense drainage run fails at t ≈ 108 s, so this is unresolved rather than a simple fix.
+- **Sign of the Gaussian-curvature term in the TCAT curvature equation.** The code has −2K·∂εw/∂t (`residual_tcat_cgp.py`, `residual_full_tcat.py`), as did the original code behind the published results. The Overleaf design notes and dissertation Eq. 3.49 give +2K when written with the non-wetting-side curvature Jn that the code uses. So does the source derivation (Gray, Shepherd & Miller, *Toward the Closure of a New Generation of Two-Fluid Flow Models: Curvature Evolution*, manuscript v0.83, 2021). The code follows its Eqn (89), which is written in J_w. Substituting J_w = −J_n gives +2K·∂εw/∂t, as does its Eqn (87). With +2K, the Test Case 5 defense drainage run fails at t ≈ 108 s, so this is unresolved rather than a simple fix.
 - **Incompressible two-phase runs with no-flow boundaries for both phases fail on the first time step** (2P-TM, both formulations). Giving the air phase its physical compressibility makes the `pp` formulation run; `sp` still fails. Found by the Szymkiewicz benchmark.
 - **The slow Tocci Problem A benchmarks have not yet been run to completion**, so their tolerances are unverified.
 - **Relative permeability is not hysteretic.** Test Case 8 uses the main drainage curve's k_r on scanning curves as well.
 - **Face mobility is averaged, not upwinded**, which matches the original code but may cause trouble at sharp fronts.
+- **The TCAT momentum resistance R̂ʷ_w is a constant (3.75×10⁵)**, the value of the original codes. Dissertation Tables 4.11–4.25 cite Eqn 4.12, a state equation in εw, the interfacial areas and the curvatures. Its wetting-phase coefficients e₁–e₄ are not published: Bruning & Miller (2019, Table 2) fit only the non-wetting-phase coefficients, in lattice-Boltzmann units. Only Test Case 1 (Table 4.7) gives a number, 5.10×10⁴, which that driver uses.
+- **Test Case 4 TCAT CGP stalls at t = 0.52 s** (the time step collapses to ~10⁻¹⁶ s), before and after the velocity fix. Figs 4.2–4.4 were made with the older Cython code in `OtherApps/Testcase4_infiltration_problem`, which used different, pre-Finney-pack parameters. Its εw boundary values (0.359 / 0.368) also differ from Table 4.16, which gives εw = ε. The slow driver test marks this case as an expected failure.
+- **No 2P-TM drivers for the Chapter 5 validation cases** (Kees & Miller drainage, Tables 5.2–5.3; Szymkiewicz imbibition, Tables 5.4–5.5). `2p_drainage_pdc.py` and `2p_imbibition_mic.py` run Finney-pack cases instead. The Szymkiewicz setup is closest to the benchmark in `tests/benchmarks/countercurrent_2p.py`.
 
 ## 9. Troubleshooting
 

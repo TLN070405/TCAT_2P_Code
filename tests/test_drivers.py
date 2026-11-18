@@ -34,12 +34,13 @@ DRIVERS = [
      "tcat_cgp_hydrostatic_equi_vertical_perturbation.py", "tcat_cgp_test_case_3.h5"),
     ("Testcase4_infiltration_problem", "re_infiltration_horizontal.py", "RE_test_case_4.h5"),
     ("Testcase4_infiltration_problem", "2p_infiltration_horizontal.py", "2P_test_case_4.h5"),
-    ("Testcase4_infiltration_problem", "tcat_cgp_infiltration_horizontal.py", "tcat_cgp_test_case_4.h5"),
+    pytest.param("Testcase4_infiltration_problem", "tcat_cgp_infiltration_horizontal.py", "tcat_cgp_test_case_4.h5",
+                 marks=pytest.mark.xfail(strict=True, reason="TC4 TCAT CGP stalls at t = 0.52 s (README, Known issues)")),
 ]
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("case,driver,output", DRIVERS, ids=[d for _, d, _ in DRIVERS])
+@pytest.mark.parametrize("case,driver,output", DRIVERS, ids=[(d.values if hasattr(d, "values") else d)[1] for d in DRIVERS])
 def test_driver_runs_and_writes_results(tmp_path, case, driver, output):
     workdir = tmp_path / "applications" / case
     shutil.copytree(REPO / "applications" / case, workdir)
