@@ -65,6 +65,10 @@ def setup_solver(model):
     # Solve initial conditions (ic are not excplicitly expressed in terms of solution variabes e.g:Neumann BC)
     _solve_ic(da, u, model)
 
+    # Start an index-1 DAE (e.g. incompressible two-fluid flow) from consistent values
+    if _needs_consistent_initialization(model):
+        _consistent_initialization(model, da, u, ts)
+
     # set the hysteresis function to be called after each successful time step.
     if model.hysteresis is True:
         ts.setPostStep(model.interface.model_update_hysteresis)
@@ -162,3 +166,70 @@ def _solve_ic(da, u, model):
     U_ic = da_ic.getVecArray(u_ic)
     for n in range(0, model.nodes):
         U[n] = U_ic[n]
+
+
+def _needs_consistent_initialization(model):
+    """
+    True when the system is an index-1 DAE whose initial conditions need not
+    satisfy its algebraic constraint: the two-phase model with both fluids
+    incompressible. Then one pressure (the total-flow pressure) has no time
+    derivative in any equation and is fixed instantaneously by the boundary
+    conditions; for example, Dirichlet saturation at one end and no flow at the
+    other gives a pressure that jumps at t = 0+. BDF sees that jump as a local
+    truncation error that does not shrink with the step size, and rejects every
+    step. model.consistent_initialization = True/False overrides the check.
+    """
+    flag = getattr(model, "consistent_initialization", None)
+    if flag is not None:
+        return bool(flag)
+    if not model.model.__class__.__name__ == "TwoPhase":
+        return False
+    p0 = 0.0
+    try:
+        return (model.w_phase.d_density_function(p0) == 0.0 and
+                model.n_phase.d_density_function(p0) == 0.0)
+    except Exception:
+        return False
+
+
+def _consistent_initialization(model, da, u, ts, fraction=1.0e-8):
+    """
+    Project the initial state onto the algebraic constraint with one backward-
+    Euler step of size dt0 = fraction * (first output time). Over such a step the
+    differential unknowns (saturation) change by O(dt0) while the algebraic ones
+    take their consistent values. The main time stepper then starts at t = dt0.
+    The step uses its own TS (options prefix 'ci_') so the BDF settings do not
+    apply; the Jacobian is by colored finite differences and the linear solve
+    is a direct LU, as for the small 1D systems here.
+    """
+    t_first = float(np.min(model.time)) if model.time is not None else 1.0
+    dt0 = fraction * t_first
+
+    opts = PETSc.Options()
+    for key, val in [("ci_snes_fd_color", None), ("ci_ksp_type", "preonly"),
+                     ("ci_pc_type", "lu"), ("ci_snes_max_it", 100),
+                     ("ci_ts_adapt_type", "none")]:
+        if not opts.hasName(key):
+            opts.setValue(key, val)
+
+    ts0 = PETSc.TS().create(PETSc.COMM_WORLD)
+    ts0.setOptionsPrefix("ci_")
+    ts0.setProblemType(ts0.ProblemType.NONLINEAR)
+    residual_instance = model_types.get_residual_class(model)(model)
+    ts0.setIFunction(residual_instance.compute_residual)
+    da0, u0 = _get_da(model)   # own DM: TS callbacks are stored on the DM
+    u.copy(u0)
+    ts0.setDM(da0)
+    ts0.setType(PETSc.TS.Type.BEULER)
+    ts0.setTime(0.0)
+    ts0.setTimeStep(dt0)
+    ts0.setMaxTime(dt0)
+    ts0.setMaxSteps(1)
+    ts0.setExactFinalTime(ts0.ExactFinalTime.MATCHSTEP)
+    ts0.setFromOptions()
+    ts0.solve(u0)
+    if ts0.getConvergedReason() < 0:
+        raise RuntimeError("Consistent initialization step failed "
+                           f"(TS reason {ts0.getConvergedReason()})")
+    u0.copy(u)
+    ts.setTime(ts0.getTime())

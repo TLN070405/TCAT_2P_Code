@@ -50,3 +50,22 @@ def test_cell_center_applies_function_per_cell(mesh11):
 def test_averages():
     assert utils.calc_average(2.0, 4.0) == 3.0
     assert utils.calc_function_average(lambda v: v**2, 1.0, 3.0) == 5.0
+
+
+def test_upwind_takes_the_upstream_node(mesh11):
+    _, mesh = mesh11
+    x = np.arange(mesh.num_cells, dtype=float)
+    # q = rho k k_r/mu (dp/dx + rho g): a positive potential gradient means flow
+    # toward -x, so the node at higher x (the neighbor) is upstream
+    grad = np.zeros(mesh.num_faces)
+    grad[1:6], grad[6:-1] = 1.0, -1.0
+    up = utils.upwind(x, grad, mesh)
+    np.testing.assert_allclose(up[1:6], x[1:6])     # face n lies between nodes n-1 and n
+    np.testing.assert_allclose(up[6:-1], x[5:-1])
+    assert up[0] == 0.0 and up[-1] == 0.0          # boundary faces untouched
+
+
+def test_upwind_averages_at_zero_gradient(mesh11):
+    _, mesh = mesh11
+    x = np.arange(mesh.num_cells, dtype=float) ** 2
+    np.testing.assert_allclose(utils.upwind(x, np.zeros(mesh.num_faces), mesh), utils.interpolate(x, mesh))

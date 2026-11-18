@@ -132,7 +132,7 @@ class Faces:
                 _face.distance = distance
 
             else:
-                _face = Face( ID = n_f, boundary=False, owner = n_f - 1, neighbor = n_f + 1)
+                _face = Face( ID = n_f, boundary=False, owner = n_f - 1, neighbor = n_f)
                 x = self.points[n_f] - 0.5*(self.points[n_f] - self.points[n_f-1])
                 _face.x = x
                 distance = x - self.points[n_f-1]
