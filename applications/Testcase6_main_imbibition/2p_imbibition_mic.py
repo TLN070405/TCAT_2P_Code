@@ -39,7 +39,7 @@ s_phase = TCAT2Phase.properties.phase.Solid(
 )
 
 # Set wetting-phase properties
-w_den_params = {"rho0": 1.0e3, "beta": 1e-8}
+w_den_params = {"rho0": 1.0e3, "beta": 4.5e-10}  # Table 4.2
 w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.0e-3,
@@ -56,7 +56,7 @@ n_phase = TCAT2Phase.properties.phase.Fluid(
     "n",
     viscosity=1.78e-5,
     momentum_resistance=0.0,
-    residual_volume_fraction= (1.-0.915)*0.369,
+    residual_volume_fraction= (1.-0.913)*0.369,  # S_ws = 0.913 on the MIC
     density_function=state_equations.density_linear_pressure,
     d_density_function=state_equations.d_density_linear_pressure,
     **n_den_params,

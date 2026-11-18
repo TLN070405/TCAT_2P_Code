@@ -41,7 +41,7 @@ s_phase = TCAT2Phase.properties.phase.Solid(
 )
 
 # Set wetting-phase properties
-w_den_params = {"rho0": 1.0e3, "beta": 4.9e-10}
+w_den_params = {"rho0": 1.0e3, "beta": 4.5e-10}  # Table 5.6
 w_phase = TCAT2Phase.properties.phase.Fluid(
     "w",
     viscosity=1.e-3,

@@ -16,7 +16,7 @@ domain =  TCAT2Phase.properties.domain.initialize_domain(
                             )
 
 # Mesh
-nodes=101
+nodes=201  # N >= 201, dissertation p. 87
 mesh = TCAT2Phase.mesh.grid.Mesh()
 mesh.uniform_mesh_1d(domain,nodes)
 

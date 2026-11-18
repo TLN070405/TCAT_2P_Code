@@ -87,21 +87,21 @@ for nodes in (nodes_array):
     # Set initial conditions
     def pw_ic(x):
         """wetting phase pressure ic at t=0"""
-        return -100
+        return -100  # e_w = 0.369 (saturated), Table 4.18
 
     initial_conditions = {"p_w": pw_ic}
     model.set_initial_conditions(initial_conditions)
 
     # Set boundary conditions
-    pw0_bc =-300 #-wn_interface.pc_function(w_phase.residual_volume_fraction +1e-5)
-    pwL_bc =-300 #-wn_interface.pc_function(w_phase.residual_volume_fraction +1e-5)
+    pw0_bc = -wn_interface.pc_function(w_phase.residual_volume_fraction + 1e-5)  # e_w = 0.0254, Table 4.18
+    pwL_bc = -wn_interface.pc_function(w_phase.residual_volume_fraction + 1e-5)
 
     boundary_conditions = {"p_w": [[pw0_bc, pwL_bc]]}
     model.set_boundary_conditions(boundary_conditions)
 
 
     # Time
-    time_interval=np.array([1e-8,1e-1,1,10,50,100,200,300])
+    time_interval=np.array([1., 10., 100., 1e3, 1e4, 1e5])  # Fig 4.5
     model.set_simulation_time(time_interval)
 
     # Numerical Parameters

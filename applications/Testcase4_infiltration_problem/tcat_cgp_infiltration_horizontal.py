@@ -51,7 +51,7 @@ s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
 # Set wetting-phase properties
 w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
-                                            momentum_resistance = 3.75e5,#5.10e4,
+                                            momentum_resistance = 3.75e5,
                                             residual_volume_fraction = 0.0687*0.369,
                                             density_function = state_equations.density_exp_pressure,
                                             d_density_function = state_equations.d_density_exp_pressure,
@@ -128,7 +128,7 @@ model.set_boundary_conditions(boundary_conditions)
 
 
 # Time
-time_interval = np.array([1e-7,1e-5,1e-4,1e-3,1e-2,1e-1,0.5])
+time_interval = np.array([1e3, 1e4, 1e5, 1.5e5])  # Figs 4.2-4.4
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
