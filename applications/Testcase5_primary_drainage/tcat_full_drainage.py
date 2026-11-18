@@ -51,7 +51,7 @@ s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
 # Set wetting-phase properties
 w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
-                                            momentum_resistance = 3.75e5,
+                                            momentum_resistance = 5.10e4,  # Eqn 4.19: eps^2 mu_w / k_i, consistent with RE k_i = 2.67e-9 and the n phase (9.07e2)
                                             residual_volume_fraction = 0.0687*0.369,
                                             density_function = state_equations.density_exp_pressure,
                                             d_density_function = state_equations.d_density_exp_pressure,
