@@ -238,7 +238,7 @@ From the repo root, with the environment active:
 
 ```bash
 pytest            # unit and solver tests, about 15 seconds
-pytest -m slow    # also runs the Test Case 1-4 driver scripts, about 5-10 minutes
+pytest -m slow    # also runs the Test Case 1-4 driver scripts and the analytic checks, about 5-10 minutes
 ```
 
 | File | What it checks |
@@ -252,6 +252,7 @@ pytest -m slow    # also runs the Test Case 1-4 driver scripts, about 5-10 minut
 | `test_hdf5_io.py` | Saving and loading results |
 | `test_solver.py` | Small RE and two-phase problems solved with PETSc, checked against hydrostatic equilibrium |
 | `test_drivers.py` (slow) | Runs the real driver scripts in a temporary folder, so `outputs/` is never overwritten |
+| `test_verification.py` (slow) | Test Cases 1–2 against their analytic solutions, using the dissertation's relative L2 error (Sections 4.4.3–4.4.4). TCAT CGP reproduces the dissertation's values (e.g. p_w 4.55×10⁻⁹ in Test Case 1). The RE errors are about 22 times smaller than in the dissertation, exactly the ratio of the old to the new βw (1×10⁻⁸ / 4.5×10⁻¹⁰): the analytic solutions assume incompressible water |
 | `test_benchmarks.py` | Literature benchmarks. Fast: the McWhorter & Sunada (1990) exact two-phase solution is checked against its own integral equation and an independent finite-difference solve. Slow: 2P-TM vs that exact solution for Szymkiewicz (2007) Example 1 (error and grid convergence), and RE for Tocci et al. (1997) Problem A (front position and Celia-style mass balance) |
 
 To document a known bug without fixing it yet, mark its test `@pytest.mark.xfail(strict=True, reason=...)`. Once the bug is fixed, pytest reports the test as an unexpected pass, which is the reminder to remove the marker.
@@ -267,6 +268,8 @@ Add a test whenever you change the library. In particular, compare any new analy
 - **Face mobility is averaged, not upwinded**, which matches the original code but may cause trouble at sharp fronts.
 - **The TCAT momentum resistance R̂ʷ_w is a constant (3.75×10⁵)**, the value of the original codes. Dissertation Tables 4.11–4.25 cite Eqn 4.12, a state equation in εw, the interfacial areas and the curvatures. Its wetting-phase coefficients e₁–e₄ are not published: Bruning & Miller (2019, Table 2) fit only the non-wetting-phase coefficients, in lattice-Boltzmann units. Only Test Case 1 (Table 4.7) gives a number, 5.10×10⁴, which that driver uses.
 - **Test Case 4 TCAT CGP stalls at t = 0.52 s** (the time step collapses to ~10⁻¹⁶ s), before and after the velocity fix. Figs 4.2–4.4 were made with the older Cython code in `OtherApps/Testcase4_infiltration_problem`, which used different, pre-Finney-pack parameters. Its εw boundary values (0.359 / 0.368) also differ from Table 4.16, which gives εw = ε. The slow driver test marks this case as an expected failure.
+- **TCAT CGP diverges in Test Case 3 for pressure perturbations above about 16 Pa** (dissertation Section 4.4.5); the driver uses 10 Pa. RE handles larger perturbations. The dissertation attributes this to the approximate equilibrium interfacial area εwn_eq. A reformulation that removes εwn_eq was started in Sept–Oct 2025 (prototypes in `OtherApps/20251011_NewForm`) but has no results yet. It uses +2K, see the first item.
+- **Grid convergence of TCAT CGP is not established for Test Cases 4–6.** The errors between successive grids in the dissertation drafts did not behave as expected: for Test Case 4 (old Cython code, 51/101/201 nodes), the εwn, Jwn, Kwn and εw errors grew with refinement, and for Test Cases 5–6 (101/201/401 nodes) every error jumped at t = 300 s. Neither was explained, and the final dissertation reports no error tables for these cases. Also, the dissertation's Test Case 5–6 RE and TCAT CGP runs do not start and end at the same εw (for drainage, RE goes 0.369 → 0.0254 and TCAT CGP 0.300 → 0.2746); only the normalized figures use matched runs.
 - **No 2P-TM drivers for the Chapter 5 validation cases** (Kees & Miller drainage, Tables 5.2–5.3; Szymkiewicz imbibition, Tables 5.4–5.5). `2p_drainage_pdc.py` and `2p_imbibition_mic.py` run Finney-pack cases instead. The Szymkiewicz setup is closest to the benchmark in `tests/benchmarks/countercurrent_2p.py`.
 
 ## 10. Troubleshooting
