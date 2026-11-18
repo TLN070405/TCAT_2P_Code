@@ -88,7 +88,10 @@ wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
                                                             interfacial_dynamics = 6.398675e-05,
                                                             interfacial_tension = 7.20e-2,
                                                             interfacial_area_relaxation = 1.003597e-10,
-                                                            interfacial_area_equilibrium = interfacial_area_equilibrium)
+                                                            interfacial_area_equilibrium = interfacial_area_equilibrium,
+                                                            # LEGACY -2K: with the theory sign (+2K, the default) this closure is
+                                                            # unstable here and the run fails within seconds. See README, Known issues.
+                                                            gaussian_curvature_sign = -1)
 
 TCAT2Phase.numerics.model.Model.set_model_phases(model, s_phase, w_phase, n_phase, wn_interface)
 
