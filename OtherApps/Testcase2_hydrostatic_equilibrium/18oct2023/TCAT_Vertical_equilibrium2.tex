@@ -1,0 +1,172 @@
+\documentclass{article}
+
+
+\usepackage[english]{babel}
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage[notes]{ctmmath-v3}
+\title{TCAT Constant Gas Pressure 1D}
+
+\begin{document}
+
+\maketitle
+\section{TCAT Constant Gas Pressure 1D}
+The mass-momentum conservation equation is:
+\begin{equation}
+\pdt{\lrp{\ew \raw}}
+-\pd{}x\lrb{\raw\ew^2 (\hsR^w_w)^{-1}
+\lrp{\pd\paw x-\raw g_x^w}}
+=0
+\;,
+\label{eq:TpMP1d}
+\end{equation}
+The volume fraction:
+\begin{equation}
+\pdt{\ew}
+-\dbs{\hat c}\wn\lrp{\paw+\iftma\wn J_n^\wn}
+-\lrp{\frac{\iftma\wn\hsk^\wn}{\paw+\iftma\wn J_n^\wn}}
+  \lrp{\sdats\gke\wn{\rm{eq}}-\ewn}
+=0\;,
+\label{eq:swev}
+\end{equation}
+The fluid-fluid interfacial area: 
+\begin{equation}
+ \pdt\ewn
++J_n^\wn\pdt{\ew}
++\pd{}x\lrp{\ewn w_x^\wn} 
+-\hsk^\wn\lrp{\sdats\gke\wn{\rm{eq}}-\ewn}
+=0\;,
+\label{eq:ewnev1d}
+\end{equation}
+Mean curvature of the fluid-fluid interface:
+\begin{equation}
+\pdt {\lrp{\ewn J_n^\wn}}
++2K_n^\wn \pdt\ew
++2\pd{}x\lrp{\ewn w_x^\wn J_n^\wn}
+-\frac 23\pdn 2{}x\lrp{\pdt\ew}
+=0\;,
+\label{eq:TpJ1d}
+\end{equation}
+The normal interface velocity:
+\begin{equation}
+\ewn^2 w_x^\wn\approx
+-\pdt\ew\pd \ew x\;.
+\label{eq:Tp-w1d}
+\end{equation}
+A linear geometric state equation for \(\ew\) can be expressed as next (from TCAT Simulator document page 4):
+\begin{equation}
+\ew=\gke-\lrp{b_0{D}\lrp{\ewn+\ens}+b_1{D^2}\lrp{-\ewn{J_n^\wn}+\ens{J_s^\ns}}+\frac{b_2}{4\pi} {D^3}\lrp{\ewn{K_n^\wn}+\ens{K_n^\ns}}},
+\label{eq:Tp-igeos-linear}
+\end{equation}
+Where:
+\begin{equation}
+D=\frac{6\gke}{\ews+\ens},
+\label{eq:Tp-igeos-linear-D}
+\end{equation}
+The unknowns vector contains:
+\begin{equation}
+\set U = \lrp{\ew, \paw, \ewn, J_n^\wn, K_n^\wn, w_x^\wn} 
+\label{eq:U_simplified}
+\end{equation}
+\section{IC For Vertical equilibrium case}
+\subsection{pressure }
+The pressure at IC is very simple:
+\begin{equation}
+p^w(x)=-{\raw}_0  gx
+\label{eq:pw_IC_V}
+\end{equation}
+
+\subsection{volume fraction}
+For the vertical equilibrium case the pressure distribution at t0 is:
+\begin{equation}
+p^w(x)=p^w_0-{\raw}_0  gx
+\label{eq:pw_IC}
+\end{equation}
+The density of wetting fluid is :
+\begin{equation}
+\raw(p^w)={\raw}_0 e^{{\beta}_w p^w}={\raw}_0 e^{{\beta}_wp^w_0-{\beta}_w {\raw}_0  gx}={\raw}_0 Ke^{cx}
+\label{eq:rhow_IC}
+\end{equation}
+Where \(c=-{\beta}_w {\raw}_0  g\) and \(K=e^{{\beta}_w p^w_0}\) .\\
+Now we try to estimate the \(\ew\) at equilibrium. The first equation from TCAT at equilibrium is (g is in the opposite direction of x so the minus sign will be multiplied by the minus sign of g which results in the positive sign):
+\begin{equation}
+(\hsR^w_w)^{-1}\frac{d}{dx}\left[\raw\ew^2 \left(\frac{d p^w}{dx}+\raw g \right)\right]=0
+\label{eq:TCAT_eq0}
+\end{equation}
+We replace \(p^w\) by its expression and we derivate it:
+\begin{equation}
+\frac{d}{dx}\left[ \ew^2 \raw\left({\raw}_0-\raw \right)\right]=0
+\label{eq:TCAT_eq1}
+\end{equation}
+\begin{equation}
+\raw\left({\raw}_0-\raw \right)2\ew\frac{d \ew}{dx}+\ew^2\frac{d}{dx}\left[ \raw\left({\raw}_0-\raw \right)\right]=0
+\label{eq:TCAT_eq1_2}
+\end{equation}
+\begin{equation}
+\raw\left({\raw}_0-\raw \right)2\ew\frac{d \ew}{dx}
++\ew^2\left(c{\raw}_0{\raw}-2c{\raw}^2 \right)=0
+\label{eq:TCAT_eq1_3}
+\end{equation}
+\begin{equation}
+2\left({\raw}_0-\raw \right)\frac{d \ew}{dx}
++c\ew\left({\raw}_0-2{\raw} \right)=0
+\label{eq:TCAT_eq1_4}
+\end{equation}
+\begin{equation}
+  \frac{1}{\ew}\frac{d \ew}{dx}
+=\frac{-c\left({\raw}_0-2{\raw} \right)}{2\left({\raw}_0-\raw \right)}
+\label{eq:TCAT_eq1_5}
+\end{equation}
+\begin{equation}
+  \frac{1}{\ew}\frac{d \ew}{dx}
+=\frac{-c\left(1-2 Ke^{cx} \right)}{2\left(1- Ke^{cx} \right)}
+\label{eq:TCAT_eq1_6}
+\end{equation}
+Now we try to get the primitive of the RHS:
+\begin{equation}
+\frac{-c\left(1-2 Ke^{cx} \right)}{2\left(1- Ke^{cx} \right)}
+= \frac{-c}{2}\left[1-\frac{\left( Ke^{cx} \right)}{\left(1- Ke^{cx} \right)} \right]
+=\frac{-c}{2}-\frac{1}{2}\left[\frac{\left( -cKe^{cx} \right)}{\left(1- Ke^{cx} \right)}\right]
+\label{eq:RHS}
+\end{equation}
+Its primitive is:
+\begin{equation}
+\frac{-c}{2}x-0.5ln(1-Ke^{cx})+C_0
+\label{eq:RHS_2}
+\end{equation}
+We get by also integrating \(\frac{1}{\ew}\frac{d \ew}{dx}\) : 
+\begin{equation}
+\ew(x)=C_1\left(1-Ke^{cx}\right)^{-0.5}e^{-0.5cx} 
+\label{eq:ew_expression}
+\end{equation}
+\subsection{Interfacial area }
+The determination of the interfacial area \(\ewn\) distribution at IC is not easy. In fact, the group members are suggesting to use the state equation for that (or for the equilibrium interfacial area \(\sdats\gke\wn{\rm{eq}}\)). But if the state equation is used to estimate one of this two unknowns (\(\ewn\) or \(\sdats\gke\wn{\rm{eq}}\)) the others unknowns (\(K_n^\wn\)) must be known or estimated somehow. In our old codes, we proceed differently, we try to estimate the interfacial area (By choosing simple test cases where the value of \(\sdats\gke\wn{\rm{eq}}\) is known by intuition such as when one of the phases is absent which implies that there is no interface) after that we put \(\sdats\gke\wn{\rm{eq}}=\ewn\). After estimating the interfacial area we use the state equation to get \(K_n^\wn\). So, in general the state equation will be used to estimated one of (\(\ewn\) or \(K_n^\wn\)) but not both.\\
+In our new code we proceed almost like the old codes, \(\ewn\) will be estimated without the state equation (So \(K_n^\wn\) will be estimated with this state equation). So, normally the interfacial area should varies when \(\ew\) varies, and because \(\ew(x,t0)\) varies in space the interfacial area should also. As consequence, we thought that changing \(\ewn\) proportionally to \(\ew\) could be a good idea for initialization:
+\begin{equation}
+\ewn(x,t_0)=Cst*\ew(x,t_0)=0.1*\ew(x,t_0)
+\label{eq:ewn_expression}
+\end{equation}
+Well the 0.1 constant is just a value that we putted and there is many other values that works. Finally, this is just an idea to initialize \(\ewn\) and it could not be the best way to do that.
+\subsection{Mean curvature }
+The mean curvature at equilibrium is simple also:
+\begin{equation}
+J_n^\wn(x,t_0)=-\frac{\paw}{\iftma\wn }  
+\label{eq:Jwn_expression}
+\end{equation}
+\subsection{Gaussian curvature}
+Because the interfacial area has been estimated we can use the state equation ( \Eqn{Tp-igeos-linear} )to estimate \(K_n^\wn(x,t_0)\).
+\subsection{Normal interfacial velocity}
+The Normal interfacial velocity is estimated by combining \Eqn{swev} and \Eqn{Tp-w1d}:
+\begin{equation}
+w_x^\wn\approx=-\frac{1}{\ewn^2 } \lrp{\dbs{\hat c}\wn\lrp{\paw+\iftma\wn J_n^\wn}
++\lrp{\frac{\iftma\wn\hsk^\wn}{\paw+\iftma\wn J_n^\wn}}
+  \lrp{\sdats\gke\wn{\rm{eq}}-\ewn}}\pd \ew x
+\label{eq:Wx_expression}
+\end{equation}
+
+\end{document}
+
