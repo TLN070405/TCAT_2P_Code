@@ -73,6 +73,7 @@ Every row ran to completion on the tested setup except the Test Case 4 TCAT CGP 
 | 6 Main imbibition | `re_imbibition_mic.py`, `2p_imbibition_mic.py`, `tcat_cgp_imbibition.py`, `tcat_full_imbibition.py` | 2–5 min; full TCAT ≈ 8 min |
 | 7 Non-equilibrium capillary pressure | `ere_malgorzata.py`, `e2p_malgorzata.py` (each runs three values of τ) | 7–14 min |
 | 8 Hysteresis and entrapment | `re_malgorzata_hysteresis_entrapment_pdc.py`, `2p_malgorzata_hysteresis_entrapment_pdc.py` | **very long** (see below) |
+| Chapter 5 validation (`Chapter5_validation/`) | `2p_kees_miller_drainage.py` (Kees & Miller 2002 Problem HD, Tables 5.2–5.3), `2p_szymkiewicz_imbibition.py` (Szymkiewicz 2007 Example 1, Tables 5.4–5.5) | drainage ≈ 3 min, imbibition ≈ 9 min |
 
 Start with Test Cases 1–4 to confirm everything works before trying the longer runs.
 
@@ -88,7 +89,7 @@ Start with Test Cases 1–4 to confirm everything works before trying the longer
 Two exceptions:
 
 - The `*_defense.py` drivers keep the values of the original codes, so the defense slides still reproduce.
-- The Tocci and Helmig validation drivers use their papers' values.
+- The Tocci and Helmig validation drivers use their papers' values. So do the Chapter 5 validation drivers where Tables 5.2–5.5 disagree with their source papers or with themselves (each driver's header lists the entries).
 
 Remaining gaps are listed under [Known issues](#8-known-issues).
 
@@ -125,7 +126,7 @@ cd outputs/Testcase8_complex_displacement_patterns/postprocessing
 python plot_results_re.py
 ```
 
-Each opens its figures in a window. To read results in your own code:
+Each opens its figures in a window. `outputs/Chapter5_validation/postprocessing/compare_mcwhorter_sunada.py` compares the Chapter 5 validation runs with the McWhorter & Sunada (1990) semi-analytic solution (front position, L1 error, volume of the invading fluid). To read results in your own code:
 
 ```python
 from TCAT2Phase.io.hdf5_io import load_solutions_from_hdf5
@@ -142,6 +143,9 @@ Everything that defines a run is set in the driver script itself; there are no i
 - **Closure relations:** van Genuchten parameters (`VanGenuchten(...)`) and, for Test Case 8, the Parker–Lenhard settings
 - **Initial and boundary conditions:** the `*_ic` and `*_bc` functions
 - **Output times:** the array passed to `model.set_simulation_time(...)`
+- **Boundary types** (`set_boundary_type`): 0 Dirichlet; 1 / 2 a w- / n-phase mass flux set on the face next to the boundary (the boundary node stores no mass); 4 / 5 a w- / n-phase mass flux with the boundary node's half-cell mass balance (mass conservative; use 4 and 5 together at one boundary, as the Chapter 5 validation drivers do). Flux values use the code's convention q = ρ k k_r/μ (∂p/∂x + ρg), so 0 is no flow and an influx at x = 0 is negative.
+- **Face mobility:** `model.mobility_weighting = "arithmetic"` (default, the published results) or `"upwind"` (phase-wise upstream weighting; RE and 2P-TM residuals only).
+- **Incompressible two-phase runs:** with both fluids incompressible the 2P-TM is an index-1 DAE, and the solver first takes one tiny backward-Euler step so the pressure starts consistent with the boundary conditions. This is automatic; set `model.consistent_initialization = True/False` to force it.
 - **Solver settings:** the `solver_options.solver_options(...)` call (BDF order, preconditioner, maximum number of steps). These are defined in `src/TCAT2Phase/numerics/solver_options.py`; pass `monitor=False` to silence the per-step output. Any other PETSc option can be set with `PETSc.Options().setValue(name, value)` before `setup_solver` is called.
 
 ## 6. Repository layout
@@ -165,7 +169,7 @@ From the repo root, with the environment active:
 
 ```bash
 pytest            # unit and solver tests, about 15 seconds
-pytest -m slow    # also runs the Test Case 1-4 driver scripts, about 5-10 minutes
+pytest -m slow    # also the Test Case 1-4 and Kees & Miller driver scripts and the literature benchmarks, about 30 minutes
 ```
 
 | File | What it checks |
@@ -178,8 +182,9 @@ pytest -m slow    # also runs the Test Case 1-4 driver scripts, about 5-10 minut
 | `test_interface.py`, `test_model.py` | Interface wiring; every model/formulation selects the right unknowns and residual |
 | `test_hdf5_io.py` | Saving and loading results |
 | `test_solver.py` | Small RE and two-phase problems solved with PETSc, checked against hydrostatic equilibrium |
+| `test_incompressible_two_phase.py` | Incompressible 2P-TM with no flow of either fluid at one end (`pp` and `sp`, flux boundary types 1/2 and 4/5): the first time steps succeed |
 | `test_drivers.py` (slow) | Runs the real driver scripts in a temporary folder, so `outputs/` is never overwritten |
-| `test_benchmarks.py` | Literature benchmarks. Fast: the McWhorter & Sunada (1990) exact two-phase solution is checked against its own integral equation and an independent finite-difference solve. Slow: 2P-TM vs that exact solution for Szymkiewicz (2007) Example 1 (error and grid convergence), and RE for Tocci et al. (1997) Problem A (front position and Celia-style mass balance) |
+| `test_benchmarks.py` | Literature benchmarks. Fast: the McWhorter & Sunada (1990) exact two-phase solution is checked against its own integral equation and an independent finite-difference solve; its R = 1 form for Kees & Miller (2002) Problem HD against their Fig. 1. Slow: 2P-TM vs the exact solution for Szymkiewicz (2007) Example 1 (error and grid convergence), and RE for Tocci et al. (1997) Problem A at t = 0.25 days (front position and Celia-style mass balance; about 8 min) |
 
 To document a known bug without fixing it yet, mark its test `@pytest.mark.xfail(strict=True, reason=...)`. Once the bug is fixed, pytest reports the test as an unexpected pass, which is the reminder to remove the marker.
 
@@ -188,13 +193,11 @@ Add a test whenever you change the library. In particular, compare any new analy
 ## 8. Known issues
 
 - **Sign of the Gaussian-curvature term in the TCAT curvature equation.** The code has −2K·∂εw/∂t (`residual_tcat_cgp.py`, `residual_full_tcat.py`), as did the original code behind the published results. The Overleaf design notes and dissertation Eq. 3.49 give +2K when written with the non-wetting-side curvature Jn that the code uses. So does the source derivation (Gray, Shepherd & Miller, *Toward the Closure of a New Generation of Two-Fluid Flow Models: Curvature Evolution*, manuscript v0.83, 2021). The code follows its Eqn (89), which is written in J_w. Substituting J_w = −J_n gives +2K·∂εw/∂t, as does its Eqn (87). With +2K, the Test Case 5 defense drainage run fails at t ≈ 108 s, so this is unresolved rather than a simple fix.
-- **Incompressible two-phase runs with no-flow boundaries for both phases fail on the first time step** (2P-TM, both formulations). Giving the air phase its physical compressibility makes the `pp` formulation run; `sp` still fails. Found by the Szymkiewicz benchmark.
-- **The slow Tocci Problem A benchmarks have not yet been run to completion**, so their tolerances are unverified.
 - **Relative permeability is not hysteretic.** Test Case 8 uses the main drainage curve's k_r on scanning curves as well.
-- **Face mobility is averaged, not upwinded**, which matches the original code but may cause trouble at sharp fronts.
+- **Face mobility is arithmetically averaged by default**, as in the original code and in Kees & Miller (2002). Phase-wise upwinding is available (`model.mobility_weighting = "upwind"`) but is less accurate on the Szymkiewicz benchmark (error in infiltrated water 12.7 / 5.4 / 2.2 % averaged vs 30.2 / 17.2 / 9.6 % upwinded on 10 / 20 / 40 grid intervals, `sp`; L1 error in S_w converges at order ≈ 1.35 vs ≈ 0.86), as Szymkiewicz (2007, Table 3) also found; it may still help robustness at sharp fronts.
 - **The TCAT momentum resistance R̂ʷ_w is a constant (3.75×10⁵)**, the value of the original codes. Dissertation Tables 4.11–4.25 cite Eqn 4.12, a state equation in εw, the interfacial areas and the curvatures. Its wetting-phase coefficients e₁–e₄ are not published: Bruning & Miller (2019, Table 2) fit only the non-wetting-phase coefficients, in lattice-Boltzmann units. Only Test Case 1 (Table 4.7) gives a number, 5.10×10⁴, which that driver uses.
 - **Test Case 4 TCAT CGP stalls at t = 0.52 s** (the time step collapses to ~10⁻¹⁶ s), before and after the velocity fix. Figs 4.2–4.4 were made with the older Cython code in `OtherApps/Testcase4_infiltration_problem`, which used different, pre-Finney-pack parameters. Its εw boundary values (0.359 / 0.368) also differ from Table 4.16, which gives εw = ε. The slow driver test marks this case as an expected failure.
-- **No 2P-TM drivers for the Chapter 5 validation cases** (Kees & Miller drainage, Tables 5.2–5.3; Szymkiewicz imbibition, Tables 5.4–5.5). `2p_drainage_pdc.py` and `2p_imbibition_mic.py` run Finney-pack cases instead. The Szymkiewicz setup is closest to the benchmark in `tests/benchmarks/countercurrent_2p.py`.
+- **Dissertation Tables 5.2–5.5 have inconsistent entries** (e.g. k_i = 5.96×10⁻¹² m² next to K_s = 42.4 m/day in Table 5.2; ε_w = 0.008 for S_e = 0.01 with ε_wr = 0 in Table 5.5). The Chapter 5 validation drivers follow the source papers there, and the dissertation reports these cases only as figures (Figs 5.1, 5.6), so the drivers are checked against the McWhorter–Sunada solution instead.
 
 ## 9. Troubleshooting
 

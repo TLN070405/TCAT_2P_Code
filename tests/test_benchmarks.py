@@ -170,11 +170,10 @@ def test_tocci_problem_a_mass_balance(tocci_run):
     """
     Celia et al. (1990) mass balance measure: (mass gained)/(net inflow) = 1.
 
-    The pressure-head (PR) form is not exactly mass conservative under BDF
-    (Kees & Miller 2002, Sec. 4.1). With ts_rtol = ts_atol = 1e-6 its error here
-    is about 5e-4: the ratio was 0.99894 with the trapezoid rule over 240 outputs
-    and 0.99948 over 960, which extrapolates to 0.99951 for exact quadrature.
-    Simpson's rule removes most of the quadrature part, so 1e-3 holds.
+    The net inflow is a time integral of the boundary fluxes sampled at the
+    output times. With the trapezoid rule that quadrature dominated the measure
+    (ratio 0.99898 over 250 outputs, 0.99948 over 960 at t = 0.20 days), which is
+    why this test first failed; with Simpson's rule the ratio is 0.99996.
     """
     _, solutions, model, _ = tocci_run
     _, gained, inflow = tp.mass_balance(solutions, model)
