@@ -1,6 +1,5 @@
 """phase.py"""
 from functools import partial
-from TCAT2Phase.state_equations import state_equations
 
 class Phase:
     """

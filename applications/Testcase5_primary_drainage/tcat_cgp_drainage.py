@@ -2,8 +2,7 @@ import numpy as np
 import TCAT2Phase
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
-import matplotlib.pyplot as plt
-import solver_options
+from TCAT2Phase.numerics import solver_options
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
@@ -142,7 +141,7 @@ solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
 # Export results
-filename = f"tcat_cgp_test_case_5.h5"
+filename = "tcat_cgp_test_case_5.h5"
 file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase5_primary_drainage'/'outputs'
 
 # Save the data to the correct file path

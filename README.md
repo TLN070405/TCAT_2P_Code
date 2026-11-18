@@ -45,11 +45,10 @@ Run `conda activate tcat2p` in every new terminal before using the code.
 
 ## 2. Run your first simulation
 
-Each driver script is self-contained: run it **from inside its own folder**, because it imports the `solver_options.py` that sits next to it.
+Each driver script is self-contained and can be run from any folder:
 
 ```bash
-cd applications/Testcase1_fully_saturated_system
-python re_fully_saturated.py
+python applications/Testcase1_fully_saturated_system/re_fully_saturated.py
 ```
 
 It should finish in under 10 seconds. The last line printed is where it saved its results:
@@ -58,7 +57,7 @@ It should finish in under 10 seconds. The last line printed is where it saved it
 Saving file to: .../outputs/Testcase1_fully_saturated_system/outputs/RE_test_case_1.h5
 ```
 
-From VS Code: open the repo folder, choose the `tcat2p` interpreter (Command Palette → *Python: Select Interpreter*), open a driver, and click the ▷ Run button in the upper right. VS Code runs the file from its own folder, so the import works.
+From VS Code: open the repo folder, choose the `tcat2p` interpreter (Command Palette → *Python: Select Interpreter*), open a driver, and click the ▷ Run button in the upper right.
 
 ## 3. Test cases
 
@@ -127,7 +126,7 @@ Everything that defines a run is set in the driver script itself; there are no i
 - **Closure relations:** van Genuchten parameters (`VanGenuchten(...)`) and, for Test Case 8, the Parker–Lenhard settings
 - **Initial and boundary conditions:** the `*_ic` and `*_bc` functions
 - **Output times:** the array passed to `model.set_simulation_time(...)`
-- **Solver settings:** the `solver_options.solver_options(...)` call (BDF order, preconditioner, maximum number of steps). Any other PETSc option can be added in that folder's `solver_options.py`.
+- **Solver settings:** the `solver_options.solver_options(...)` call (BDF order, preconditioner, maximum number of steps). These are defined in `src/TCAT2Phase/numerics/solver_options.py`; pass `monitor=False` to silence the per-step output. Any other PETSc option can be set with `PETSc.Options().setValue(name, value)` before `setup_solver` is called.
 
 ## 6. Repository layout
 
@@ -138,7 +137,7 @@ src/TCAT2Phase/     the package
   state_equations/    equations of state, van Genuchten, Parker–Lenhard hysteresis
   mesh/               1D mesh
   io/                 HDF5 save/load
-applications/       one folder per test case, each with driver scripts and solver_options.py
+applications/       one folder per test case, with its driver scripts
 outputs/            results (.h5) and plotting scripts, one folder per test case
 tests/              pytest unit tests
 HysteresisCharts/   scripts for the hysteresis figures in the dissertation
@@ -175,6 +174,5 @@ Add a test whenever you change the library. In particular, compare any new analy
 |---|---|
 | `ModuleNotFoundError: No module named 'petsc4py'` | The conda environment isn't active. Run `conda activate tcat2p`. |
 | `ModuleNotFoundError: No module named 'TCAT2Phase'` | Run `pip install -e .` from the repo root with the environment active. |
-| `ModuleNotFoundError: No module named 'solver_options'` | You ran a driver from a different folder. `cd` into its test-case folder first. |
 | `FileNotFoundError` from a plotting script | Run the matching driver first, and check that the filename in the script matches the `.h5` file in the `outputs/` folder. |
 | A run seems frozen | Watch the `TS dt ... time ...` lines it prints. If time is still increasing, it is working, just slowly (see Test Case 8). |

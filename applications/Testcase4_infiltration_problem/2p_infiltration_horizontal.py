@@ -1,12 +1,8 @@
 import numpy as np
-from numpy import linalg 
-from petsc4py import PETSc
 import TCAT2Phase
-from TCAT2Phase.numerics import utils
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
-import matplotlib.pyplot as plt
-import solver_options
+from TCAT2Phase.numerics import solver_options
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
@@ -135,7 +131,7 @@ for time,variable in solutions.items():
 
 
 # Export results
-filename = f"2P_test_case_4.h5"
+filename = "2P_test_case_4.h5"
 file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase4_infiltration_problem'/'outputs'
 
 # Save the data to the correct file path

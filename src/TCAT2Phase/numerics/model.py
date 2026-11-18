@@ -3,7 +3,7 @@ import numpy as np
 from . import model_types
 
 __all__ = [
-    "initialize_model"
+    "Model"
 ]
 
 model_options = [

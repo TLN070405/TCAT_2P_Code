@@ -1,9 +1,8 @@
 import TCAT2Phase
 from TCAT2Phase.state_equations import state_equations_interface
 from TCAT2Phase.state_equations import state_equations
-import solver_options
+from TCAT2Phase.numerics import solver_options
 import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 # Domain
@@ -112,15 +111,7 @@ for nodes in (nodes_array):
     solutions = TCAT2Phase.numerics.solver.solver_time(u,ts,model)
 
 
-    for time, variable in solutions.items():
-        plt.plot(mesh.points, variable["p_w"], label=f"t={time}")
-        plt.xlabel(r"$x\, (m)$")
-        plt.ylabel(r"$p_w$")
-        plt.title("equilibrium Solution")
-        plt.legend()
-    #plt.show()
-
-
+    # Add derived variables to the saved results
     for time,variable in solutions.items():
         p_w = variable['p_w']
         e_w=np.zeros([nodes] )
@@ -130,12 +121,6 @@ for nodes in (nodes_array):
             j_wn[n]= -p_w[n]/ 7.20e-2
         variable["e_w"] = e_w
         variable["j_wn"] = j_wn
-        plt.plot(mesh.points,e_w,label=f't={time}')
-        plt.xlabel(r'$x\, (m)$')
-        plt.ylabel(r'$\epsilon^w$')
-        plt.title('Volume fraction vs space')
-        plt.legend()
-    #plt.show()
 
 
 

@@ -3,9 +3,8 @@
 import TCAT2Phase
 from TCAT2Phase.state_equations import state_equations_interface
 from TCAT2Phase.state_equations import state_equations
-import solver_options
+from TCAT2Phase.numerics import solver_options
 import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
@@ -117,7 +116,6 @@ u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 solutions = TCAT2Phase.numerics.solver.solver_time(u, ts, model)
 
 # visualization
-#plt.gca().set_ylim(0.02, 0.41)  # Y-axis limits
 
 for time,variable in solutions.items():
     p_w = variable['p_w']
@@ -130,7 +128,7 @@ for time,variable in solutions.items():
     variable["j_wn"] = j_wn
 
 # Export results
-filename = f"RE_test_case_1.h5"
+filename = "RE_test_case_1.h5"
 file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase1_fully_saturated_system'/'outputs'
 
 # Save the data to the correct file path

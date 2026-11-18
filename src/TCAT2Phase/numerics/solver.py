@@ -1,11 +1,10 @@
 """solver.py"""
 
 import numpy as np
-import petsc4py
 from petsc4py import PETSc
 from . import model_types
 
-__all__ = ["solver"]
+__all__ = ["setup_solver", "solver_time", "solver_error"]
 
 def solver_time(u,ts,model):
     """
@@ -61,7 +60,7 @@ def setup_solver(model):
     ksp = _get_linear_solver(snes)
 
     # PETSc preconditioner
-    pc = _get_preconditioner(ksp)
+    _get_preconditioner(ksp)
 
     # Solve initial conditions (ic are not excplicitly expressed in terms of solution variabes e.g:Neumann BC)
     _solve_ic(da, u, model)

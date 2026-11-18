@@ -12,7 +12,7 @@ import numpy as np
 import TCAT2Phase
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
-import solver_options
+from TCAT2Phase.numerics import solver_options
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 

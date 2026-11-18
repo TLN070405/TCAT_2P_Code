@@ -1,14 +1,10 @@
 import numpy as np
-from numpy import linalg 
 from petsc4py import PETSc
 import TCAT2Phase
-from TCAT2Phase.numerics import utils
 from TCAT2Phase.state_equations import state_equations
 from TCAT2Phase.state_equations import state_equations_interface
 from TCAT2Phase.state_equations import state_equations_hysteresis
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import solver_options
+from TCAT2Phase.numerics import solver_options
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import save_solutions_to_hdf5
 
@@ -206,7 +202,7 @@ for time,variable in solutions.items():
     variable['pc_range']       = pc_range
 
 # Export results
-filename = f"RE_test_case_8.h5"
+filename = "RE_test_case_8.h5"
 file_path = file_path =  Path(__file__).resolve().parent.parent.parent / 'outputs'/ 'Testcase8_complex_displacement_patterns'/'outputs'
 
 # Save the data to the correct file path
