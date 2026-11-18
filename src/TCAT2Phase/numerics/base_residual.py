@@ -37,6 +37,8 @@ class BaseResidual:
         """
         primary_variables = self.compute_primary_variables(u)
 
+        self.model.interface.primary_variables = primary_variables
+
         fluxes = self.compute_phases_fluxes(primary_variables)
 
         for cell in self.mesh.cells:
@@ -47,7 +49,7 @@ class BaseResidual:
 
             od   = self.compute_spatial_operator(primary_variables,fluxes,cell)
             self.compute_time_matrix(primary_variables,fluxes)
-            f[n] = self.compute_residual_equations (udot, od)
+            f[n] = utils.petsc_value(self.compute_residual_equations(udot, od))
 
     def compute_primary_variables(self,u):
         """
@@ -69,8 +71,8 @@ class BaseResidual:
         rho_w = utils.cell_center(primary_variables['p_w'], self.model.w_phase.density_function, mesh)
         rho_n = utils.cell_center(primary_variables['p_n'], self.model.n_phase.density_function, mesh)
 
-        k_rw = utils.cell_center(primary_variables['p_c'], self.model.interface.w_relative_permeability, mesh)
-        k_rn = utils.cell_center(primary_variables['p_c'], self.model.interface.n_relative_permeability, mesh)
+        k_rw = utils.cell_center(primary_variables['p_c'], self.model.w_phase.relative_permeability_function, mesh)
+        k_rn = utils.cell_center(primary_variables['p_c'], self.model.n_phase.relative_permeability_function, mesh)
 
         del_pw = utils.gradient(primary_variables['p_w'], mesh)
         del_pn = utils.gradient(primary_variables['p_n'], mesh)
@@ -113,15 +115,10 @@ class BaseResidual:
         boundary_type = self.model.boundary_type
         boundary_conditions = self.model.boundary_conditions
         u_names = self.model.model.u_names
-        # bc_vlaues is an array of size (number of variables of the formulation)
-        # it is used to store all bc_values of one specific boundary node (0 or nodes-1)
-        # It is used to define the residual as a whole and not one by one.
+
         bc_values = np.zeros(self.model.model.num_u)
-        # fluxes_bc is used to store all fluxes bc, calculated using "u"
-        fluxes_bc = np.zeros(self.model.model.num_u)
-        # bc_type_0 is used to know which one of the bc_values is flux and which one is dirichlet
-        # it is 0 for DIrchlet and 0 for Neumman (q_w or q_n)
-        bc_type0  = np.zeros(self.model.model.num_u)
+        bc_flux = np.zeros(self.model.model.num_u)
+        bc_type  = np.zeros(self.model.model.num_u)
 
         for i, j in enumerate([0, self.model.nodes-1]):
             # Residual at Boundaries left and right
@@ -129,57 +126,44 @@ class BaseResidual:
                 # check if bc are time dependent or just constant bc and store all bc values for node "j"
                 bc_values[n] = self.check_callable_boundary_conditions(boundary_conditions[n][0][i],t)
                 if boundary_type[u_names[n]][0][i] == 0:
-                    # if bc type is Dirichlet than no flux
-                    fluxes_bc[n] = 0
-                    # if bc type is Dirichlet than bc_type0 is 1
-                    bc_type0[n]  = 1
+                    # if bc type is Dirichlet than bc_type[n]  = 0
+                    bc_type[n]  = 0
                 elif boundary_type[u_names[n]][0][i] == 1:
                     # If bc type is 1 or 2 (Neumman) than compute the correspendant flux
-                    fluxes_bc[n] = self.compute_boundary_flux(self.model.w_phase,u)
-                    # bc type0 is 0 here because its Neumman BC
-                    bc_type0[n]  = 0
+                    bc_flux[n] = self.compute_boundary_flux(self.model.w_phase, u, i)
+                    bc_type[n]  = 1
                 elif boundary_type[u_names[n]][0][i] == 2:
                     # Same as line above, just compute q_n flux instead of q_w
-                    fluxes_bc[n] = self.compute_boundary_flux(self.model.n_phase,u)
-                    bc_type0[n]  = 0
+                    bc_flux[n] = self.compute_boundary_flux(self.model.n_phase, u, i)
+                    bc_type[n]  = 1
+                elif boundary_type[u_names[n]][0][i] == 3:
+                    # Same as line above, just compute q_n flux instead of q_w
+                    bc_flux[n] =  (u[j+(1-i)][n] -  u[j-i][n])
+                    bc_type[n]  = 1
                 else:
                     print("Boundary type non supported")
-            # here we combine both the Dirichlet and Neumman bc into one code line
-            # this line computes the residual of all solution variables at boundary node "j"
-            # If we print f[j] we get an array(number of variables) and not one single value
-            #  bc_type0 * u[:][j] +(1-bc_type0) * fluxes_bc : this formula combines Dirichlet and Neumman
-            # And it allows to detect which variable has Dirichlet and which one is Neumman.
-            f[j]= bc_type0 * u[:][j] +(1-bc_type0) * fluxes_bc - bc_values
+            f[:][j]= utils.petsc_value((1-bc_type) * u[:][j] + bc_type * bc_flux - bc_values)
 
-
-    def compute_boundary_flux(self,phase,u):
+    def compute_boundary_flux(self, phase, u, side):
         """
-        function to compute phases fluxes at boundary points
-        """
-        # get primary variables
-        primary_variables  = self.compute_primary_variables(u)
+        Mass flux of a phase next to a boundary, for flux (Neumann) boundary conditions.
 
-        # Cell Centered Variables
-        if phase.phase =='w':
-            rho = utils.cell_center(primary_variables['p_w'], self.model.w_phase.density_function, self.mesh.boundary)
-            k_r = utils.cell_center(primary_variables['p_c'], self.model.interface.w_relative_permeability, self.mesh.boundary)
-            del_p = utils.gradient(primary_variables['p_w'], self.mesh.boundary)
-        elif phase.phase =='n':
-            rho = utils.cell_center(primary_variables['p_n'], self.model.n_phase.density_function, self.mesh.boundary)
-            k_r = utils.cell_center(primary_variables['p_c'], self.model.interface.n_relative_permeability, self.mesh.boundary)
-            del_p = utils.gradient(primary_variables['p_n'], self.mesh.boundary)
-        else:
-            print("phase should be 'n' or 'w'")
-        # Flux
-        q =  state_equations.darcy_velocity(
-                self.mesh.boundary,
-                self.model.solid.permeability,
-                k_r*rho,
-                self.model.phase.viscosity,
-                del_p,
-                rho,
-                self.model.solid.gravity)
-        return  q
+        side: 0 for the left boundary (x = x0), 1 for the right boundary (x = xL).
+
+        Returns the flux at the face between the boundary node and its neighbor,
+        computed exactly as in the interior residual (compute_phases_fluxes), so
+        it uses the same sign convention: q = rho k k_r / mu (dp/dx + rho g).
+        A prescribed value of 0 gives a no-flow boundary.
+        """
+        primary_variables = self.compute_primary_variables(u)
+        fluxes = self.compute_phases_fluxes(primary_variables)
+
+        key = 'q_' + phase.phase
+        if key not in fluxes:
+            raise ValueError(f"This model does not compute a flux for phase '{phase.phase}'")
+
+        face = 1 if side == 0 else self.model.nodes - 1
+        return fluxes[key][face]
 
     def check_callable_boundary_conditions(self,boundary_conditions,t):
         """

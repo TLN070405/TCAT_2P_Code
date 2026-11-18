@@ -26,6 +26,19 @@ def cell_center(x,function,mesh):
         value[cell.ID] = function(x[cell.ID])
     return value
 
+def _scalar(value):
+    """Mesh distances are stored as 1-element arrays; return the plain float."""
+    return float(np.ravel(value)[0])
+
+def petsc_value(value):
+    """
+    Prepare a residual value for assignment into a PETSc DMDA array entry.
+    Single-unknown models (e.g. Richards) have scalar entries, so a 1-element
+    array is unwrapped; multi-unknown models keep the array.
+    """
+    value = np.asarray(value)
+    return value.item() if value.size == 1 else value
+
 def gradient(x,mesh):
     """
     Return the gradient of a value. Should these be at points or cell-centers?=
@@ -35,7 +48,7 @@ def gradient(x,mesh):
         for face,neigh,dist in zip(cell.faces,cell.neighbors,cell.distance):
             if mesh.faces[face].boundary or mesh.faces[face].owner != cell.ID:
                 continue
-            gradient[face] = 1/dist*( x[neigh] - x[cell.ID] )
+            gradient[face] = 1/_scalar(dist)*( x[neigh] - x[cell.ID] )
 
     return gradient
 
@@ -50,6 +63,6 @@ def interpolate(x,mesh):
             if mesh.faces[face].boundary or mesh.faces[face].owner != cell.ID:
                 continue
 
-            value[face] = x[cell.ID] + mesh.faces[face].distance/dist*(x[neigh] - x[cell.ID]  )
+            value[face] = x[cell.ID] + _scalar(mesh.faces[face].distance) / _scalar(dist) * (x[neigh] - x[cell.ID])
 
     return value

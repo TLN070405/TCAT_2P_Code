@@ -73,6 +73,7 @@ class ParkerLenhard:
         self.p_c           = np.zeros(model.nodes)
         self.s_a           = np.zeros(model.nodes)
         self.s_nt_e        = np.zeros(model.nodes)
+        self.primary_variables = {}
         self.imbibition    = imb_interface
         self.drainage      = dr_interface
         self.model         = model
@@ -126,7 +127,7 @@ class ParkerLenhard:
         dsa             = 1./(self.model.solid.porosity-e_wr) +  dsnte
         dsa_hysteretic  = ((sa_reversal_mpc-sa_endpoint_mpc)/(sa_reversal-sa_endpoint))*dsa
 
-        d_pc_hysteretic = e_ws*dsa_hysteretic*interface.d_pc_function(sa_hysteretic)
+        d_pc_hysteretic = e_ws*dsa_hysteretic*interface.d_pc_function(sa_hysteretic * e_ws + e_wr)
 
         return d_pc_hysteretic
 
@@ -233,15 +234,16 @@ class ParkerLenhard:
 
     def linear_effective_entrapped_saturation_nw_ew(self,ew):
         """
-        Linear evolution of effective entrapped nw saturation from Parker Lenhard formula  snt_eff = a * ew + b
+        Effective entrapped nw saturation as a function of the w-phase volume fraction.
+
+        Uses the same linear Parker-Lenhard relation in apparent saturation as
+        linear_effective_entrapped_saturation_nw, snte = a * sa + b, combined with
+        ew = (sa - snte) * (porosity - e_wr) + e_wr. Solving for sa gives
+        snte = (a * x + b) / (1 - a) with x = (ew - e_wr) / (porosity - e_wr),
+        so pc_function is the exact inverse of volume_fraction_function.
         """
-        drainage_process,sa_reversal,sa_endpoint,pc_reversal,pc_endpoint,snte_reversal,snte_endpoint,ew_reversal,ew_endpoint = self.get_data_hysteresis()
-
-        a = (snte_endpoint-snte_reversal)/(ew_endpoint-ew_reversal)
-        b = snte_endpoint - a * sa_endpoint
-        snte = a * ew + b
-
-        return snte
+        a, b, x = self._entrapment_line_in_ew(ew)
+        return (a * x + b) / (1.0 - a)
 
     def d_linear_effective_entrapped_saturation_nw(self,dsa):
         """
@@ -257,16 +259,25 @@ class ParkerLenhard:
 
     def dlinear_effective_entrapped_saturation_nw_ew(self,ew):
         """
-        Linear evolution of effective entrapped nw saturation from Parker Lenhard formula  snt_eff = a * ew + b
-        sa : apparent saturation
+        Derivative of linear_effective_entrapped_saturation_nw_ew with respect to ew.
+        """
+        a, _, _ = self._entrapment_line_in_ew(ew)
+        porosity = self.model.solid.porosity
+        e_wr = self.model.w_phase.residual_volume_fraction
+        return a / ((1.0 - a) * (porosity - e_wr))
+
+    def _entrapment_line_in_ew(self, ew):
+        """
+        Slope a and intercept b of snte = a * sa + b, and x = (ew - e_wr) / (porosity - e_wr).
         """
         drainage_process,sa_reversal,sa_endpoint,pc_reversal,pc_endpoint,snte_reversal,snte_endpoint,ew_reversal,ew_endpoint = self.get_data_hysteresis()
+        porosity = self.model.solid.porosity
+        e_wr = self.model.w_phase.residual_volume_fraction
 
-        a = (snte_endpoint-snte_reversal)/(ew_endpoint-ew_reversal)
+        a = (snte_endpoint-snte_reversal)/(sa_endpoint-sa_reversal)
         b = snte_endpoint - a * sa_endpoint
-        dsnte = a
-
-        return dsnte
+        x = (ew - e_wr) / (porosity - e_wr)
+        return a, b, x
 
     def get_data_hysteresis(self):
         """
@@ -289,7 +300,7 @@ class ParkerLenhard:
     def determine_hysteresis_state(self,switch_condition):
         """
         function to update the current process at each node (drainage or imbibition ) based on 
-        the switch condition (which is different for each node). 
+        the switch condition (which is different for each node).
         If the switch condition is greater than some user defined tolerance (hysteresis_tol), 
         an imbibition process will take place. Else, the current process is a drainage. 
         The theoretical value of  "hysteresis_tol" is zero, but to avoid oscillations 
@@ -344,7 +355,7 @@ class ParkerLenhard:
             self.data.snte_endpoint[n][0] = self.lands_residual_effective_saturation_nw()
             self.data.snte_reversal[n][0] = 0.0
         # if we are on a scanning curve just do "endpoint=reversal" and "reversal= snte calculated from results of ts solver"
-        elif current_path_index is not 0 or 1:
+        else:
             self.data.snte_endpoint[n][0] = self.data.snte_reversal[n][0]
             self.data.snte_reversal[n][0] = snte
 
@@ -398,6 +409,12 @@ class ParkerLenhard:
         nodes = self.model.nodes
         counter  = self.data.counter_hysteresis
         self.data.time[counter] = ts.getTime()
+
+        #Get primary variables from solver
+        self.e_w = self.primary_variables['e_w']
+        self.p_w = self.primary_variables['p_w']
+        self.p_n = self.primary_variables['p_n']
+        self.p_c = self.primary_variables['p_c']
 
         if self.data.switch_condition == 'p_c':
             switch_condition = self.data.pc_hysteresis[:,counter-1] - self.p_c

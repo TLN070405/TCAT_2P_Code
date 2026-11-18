@@ -1,92 +1,75 @@
-import TCAT2Phase
-from TCAT2Phase.state_equations import state_equations_interface
-# Set solid phase properties
-s_phase = TCAT2Phase.properties.phase.Solid('s')
-s_phase.set_porosity(0.448)
+"""Tests for the Brooks-Corey closure relations (state_equations_interface.BrooksCorey)."""
+import numpy as np
+import pytest
 
-# Set wetting-phase properties
-w_phase = TCAT2Phase.properties.phase.Fluid('w')
-w_phase.set_residual_volume_fraction(0.0)
+TOL = 1.0e-12
+PC_ABOVE_ENTRY = [1100.0, 1500.0, 4000.0, 2.0e4]
 
-# Set non-wetting phase properties
-n_phase = TCAT2Phase.properties.phase.Fluid('n')
-n_phase.set_residual_volume_fraction(0.0)
 
-# Set wn-interface properties
-wn_interface = TCAT2Phase.properties.interface.Interface()
+# Regression values: computed by the code before May 2025 and unchanged since.
+def test_volume_fraction_regression(bc_legacy):
+    assert bc_legacy.volume_fraction_w(p_c=100.0) == pytest.approx(0.448, abs=TOL)
 
-pd= 3450
-lamda =4.66
-bc = state_equations_interface.BrooksCorey(
-    pd = pd,
-    lamda = lamda,
-    porosity = s_phase.porosity,
-    e_wr = w_phase.residual_volume_fraction,
-    e_nr = n_phase.residual_volume_fraction,
+
+def test_d_volume_fraction_regression(bc_legacy):
+    assert bc_legacy.d_volume_fraction_w(p_c=100.0) == pytest.approx(0.0, abs=TOL)
+
+
+def test_capillary_pressure_regression(bc_legacy):
+    assert bc_legacy.capillary_pressure(e_w=0.3) == pytest.approx(3760.0341571957747, abs=TOL)
+
+
+def test_d_capillary_pressure_regression(bc_legacy):
+    assert bc_legacy.d_capillary_pressure(e_w=0.3) == pytest.approx(-2689.5809422001253, abs=TOL)
+
+
+def test_relative_permeability_regression(bc_legacy):
+    assert bc_legacy.w_relative_permeability(100.0) == pytest.approx(1.0, abs=TOL)
+    assert bc_legacy.n_relative_permeability(100.0) == pytest.approx(0.0, abs=TOL)
+
+
+# Analytic formula and consistency checks.
+@pytest.mark.parametrize("p_c", PC_ABOVE_ENTRY)
+def test_volume_fraction_matches_analytic_formula(bc_residual, p_c):
+    se = (p_c / 1000.0) ** (-2.0)
+    assert bc_residual.volume_fraction_w(p_c) == pytest.approx(0.03 + se * 0.35, rel=1e-14)
+
+
+@pytest.mark.parametrize("p_c", PC_ABOVE_ENTRY)
+def test_capillary_pressure_inverts_volume_fraction(bc_residual, p_c):
+    assert bc_residual.capillary_pressure(bc_residual.volume_fraction_w(p_c)) == pytest.approx(p_c, rel=1e-10)
+
+
+@pytest.mark.parametrize("p_c", PC_ABOVE_ENTRY)
+def test_d_volume_fraction_matches_finite_difference(bc_residual, fd, p_c):
+    assert bc_residual.d_volume_fraction_w(p_c) == pytest.approx(
+        fd(bc_residual.volume_fraction_w, p_c, 1e-4 * p_c), rel=1e-6
     )
 
-allowable_error = 1.e-12
+
+@pytest.mark.parametrize("e_w", [0.05, 0.15, 0.25, 0.35])
+def test_d_capillary_pressure_matches_finite_difference(bc_residual, fd, e_w):
+    assert bc_residual.d_capillary_pressure(e_w) == pytest.approx(
+        fd(bc_residual.capillary_pressure, e_w, 1e-7), rel=1e-6
+    )
 
 
-def test_w_volume_fraction():
-    """
-    e_w = f(p_c,Van_Genuchten)
-    """
-    w_phase.set_volume_fraction_function(bc.volume_fraction_w)
-    e_w = w_phase.volume_fraction_function(p_c = 100)
-
-    assert abs(e_w - 0.448) <= allowable_error
-
-def test_d_w_volume_fraction():
-    """
-    d_e_w = f(p_c,Van_Genuchten)
-    """
-    w_phase.set_d_volume_fraction_function(bc.d_volume_fraction_w)
-    d_e_w = w_phase.d_volume_fraction_function(p_c = 100)
-
-    assert abs(d_e_w - 0.0) <= allowable_error
-
-def test_capillary_pressure():
-    """
-    p_c = f(e_w,Van_Genuchten)
-    """
-    wn_interface.set_pc_function(bc.capillary_pressure)
-    p_c = wn_interface.pc_function(e_w = 0.3)
-
-    assert abs(p_c - 3760.0341571957747) <= allowable_error
-
-def test_d_capillary_pressure():
-    """
-    d_p_c = f(e_w,Van_Genuchten)
-    """
-    wn_interface.set_d_pc_function(bc.d_capillary_pressure)
-    d_p_c = wn_interface.d_pc_function(e_w = 0.3)
-
-    assert abs(d_p_c - -2689.5809422001253) <= allowable_error
-
-def test_w_relative_permability():
-    """
-    k_rw = f(p_c,Van_Genuchten)
-    """
-    w_phase.set_rel_perm_function(bc.w_relative_permability)
-    k_wr = w_phase.rel_perm_function(100)
-
-    assert abs(k_wr - 1.0) <= allowable_error
-
-def test_n_relative_permability():
-    """
-    k_nw = f(p_c,Van_Genuchten)
-    """
-    n_phase.set_rel_perm_function(bc.n_relative_permability)
-    k_nr = n_phase.rel_perm_function(100)
-
-    assert abs(k_nr - 0.0) <= allowable_error
+@pytest.mark.parametrize("p_c", [0.0, 500.0, 1000.0])
+def test_saturated_below_entry_pressure(bc_residual, p_c):
+    assert bc_residual.volume_fraction_w(p_c) == pytest.approx(0.4 - 0.02)
+    assert bc_residual.d_volume_fraction_w(p_c) == 0.0
+    assert bc_residual.w_relative_permeability(p_c) == 1.0
+    assert bc_residual.n_relative_permeability(p_c) == 0.0
 
 
+def test_capillary_pressure_never_below_entry_pressure(bc_residual):
+    for e_w in np.linspace(0.031, 0.38, 50):
+        assert bc_residual.capillary_pressure(e_w) >= 1000.0
 
-test_w_volume_fraction()
-test_d_w_volume_fraction()
-test_capillary_pressure()
-test_d_capillary_pressure()
-test_w_relative_permability()
-test_n_relative_permability()
+
+def test_relative_permeabilities_in_unit_interval_and_monotone(bc_residual):
+    pcs = np.linspace(1001.0, 2.0e4, 200)
+    k_w = np.array([bc_residual.w_relative_permeability(pc) for pc in pcs])
+    k_n = np.array([bc_residual.n_relative_permeability(pc) for pc in pcs])
+    assert np.all((0 <= k_w) & (k_w <= 1)) and np.all((0 <= k_n) & (k_n <= 1))
+    assert np.all(np.diff(k_w) < 0) and np.all(np.diff(k_n) > 0)

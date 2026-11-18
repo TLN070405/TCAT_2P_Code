@@ -7,7 +7,12 @@ class ResidualTcatCGP(BaseResidual):
     """
     class holds the residual of the system of equations
     """
-
+    def __init__(self, model):
+        # Call the __init__ method of BaseResidual
+        super().__init__(model)
+        self.e_wn_eq = self.get_equilibrium_interfacial_area_array()
+        self.od_dp = np.zeros(3)
+    
     def compute_primary_variables(self,u):
         """
         function to get and compute solution and primary variables for 2 phases SP formulation
@@ -26,10 +31,10 @@ class ResidualTcatCGP(BaseResidual):
         """
         function to calculate phases fluxes
         """
+
         mesh = self.mesh
         gravity = self.model.solid.gravity
-        k = 1./self.model.w_phase.momentum_resistance
-        mu_w = 1.0
+        kw = 1./self.model.w_phase.momentum_resistance
 
         rho_w = utils.cell_center(primary_variables['p_w'], self.model.w_phase.density_function, mesh)
 
@@ -39,7 +44,7 @@ class ResidualTcatCGP(BaseResidual):
 
         rho_w_face = utils.interpolate(rho_w, mesh)
 
-        q_w = state_equations.darcy_velocity(mesh, k, utils.interpolate(k_rw * rho_w, mesh), mu_w, del_pw, rho_w_face, gravity)
+        q_w = state_equations.darcy_velocity(mesh, kw, utils.interpolate(k_rw * rho_w, mesh), 1., del_pw, rho_w_face, gravity)
 
         return {'q_w':q_w,'rho_w':rho_w}
 
@@ -51,11 +56,15 @@ class ResidualTcatCGP(BaseResidual):
         # model parameters
         c_wn = self.model.interface.interfacial_dynamics
         gamma_wn = self.model.interface.interfacial_tension
-        k_hat_wn = self.model.interface.interfacial_area_relaxation
-        e_wn_eq  = self.model.interface.interfacial_area_equilibrium
+        k1_wn_hat = self.model.interface.interfacial_area_relaxation
+        e_wn_eq  = self.e_wn_eq
+
+        # spatial operator array
+        od_dp = self.od_dp
 
         # intermediate calculation parameters
-        dx2 = (1/(cell.length[0]*cell.length[0]))
+        cx= 1.0 / cell.length[0]
+        cx2 = cx*cx
 
         # primary variables
         e_w = primary_variables['e_w']
@@ -65,33 +74,31 @@ class ResidualTcatCGP(BaseResidual):
         w_wn = primary_variables['w_wn']
         k_wn = primary_variables['k_wn']
 
-        # fluxes
-        q_w = fluxes['q_w']
+        qe_up,qj_up,qe_down,qj_down =self.compute_primary_variables_gradient_lax_friedrichs(e_wn, j_wn, w_wn)
 
-        # primary variables gradients
-        d_e_w_d_x, d_e_wn_d_x, d_j_wn_d_x, d_w_wn_d_x = self.compute_primary_variables_gradient(e_w, e_wn, j_wn, w_wn)
-
-        od_dp = np.zeros(3)
         for idx,node in enumerate ([n-1, n, n+1]):
             pw_jwn = p_w[node] + gamma_wn * j_wn[node]
-            od_dp[idx]= c_wn * (pw_jwn)  + gamma_wn * k_hat_wn/(pw_jwn + 1e-3) * (e_wn_eq[node] - e_wn[node])
+            od_dp[idx]= c_wn * (pw_jwn)  - (gamma_wn * k1_wn_hat/p_w[node]) * (e_wn_eq[node] - e_wn[node])
 
-        d2_od_dp = dx2 * ( od_dp[2] - 2 * od_dp[1] + od_dp[0] )
+        d2_od_dp = cx2*( od_dp[2] - 2. * od_dp[1] + od_dp[0] )
 
         # d(ewn*wwn)/dx
-        d_ewn_wwn_dx = w_wn[n] * d_e_wn_d_x[n] + e_wn[n] * d_w_wn_d_x[n]
+        d_ewn_wwn_dx =  cx*(qe_up-qe_down)
 
         #d(jwn*ewn*wwn)/dx = jwn*d(ewn*wwn)/dx + ewn*wwn* djwn/dx
-        d_ewn_jwn_wwn_dx =j_wn[n] * d_ewn_wwn_dx  + e_wn[n] * w_wn[n] * d_j_wn_d_x[n]
+        d_ewn_jwn_wwn_dx = cx*(qj_up-qj_down)
+
+        #d(e_w)/dx
+        d_e_w_d_x = 0.5*cx*(e_w[n+1]-e_w[n-1])
 
         # spatial operators
-        od_w  = 1.0 / cell.length * (q_w[n + 1] - q_w[n])
-        od_ia = k_hat_wn * (e_wn_eq[n] - e_wn[n]) - d_ewn_wwn_dx
-        od_j  = (2/3) * d2_od_dp - 2 * d_ewn_jwn_wwn_dx
-        od_v  = e_w[n] * e_wn[n] * w_wn[n] + od_dp[1] * d_e_w_d_x[n]
-        od_k  = e_w[n] - self.model.interface.volume_fraction_function(e_wn[n], j_wn[n], k_wn[n])
+        od_w  = cx * (fluxes['q_w'][n + 1] - fluxes['q_w'][n])
+        od_ia = -(k1_wn_hat *( p_w[n] + gamma_wn*j_wn[n] )/p_w[n] ) * (e_wn_eq[n] - e_wn[n]) - d_ewn_wwn_dx
+        od_j  = (2./3.) * d2_od_dp - 2. * d_ewn_jwn_wwn_dx
+        od_v  = e_wn[n] * e_wn[n] * w_wn[n] + od_dp[1] * d_e_w_d_x  # (e_wn)^2 w_wn, dissertation Eqn 3.50
+        od_k  = k_wn[n] - self.model.interface.gaussian_curvature(e_w[n], e_wn[n], j_wn[n])
 
-        od =[od_dp[1], od_w[0], od_ia, od_j, od_v, od_k]
+        od =[od_dp[1], od_w, od_ia, od_j, od_v, od_k]
         return od
 
     def compute_time_matrix(self,primary_variables,fluxes):
@@ -110,13 +117,55 @@ class ResidualTcatCGP(BaseResidual):
         self.time_mat[3, 2] = primary_variables['j_wn'][n]
         self.time_mat[3, 3] = primary_variables['e_wn'][n]
 
-    def compute_primary_variables_gradient(self,e_w, e_wn, j_wn, w_wn):
+    def get_equilibrium_interfacial_area_array(self):
         """
-        gradient of primary variables
+        Function to transform the e_wn_eq(x) function to an array to be used directly
+        in discretization of spatial operator.
         """
-        d_e_w_d_x = utils.gradient(e_w, self.mesh)
-        d_e_wn_d_x = utils.gradient(e_wn, self.mesh)
-        d_j_wn_d_x = utils.gradient(j_wn, self.mesh)
-        d_w_wn_d_x = utils.gradient(w_wn, self.mesh)
+        nodes = self.model.nodes
+        e_wn_eq  = np.zeros([nodes])
 
-        return d_e_w_d_x, d_e_wn_d_x, d_j_wn_d_x, d_w_wn_d_x
+        for cell in self.mesh.cells:
+            x = self.model.domain.domain_size[0,0] + cell.ID * cell.length[0]
+            e_wn_eq[cell.ID] = self.model.interface.interfacial_area_equilibrium(x)
+
+        return e_wn_eq
+
+    def compute_primary_variables_gradient_lax_friedrichs(self, e_wn, j_wn, w_wn):
+        """
+        Function to compute gradient of primary variables and limiting the slope.
+        """
+        n = self.model.current_cell
+
+        alpha = max(abs(w_wn[n]), abs(w_wn[n+1]))
+        qe_up   = 0.5 * (w_wn[n] * e_wn[n] + w_wn[n+1] * e_wn[n+1]) - 0.5 * alpha * (e_wn[n+1] - e_wn[n])
+        qj_up = 0.5 * (w_wn[n] * e_wn[n]* j_wn[n] + w_wn[n+1] * e_wn[n+1] * j_wn[n+1]) - 0.5 * alpha * (e_wn[n+1]*j_wn[n+1] - e_wn[n]*j_wn[n])
+        alpha = max(abs(w_wn[n-1]), abs(w_wn[n]))
+        qe_down = 0.5 * (w_wn[n] * e_wn[n] + w_wn[n-1] * e_wn[n-1]) - 0.5 * alpha * (e_wn[n] - e_wn[n-1])
+        qj_down = 0.5 * (w_wn[n] * e_wn[n] * j_wn[n] + w_wn[n-1] * e_wn[n-1] * j_wn[n-1]) - 0.5 * alpha * (e_wn[n]*j_wn[n] - e_wn[n-1]*j_wn[n-1])
+        
+        return qe_up,qj_up,qe_down,qj_down
+
+    def compute_primary_variables_gradient_upwind(self, e_wn, j_wn, w_wn):
+        """
+        Function to compute gradient of primary variables and limiting the slope.
+        """
+        n = self.model.current_cell
+        w_wn_up   = 0.5*(w_wn[n] + w_wn[n+1])
+        w_wn_down = 0.5*(w_wn[n] + w_wn[n-1])
+
+        if w_wn_up>=0:
+            qe_up = w_wn_up*e_wn[n]
+            qj_up = w_wn_up*e_wn[n]*j_wn[n]
+        else:
+            qe_up = w_wn_up*e_wn[n+1]
+            qj_up = w_wn_up*e_wn[n+1]*j_wn[n+1]
+
+        if w_wn_down>=0:
+            qe_down = w_wn_down*e_wn[n-1]
+            qj_down = w_wn_down*e_wn[n-1]*j_wn[n-1]
+        else:
+            qe_down  = w_wn_down*e_wn[n]
+            qj_down = w_wn_down*e_wn[n]*j_wn[n]
+
+        return qe_up,qj_up,qe_down,qj_down

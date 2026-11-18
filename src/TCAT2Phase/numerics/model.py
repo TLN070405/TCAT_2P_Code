@@ -3,7 +3,7 @@ import numpy as np
 from . import model_types
 
 __all__ = [
-    "initialize_model"
+    "Model"
 ]
 
 model_options = [
@@ -11,10 +11,13 @@ model_options = [
         'extended_two_phase',
         'Richards',
         'extended_Richards',
-        'cgp-TCAT'
-                ]
+        'cgp-TCAT',
+        'full-TCAT'
+        ]
 
 form_options = {
+        'full-TCAT' : {'sppijgvk': model_types.FullTCAT('sppijgvk')
+                      },
         'cgp-TCAT' : {'spijvk': model_types.CgpTCAT('spijvk')
                       },
         'extended_two_phase' : {'spp': model_types.ExtendedTwoPhase('spp')
@@ -50,7 +53,6 @@ class Model:
         self.nodes = nodes
         self.mesh = mesh
         self.current_cell = 0
-        self.res = np.zeros_like(self.nodes)
         self.boundary_type = {}
         self.boundary_conditions = {}
         self.initial_conditions = {}
@@ -66,20 +68,13 @@ class Model:
         """
         Select the model class
         """
-        if model_type in model_options:
-            if form in form_options[model_type]:
-                self.model = form_options[model_type][form]
-            else:
-                print(f"Not a valid formulation. Options are {form_options[model_type]}")
-        else:
-            print(f"Not a valid model. Options are {model_options}")
-
-    def get_resolution(self):
-        """
-        Calculate the resolution
-        """
-        for d in range(self.domain.dims):
-            self.res[d] = self.domain.domain_length[d]/(self.nodes[d]-1)
+        if model_type not in model_options:
+            raise ValueError(f"Unknown model_type '{model_type}'. Options are {model_options}")
+        if form not in form_options[model_type]:
+            raise ValueError(
+                f"Unknown form '{form}' for model_type '{model_type}'. "
+                f"Options are {list(form_options[model_type])}")
+        self.model = form_options[model_type][form]
 
     def set_boundary_type(self,boundary_type):
         """

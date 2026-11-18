@@ -7,7 +7,7 @@ from TCAT2Phase.numerics.residual_e2p_spp import ResidualE2pSPP
 from TCAT2Phase.numerics.residual_re_pr import ResidualRePR
 from TCAT2Phase.numerics.residual_ere_sp import ResidualEReSP
 from TCAT2Phase.numerics.residual_tcat_cgp import ResidualTcatCGP
-
+from TCAT2Phase.numerics.residual_full_tcat import ResidualTcatFULL
 
 class BaseModel:
     """
@@ -17,6 +17,17 @@ class BaseModel:
         self.name = None
         self.u_names = []
         self.num_u = 0
+
+class FullTCAT(BaseModel):
+    """
+    Extended two phase model formulation
+    """
+    def __init__(self,form):
+        if form == 'sppijgvk':
+            self.name = 'full-TCAT-sppijgvk'
+            self.u_names = ['e_w','p_w','p_n','e_wn','j_wn','g_wn','w_wn','k_wn']
+            self.num_u = 8
+            self.form_function = form_function.model_formfunction
 
 class CgpTCAT(BaseModel):
     """
@@ -85,7 +96,9 @@ def get_residual_class(model):
     function to get the correct residual depending on model and formulation
     """
     form  = model.model.name
-    if form=="cgp-TCAT-spijvk":
+    if form=="full-TCAT-sppijgvk":
+        return ResidualTcatFULL
+    elif form=="cgp-TCAT-spijvk":
         return ResidualTcatCGP
     elif form=="extended-two-phase-spp":
         return ResidualE2pSPP

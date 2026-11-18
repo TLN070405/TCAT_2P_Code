@@ -1,0 +1,274 @@
+\documentclass{article}
+
+
+\usepackage[english]{babel}
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage[notes]{ctmmath-v3}
+\title{TCAT CGP Variables units}
+
+\begin{document}
+
+\maketitle
+\section{TCAT Constant Gas Pressure 1D}
+The mass-momentum conservation equation is:
+\begin{equation}
+\pdt{\lrp{\ew \raw}}
+-\pd{}x\lrb{\raw\ew^2 (\hsR^w_w)^{-1}
+\lrp{\pd\paw x-\raw g_x^w}}
+=0
+\;,
+\label{eq:TpMP1d}
+\end{equation}
+The volume fraction:
+\begin{equation}
+\pdt{\ew}
+-\dbs{\hat c}\wn\lrp{\paw+\iftma\wn J_n^\wn}
+-\lrp{\frac{\iftma\wn\hsk^\wn}{\paw+\iftma\wn J_n^\wn}}
+  \lrp{\sdats\gke\wn{\rm{eq}}-\ewn}
+=0\;,
+\label{eq:swev}
+\end{equation}
+The fluid-fluid interfacial area: 
+\begin{equation}
+ \pdt\ewn
++J_n^\wn\pdt{\ew}
++\pd{}x\lrp{\ewn w_x^\wn} 
+-\hsk^\wn\lrp{\sdats\gke\wn{\rm{eq}}-\ewn}
+=0\;,
+\label{eq:ewnev1d}
+\end{equation}
+Mean curvature of the fluid-fluid interface:
+\begin{equation}
+\pdt {\lrp{\ewn J_n^\wn}}
++2K_n^\wn \pdt\ew
++2\pd{}x\lrp{\ewn w_x^\wn J_n^\wn}
+-\frac 23\pdn 2{}x\lrp{\pdt\ew}
+=0\;,
+\label{eq:TpJ1d}
+\end{equation}
+The normal interface velocity:
+\begin{equation}
+\ewn^2 w_x^\wn\approx
+-\pdt\ew\pd \ew x\;.
+\label{eq:Tp-w1d}
+\end{equation}
+A linear geometric state equation for \(\ew\) can be expressed as next (from TCAT Simulator document page 4):
+\begin{equation}
+\ew=\gke-\lrp{b_0{D}\lrp{\ewn+\ens}+b_1{D^2}\lrp{-\ewn{J_n^\wn}+\ens{J_s^\ns}}+{b_2} {D^3}\lrp{\ewn{K_n^\wn}+\ens{K_n^\ns}}},
+\label{eq:Tp-igeos-linear}
+\end{equation}
+Where:
+\begin{equation}
+D=\frac{6\gke}{\ews+\ens},
+\label{eq:Tp-igeos-linear-D}
+\end{equation}
+The unknowns vector contains:
+\begin{equation}
+\set U = \lrp{\ew, \paw, \ewn, J_n^\wn, K_n^\wn, w_x^\wn} 
+\label{eq:U_simplified}
+\end{equation}
+\pagebreak
+\section{Variables units}
+Tables \ref{tablespace_time}, \ref{table1}, \ref{table2} and \ref{table3} show the units of variables of the TCAT system, which will be used later to do the LBM units conversions.
+\begin{table}[h!]\centering
+ \begin{tabular}{ c c  c c} 
+ \hline
+Variable   & Generic unit &  Unit (SI) \\  [1ex]
+ \hline
+\( x\)  &  L  & m   \\
+\(t\)  &  \( T\)  & s    \\[1ex] 
+ \hline
+ \end{tabular}
+ \caption{TCAT CGP independent variables units}
+\label{tablespace_time}
+\end{table}
+
+
+
+ \begin{table}[h!]
+\centering
+ \begin{tabular}{ c c  c c} 
+ \hline
+Variable   & Generic unit &  Unit (SI) \\  [1ex]
+ \hline
+\( \ew\)  &  -  & -    \\
+\( \paw\)  &  \( {F}/{L^2}\)  & Pa    \\
+\( \ewn\)  &  \( {1}/{L}\)  & \( {1}/{m}\)  \\
+\( J_n^\wn\)  &  \( {1}/{L}\)  & \( {1}/{m}\)  \\
+\(K_n^\wn\)  &  \( {1}/{L^2}\)  & \( {1}/{m^2}\)  \\
+\(w_x^\wn\)  &  \( {L}/{T}\)  & \( {m}/{s}\)  \\[1ex] 
+ \hline
+ \end{tabular}
+ \caption{TCAT CGP solution variables units}
+\label{table1}
+\end{table}
+
+
+ \begin{table}[h!]
+\centering
+ \begin{tabular}{ c c  c c} 
+ \hline
+Variable   & Generic unit &  Unit (SI) \\  [1ex]
+ \hline
+  \(\gke\)     &  \(-\)  & \(-\) \\
+ \(\ens\)     &  \( {1}/{L}\)  & \( {1}/{m}\) \\
+ \(\ews\)     &  \( {1}/{L}\)  & \( {1}/{m}\) \\ 
+\({J_s^\ns}\)   &  \( {1}/{L}\)  & \( {1}/{m}\)  \\
+\({K_n^\ns}\)  &  \( {1}/{L^2}\)  & \( {1}/{m^2}\)  \\
+\(D\)  &  \( {L}\)  & \( {m}\)  \\
+\(b_0\)  &  \( -\)  & \( -\)  \\
+\(b_1\)  &  \( -\)  & \( -\)  \\
+\(b_2\)  &  \( -\)  & \( -\)  \\[1ex]  
+ \hline
+ \end{tabular}
+ \caption{Equation 6 variables units}
+\label{table2}
+\end{table}
+
+ \begin{table}[h!]
+\centering
+ \begin{tabular}{ c c  c c} 
+ \hline
+Variable   & Generic unit &  Unit (SI) \\  [1ex]
+ \hline
+ \(\hsR^w_w\)     &  \( (F\times T)/L^4 \)  & \( (N\times s)/m^4 \) \\
+ \(\iftma\wn\)     &  \(  F/L\)  & \(N/m \) \\ 
+\(\hsk^\wn\)   &  \( 1/T \)  & \(1/s  \)  \\
+\(\dbs{\hat c}\wn \)  &  \( L^2/(F\times T)\)  & \( m^2/(N\times s)\)  \\[1ex] 
+ \hline
+ \end{tabular}
+ \caption{Constants units}
+\label{table3}
+\end{table}
+\pagebreak
+\section{LBM units conversion}
+To convert LBM units to physical units (SI units), we need the scaling factors and the values of variables in LBM units. For the scaling factors we have from Bruning's paper (Bruning-Miller-19 Toward a New Generation of Two-Fluid Flow Models Based on the Thermodynamically-Constrained Averaging Theory 2019):
+\begin{equation}
+C_L=1.5 \times 10^{-5} \quad \frac{m}{lbm_L}
+\label{eq:C_L}
+\end{equation}
+\begin{equation}
+C_{\rho}=1.429 \times 10^{3} \quad \frac{kg/m^3}{lbm_{\rho}}
+\label{eq:C_rho}
+\end{equation}
+\begin{equation}
+C_{T}=1.680\times 10^{-5} \quad \frac{s}{lbm_{T}}
+\label{eq:C_T}
+\end{equation}
+Now, to get the physical units, we use the formula:
+\begin{equation}
+physical_{unit}=Scaling_{factor}*lbm_{unit}
+\label{eq:scaling_lbm}
+\end{equation}
+Let's now, for example, do the conversion of \(K_n^\wn\); because we have only the main scaling factors of time, space, and density, we need to get the scaling factor for \(K_n^\wn\) by combining these main factors. First from Table \ref{table1}  we have \([K_n^\wn]=1/m^2\), so the scaling factor is:
+\begin{equation}
+C_{K_n^\wn}=1/{C_L}^2=4444444444.44
+\label{eq:C_Kwn}
+\end{equation}
+Besides this factor, we also need the value of \(K_n^\wn\) in LBM units. The same steps apply to any variable:
+\begin{equation}
+C_{\ewn}=C_{\ens}=C_{\ews}=C_{J_n^\wn}=1/{C_L}=66666.66
+\label{eq:C_ewn}
+\end{equation}
+\begin{equation}
+C_{\paw}=\frac{C_{\rho}{C_L}^3}{{C_T}^2C_L} =\frac{C_{\rho}{C_L}^2}{{C_T}^2}=1139.19
+\label{eq:C_pw}
+\end{equation}
+\begin{equation}
+C_{w_x^\wn}={C_L}/{C_T}=0.8928
+\label{eq:C_wxwn}
+\end{equation}
+\pagebreak
+\section{Variables ranges}
+In this section, we will try to define the ranges of the six unknowns \(\lrp{\ew, \paw, \ewn, J_n^\wn, K_n^\wn, w_x^\wn}\) using Bruning data and converting these into SI units. First, we get the data's max and min values in LBM units. After that, we do the conversion. The table \ref{table:5} resumes the min and max of variables, but we did some corrections based on the ``Finney 100223.R" code, which mentions that some values need to be nondimensionalized and corrected. The corrections are:
+\begin{equation}
+{\ewn}=D_1 {\ewn}  \quad \textrm{Where} \quad D_1=5.8383194202938036 
+\label{eq:ewn_correction}
+\end{equation}
+\begin{equation}
+{\ens}=D_1 {\ens} 
+\label{eq:ens_correction}
+\end{equation}
+\begin{equation}
+{J_n^\wn}=D_2 {J_n^\wn}  \quad \textrm{Where} \quad D_2=120 
+\label{eq:Jwn_correction}
+\end{equation}
+ \begin{table}[h!]
+\centering
+ \begin{tabular}{ c c  c c} 
+ \hline
+Variable   & min (LBM units) &  max (LBM units)\\  [1ex]
+ \hline
+\( \ew\)  &  0.05 \(\times \gke \)  & 0.9\(\times \gke \)   \\
+\( \paw\)  &  0.32848 & 0.3326    \\
+\( \ewn\)  &  0.02\( \times D_1 \) & 0.16 \( \times D_1 \) \\
+\( J_n^\wn\)  &  0.065 \( \times D_2 \)& 0.13\( \times D_2 \)  \\
+\(K_n^\wn\)  &  0  &\( 10^{19}\)  \\
+\(w_x^\wn\)  & 0.000005   & 0.000055 \\
+\(\ews\)  &  0.12 \( \times D_1 \) & 0.56 \( \times D_1 \)\\
+\(\ens\)  &  0.02 \( \times D_1 \) & 0.44 \( \times D_1 \)\\[1ex] 
+ \hline
+ \end{tabular}
+ \caption{TCAT CGP solution variables ranges lbm}
+\label{table:5}
+\end{table}
+For \(K_n^\wn\), the values from data are for sure nondimensionalized, so we will not consider them (we used a range of [0,1] instead). 
+
+ \begin{table}[h!]
+\centering
+ \begin{tabular}{ c c  c c} 
+ \hline
+Variable   & min (SI units) &  max (SI units)\\  [1ex]
+ \hline
+\( \ew\)  &  0.018   & 0.324  \\
+\( \paw\)  &  374.20 & 378.89  \\
+\( \ewn\)  &  7784.42 & 62275.40 \\
+\( J_n^\wn\)  &  519999.94& 1039999.89 \\
+\(K_n^\wn\)  &  0  & 4444444444.44  \\
+\(w_x^\wn\)  & 0.000004464   & 0.000049104 \\
+\(\ews\)  &  46706.55 & 217963.90\\
+\(\ens\)  &  7784.42 & 171257.35\\[1ex] 
+ \hline
+ \end{tabular}
+ \caption{TCAT CGP solution variables ranges SI}
+\label{table:6}
+\end{table}
+\pagebreak
+\section{Formula for \(\ens\) and \(\ews\) based on Finney Pack}
+For a Finney pack homogeneous system with spheres, we have:
+\begin{equation}
+{\epsilon}^s=  \ens+\ews= (spheres \quad number  \quad \times \quad  sphere  \quad area) /  (system \quad   volume )
+\label{eq:es_formula}
+\end{equation}
+From our data, the number of spheres=4021, the system's volume is V=0.024*0.024*0.024 \(m^3\). Then:
+\begin{equation}
+{\epsilon}^s=(4021 \times 4  \pi r^2)/V 
+\label{eq:es_formula}
+\end{equation}
+We know that:
+\begin{equation}
+\textrm{When} \quad  \ew=0 \quad \textrm{Then} \quad \ens={\epsilon}^s=(4021 \times 4  \pi r^2)/V 
+\label{eq:ens_ew0}
+\end{equation}
+\begin{equation}
+\textrm{When} \quad  \ew=\gke \quad \textrm{Then} \quad \ens=0
+\label{eq:ens_ewe}
+\end{equation}
+Between these two values, we can build a linear relation:
+\begin{equation}
+\ens= \frac{(4021 \times 4  \pi r^2)/V - 0 }{0-\gke}\ew+(4021 \times 4  \pi r^2)/V
+\label{eq:ens_linear}
+\end{equation}
+Additionally,  \(\ews\) can also be calculated:
+\begin{equation}
+\ews={\epsilon}^s-\ens= \frac{(4021 \times 4  \pi r^2)/V }{\gke}\ew
+\label{eq:ews_linear}
+\end{equation}
+
+\end{document}
+

@@ -6,7 +6,6 @@ from TCAT2Phase.numerics import utils
 def model_formfunction(snes,U,F,model):
     """
     residual function to solve boundary conditions in case we have flux bc
-    tm: stands for traditional model.
     """
     da=snes.getDM()
     localU=da.getLocalVec()
@@ -35,7 +34,7 @@ def model_formfunction_internal(f,u,model):
         for n_u,u_name in enumerate(model.model.u_names):
             initial_conditions[n_u] = model.initial_conditions[u_name](x)
 
-        f[n] = u[:][n] - initial_conditions
+        f[n] = utils.petsc_value(u[:][n] - initial_conditions)
 
 
 

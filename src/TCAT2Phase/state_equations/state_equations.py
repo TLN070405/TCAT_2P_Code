@@ -53,5 +53,5 @@ def darcy_velocity(mesh, k, k_r, mu, del_p, rho, g):
     for face in mesh.faces:
         if face.boundary:
             continue
-        q[face.ID] = k * k_r[face.ID] / mu * (del_p[face.ID] - rho[face.ID] * g)
+        q[face.ID] = k * k_r[face.ID] / mu * (del_p[face.ID] + rho[face.ID] * g)
     return q

@@ -58,7 +58,7 @@ class TraditionalInterface(Interface):
 
     def set_n_relative_permeability(self,n_relative_permeability,**parameters):
         """
-        Set density
+        Set relative permeability of non wetting phase
         """
         return partial(n_relative_permeability,**parameters)
 
@@ -77,3 +77,17 @@ class TCATInterface(Interface):
         self.interfacial_tension = interfacial_tension
         self.interfacial_area_relaxation = interfacial_area_relaxation
         self.interfacial_area_equilibrium = interfacial_area_equilibrium
+        self.gaussian_curvature = self.set_gaussian_curvature_function(tcat.gaussian_curvature)
+        self.n_relative_permeability = self.set_n_relative_permeability(tcat.n_relative_permeability)
+
+    def set_gaussian_curvature_function(self,gaussian_curvature,**parameters):
+        """
+        Set gaussian curvature function from linear geometric relation
+        """
+        return partial(gaussian_curvature,**parameters)
+
+    def set_n_relative_permeability(self,n_relative_permeability,**parameters):
+        """
+        Set relative permeability of non wetting phase
+        """
+        return partial(n_relative_permeability,**parameters)

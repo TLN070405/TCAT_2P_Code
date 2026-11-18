@@ -4,3 +4,26 @@
 *.html
 *.DS_Store
 *.so
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+*.icloud
+# simulation results: regenerate by running the drivers
+outputs/*/outputs/
+*.o
+~$*
+# OtherApps: keep code, scripts, figures and results; the repo is public, so
+# no third-party papers or personal documents
+OtherApps/**/*.pdf
+OtherApps/**/*.docx
+# coursework kept in this folder but not part of the research code
+Basic_Dev_Python/
+Basic_Dev_Python.zip
+Basic_Dev_JQR/
+Senior_Dev_JQR_DS/
+*.aux
+*.synctex.gz
+OtherApps/**/*.log
+OtherApps/**/*.out
