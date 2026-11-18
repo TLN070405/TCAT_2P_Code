@@ -163,12 +163,21 @@ pytest -m slow    # also runs the Test Case 1-4 driver scripts, about 5-10 minut
 | `test_hdf5_io.py` | Saving and loading results |
 | `test_solver.py` | Small RE and two-phase problems solved with PETSc, checked against hydrostatic equilibrium |
 | `test_drivers.py` (slow) | Runs the real driver scripts in a temporary folder, so `outputs/` is never overwritten |
+| `test_benchmarks.py` | Literature benchmarks. Fast: the McWhorter & Sunada (1990) exact two-phase solution is checked against its own integral equation and an independent finite-difference solve. Slow: 2P-TM vs that exact solution for Szymkiewicz (2007) Example 1 (error and grid convergence), and RE for Tocci et al. (1997) Problem A (front position and Celia-style mass balance) |
 
 To document a known bug without fixing it yet, mark its test `@pytest.mark.xfail(strict=True, reason=...)`. Once the bug is fixed, pytest reports the test as an unexpected pass, which is the reminder to remove the marker.
 
 Add a test whenever you change the library. In particular, compare any new analytic derivative against a finite difference, as the existing tests do.
 
-## 8. Troubleshooting
+## 8. Known issues
+
+- **Sign of the Gaussian-curvature term in the TCAT curvature equation.** The code has −2K·∂εw/∂t (`residual_tcat_cgp.py`, `residual_full_tcat.py`), as did the original code behind the published results. The Overleaf design notes and dissertation Eq. 3.49 give +2K when written with the non-wetting-side curvature Jn that the code uses. With +2K, the Test Case 5 defense drainage run fails at t ≈ 108 s, so this is unresolved rather than a simple fix.
+- **Incompressible two-phase runs with no-flow boundaries for both phases fail on the first time step** (2P-TM, both formulations). Giving the air phase its physical compressibility makes the `pp` formulation run; `sp` still fails. Found by the Szymkiewicz benchmark.
+- **The slow Tocci Problem A benchmarks have not yet been run to completion**, so their tolerances are unverified.
+- **Relative permeability is not hysteretic.** Test Case 8 uses the main drainage curve's k_r on scanning curves as well.
+- **Face mobility is averaged, not upwinded**, which matches the original code but may cause trouble at sharp fronts.
+
+## 9. Troubleshooting
 
 | Symptom | Cause and fix |
 |---|---|
