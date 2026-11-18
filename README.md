@@ -81,14 +81,14 @@ Start with Test Cases 1–4 to confirm everything works before trying the longer
 | Slides | Drivers | Plot script (in `outputs/<case>/postprocessing/`) | Matches the original code to |
 |---|---|---|---|
 | 9–12 (RE vs TCAT CGP) | `re_drainage_defense.py`, `tcat_cgp_drainage_defense.py`, `re_imbibition_defense.py`, `tcat_cgp_imbibition_defense.py` | `plot_results_defense_re_cgp.py` | RE about 1e-12; TCAT CGP within 0.3% of each variable's change |
-| 16–21 (2P-TM vs full TCAT) | `2p_drainage_defense.py`, `tcat_full_drainage_defense.py`, `2p_imbibition_defense.py`, `tcat_full_imbibition_defense.py` | `plot_results_defense_2p_tcat.py` | 2P-TM 1e-10 to 1e-7; full TCAT not yet checked |
+| 16–21 (2P-TM vs full TCAT) | `2p_drainage_defense.py`, `tcat_full_drainage_defense.py`, `2p_imbibition_defense.py`, `tcat_full_imbibition_defense.py` | `plot_results_defense_2p_tcat.py` | 2P-TM 1e-10 to 1e-7; full TCAT about 1e-9 |
 
 The defense results were produced with earlier standalone Cython codes. The new drivers copy two quirks of those codes on purpose, so the slides can be reproduced. Each is flagged at the top of the driver:
 
 - `REPRODUCE_DEFENSE_KRW = True` in the RE drivers: the original code evaluated the RE relative permeability at the volume fraction instead of the capillary pressure, which made k_rw = 1. Set it to `False` for the correct Van Genuchten k_rw.
 - `MONITOR_NODE` in the 2P/full-TCAT drivers: because of an indexing slip, the original code recorded its normalized time history at x = 0.25 m (2P-TM) and x = 0.375 m (full TCAT), not the midpoint.
 
-The full-TCAT defense runs are memory-hungry; run them one at a time.
+Run times on the tested Mac: RE under 1 min, TCAT CGP 2–3 min, 2P-TM 1–35 min, full TCAT 8–15 min. Each needs under 100 MB of memory.
 
 **Test Case 8** simulates 3000 s of repeated drainage and imbibition, with Parker–Lenhard hysteresis, van Genuchten closure relations, and Land's model for entrapment. The solver takes very small time steps (about 0.002 s early in the run), so a full run takes well over 15 minutes (it was not run to completion when these instructions were tested), and its output file is large (the 2P result is about 160 MB). To try it quickly, shorten the run by editing `time_values` and `pw_values` in `pw0_bc()` and the simulation times passed to `model.set_simulation_time(...)`.
 
