@@ -42,16 +42,26 @@ def diffusivity(S, bc=None):
     return -(K * k_rn * f / MU_N) * dpc_ds
 
 
-def run(nodes, t_end=T_FINAL, bdf_order=2, form="pp", monitor=False, air_compressibility=0.0):
-    """Solve with the 2P-TM pp formulation; return (x, S_w) at t_end."""
+def run(nodes, t_end=T_FINAL, bdf_order=2, form="pp", monitor=False, air_compressibility=0.0, options=None,
+        no_flow="conservative", mobility="arithmetic"):
+    """Solve with the 2P-TM pp or sp formulation; return (x, S_w) at t_end.
+
+    options:  extra PETSc options {name: value}, applied after the defaults below.
+    no_flow:  how the x = L no-flow condition is imposed: "conservative" (boundary
+              types 4/5: half-cell mass balance with zero outer flux) or
+              "algebraic" (types 1/2: zero flux on the face next to the boundary).
+    mobility: face mobility weighting, "arithmetic" or "upwind".
+    """
     domain = TCAT2Phase.properties.domain.initialize_domain(dims=1, domain_size=np.array([[0.0, LENGTH]]))
     mesh = TCAT2Phase.mesh.grid.Mesh()
     mesh.uniform_mesh_1d(domain, nodes)
     model = TCAT2Phase.numerics.model.Model(model_type="two_phase", form=form, domain=domain, nodes=nodes, mesh=mesh)
     first = "p_w" if form == "pp" else "e_w"
     second = "p_n" if form == "pp" else "p_w"
-    # x = L: no flow of water (type 1) or of the non-wetting phase (type 2)
-    model.set_boundary_type({first: [[0, 1]], second: [[0, 2]]})
+    # x = L: no flow of water (type 1 or 4) or of the non-wetting phase (type 2 or 5)
+    tw, tn = (4, 5) if no_flow == "conservative" else (1, 2)
+    model.set_boundary_type({first: [[0, tw]], second: [[0, tn]]})
+    model.mobility_weighting = mobility
 
     solid = TCAT2Phase.properties.phase.Solid("s", porosity=PHI, permeability=K, gravity=0.0,
                                                dynamic_capillary_pressure_parameter=None)
@@ -84,6 +94,8 @@ def run(nodes, t_end=T_FINAL, bdf_order=2, form="pp", monitor=False, air_compres
     for key, val in [("snes_fd_color", None), ("ts_type", "bdf"), ("ts_bdf_order", bdf_order),
                      ("ts_max_steps", 100000), ("ts_max_reject", 500), ("ts_max_snes_failures", 10000),
                      ("ts_rtol", 1.0e-6), ("ts_atol", 1.0e-6), ("pc_type", "lu")]:
+        opts.setValue(key, val)
+    for key, val in (options or {}).items():
         opts.setValue(key, val)
     if monitor:
         opts.setValue("ts_monitor", None)

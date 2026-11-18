@@ -63,6 +63,15 @@ class Model:
         self.n_phase = None
         self.interface = None
         self.hysteresis = False
+        # Face mobility k_r*rho/mu between two nodes: 'arithmetic' (average of the
+        # two nodes, the published default) or 'upwind' (phase-wise upstream node,
+        # chosen from the sign of the phase potential gradient).
+        self.mobility_weighting = "arithmetic"
+        # Consistent initialization: take one tiny backward-Euler step before the
+        # BDF integration so algebraic variables (e.g. the pressure of an
+        # incompressible two-fluid system) start on the constraint manifold.
+        # None = automatic (two_phase with both fluids incompressible), or True/False.
+        self.consistent_initialization = None
 
     def select_model(self, model_type, form):
         """

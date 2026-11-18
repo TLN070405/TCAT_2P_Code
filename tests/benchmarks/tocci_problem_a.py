@@ -73,7 +73,7 @@ def mass_balance(solutions, model):
     """
     Celia et al. (1990) Eq. (11): MB(t) = (mass gained in the interior cells) /
     (time-integrated net boundary inflow), using the solver's own face fluxes.
-    The flux integral uses the trapezoid rule over the output times.
+    The flux integral uses Simpson's rule over the output times (cumulative_integral).
     """
     residual = TCAT2Phase.numerics.residual_re_pr.ResidualRePR(model)
     times = sorted(solutions)
@@ -87,8 +87,26 @@ def mass_balance(solutions, model):
         # residual convention: d(rho e_w)/dt = (q[n+1] - q[n]) / dx, so interior gain rate = q[N-1] - q[1]
         inflow.append(q[model.nodes - 1] - q[1])
     mass, inflow, t = np.array(mass), np.array(inflow), np.array(times)
-    cumulative_inflow = np.concatenate([[0.0], np.cumsum(0.5 * (inflow[1:] + inflow[:-1]) * np.diff(t))])
-    return t, (mass - mass[0]), cumulative_inflow
+    return t, (mass - mass[0]), cumulative_integral(inflow, t)
+
+
+def cumulative_integral(y, t):
+    """
+    int_t[0]^t[k] y dt for every k: composite Simpson's rule at even k (pairs
+    of intervals), plus a trapezoid for the last interval at odd k. Simpson's
+    rule makes the quadrature error small next to the solver's own mass error.
+    """
+    out = np.zeros_like(y, dtype=float)
+    for k in range(1, len(y)):
+        if k % 2 == 0:
+            h0, h1 = t[k - 1] - t[k - 2], t[k] - t[k - 1]
+            if np.isclose(h0, h1):
+                out[k] = out[k - 2] + h0 / 3.0 * (y[k - 2] + 4.0 * y[k - 1] + y[k])
+            else:
+                out[k] = out[k - 1] + 0.5 * (y[k] + y[k - 1]) * h1
+        else:
+            out[k] = out[k - 1] + 0.5 * (y[k] + y[k - 1]) * (t[k] - t[k - 1])
+    return out
 
 
 def front_position(z, p_w, psi_level=-5.0):
