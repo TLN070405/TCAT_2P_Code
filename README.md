@@ -73,7 +73,7 @@ Every row ran to completion on the tested setup except the Test Case 4 TCAT CGP 
 | 6 Main imbibition | `re_imbibition_mic.py`, `2p_imbibition_mic.py`, `tcat_cgp_imbibition.py`, `tcat_full_imbibition.py` | 2–5 min; full TCAT ≈ 8 min |
 | 7 Non-equilibrium capillary pressure | `ere_malgorzata.py`, `e2p_malgorzata.py` (each runs three values of τ) | 7–14 min |
 | 8 Hysteresis and entrapment | `re_malgorzata_hysteresis_entrapment_pdc.py`, `2p_malgorzata_hysteresis_entrapment_pdc.py` | **very long** (see below) |
-| Chapter 5 validation (`Chapter5_validation/`) | `2p_kees_miller_drainage.py` (Kees & Miller 2002 Problem HD, Tables 5.2–5.3), `2p_szymkiewicz_imbibition.py` (Szymkiewicz 2007 Example 1, Tables 5.4–5.5) | drainage ≈ 3 min, imbibition ≈ 9 min |
+| Chapter 5 validation (`Chapter5_validation/`) | `2p_kees_miller_drainage.py` (Kees & Miller 2002 Problem HD, Tables 5.2–5.3), `2p_szymkiewicz_imbibition.py` (Szymkiewicz 2007 Example 1, Tables 5.4–5.5) | drainage ≈ 3 min, imbibition ≈ 9 min (CPU time; measured on a busy machine, where wall-clock was 9 and 30 min) |
 
 Start with Test Cases 1–4 to confirm everything works before trying the longer runs.
 
