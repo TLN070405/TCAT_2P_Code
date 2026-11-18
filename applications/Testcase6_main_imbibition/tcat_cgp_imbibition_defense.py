@@ -54,7 +54,10 @@ wn_interface = TCAT2Phase.properties.interface.TCATInterface(
     interfacial_dynamics=6.398675e-05,
     interfacial_tension=7.20e-2,
     interfacial_area_relaxation=1.003597e-10,
-    interfacial_area_equilibrium=lambda x: EWN_BOUNDARY)
+    interfacial_area_equilibrium=lambda x: EWN_BOUNDARY,
+    # Legacy -2K sign of the Gaussian-curvature term, as in the code behind the
+    # defense results; the library default is the theory value +1 (README, section 8).
+    gaussian_curvature_sign=-1)
 
 model.set_model_phases(s_phase, w_phase, None, wn_interface)
 

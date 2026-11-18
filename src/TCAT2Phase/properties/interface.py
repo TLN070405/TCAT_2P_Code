@@ -70,9 +70,19 @@ class TCATInterface(Interface):
     def __init__(self,tcat,interfacial_dynamics,
                            interfacial_tension,
                            interfacial_area_relaxation,
-                           interfacial_area_equilibrium):
+                           interfacial_area_equilibrium,
+                           gaussian_curvature_sign=1.0):
         # tcat in the inputs is similar to psk relations in 2P model and it contains closure relations.
         super().__init__(tcat)
+        # Sign s of the Gaussian-curvature term in the mean-curvature equation,
+        #   e_wn dJ/dt + J de_wn/dt + s*2K de_w/dt = ...
+        # with J the curvature seen from the non-wetting phase (p_c = gamma*J > 0).
+        # s = +1 is the theory (Gray, Shepherd & Miller curvature-evolution manuscript,
+        # Eqns 87/89 with de_n/dt = -de_w/dt and J_w = -J_n; dissertation Eqn 3.49).
+        # s = -1 reproduces the original code behind the dissertation/defense results.
+        if gaussian_curvature_sign not in (1, -1):
+            raise ValueError("gaussian_curvature_sign must be +1 (theory) or -1 (legacy)")
+        self.gaussian_curvature_sign = float(gaussian_curvature_sign)
         self.interfacial_dynamics = interfacial_dynamics
         self.interfacial_tension = interfacial_tension
         self.interfacial_area_relaxation = interfacial_area_relaxation

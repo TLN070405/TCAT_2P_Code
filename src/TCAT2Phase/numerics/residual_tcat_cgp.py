@@ -113,7 +113,8 @@ class ResidualTcatCGP(BaseResidual):
         self.time_mat[1, 1] = primary_variables['e_w'][n] * d_rho_w_p_w
         self.time_mat[2, 0] = primary_variables['j_wn'][n]
         self.time_mat[2, 2] = 1
-        self.time_mat[3, 0] = -2*primary_variables['k_wn'][n]
+        # +2K de_w/dt (theory) or -2K (legacy), see TCATInterface.gaussian_curvature_sign
+        self.time_mat[3, 0] = 2.*self.model.interface.gaussian_curvature_sign*primary_variables['k_wn'][n]
         self.time_mat[3, 2] = primary_variables['j_wn'][n]
         self.time_mat[3, 3] = primary_variables['e_wn'][n]
 
