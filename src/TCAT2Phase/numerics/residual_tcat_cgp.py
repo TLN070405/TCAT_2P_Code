@@ -95,7 +95,7 @@ class ResidualTcatCGP(BaseResidual):
         od_w  = cx * (fluxes['q_w'][n + 1] - fluxes['q_w'][n])
         od_ia = -(k1_wn_hat *( p_w[n] + gamma_wn*j_wn[n] )/p_w[n] ) * (e_wn_eq[n] - e_wn[n]) - d_ewn_wwn_dx
         od_j  = (2./3.) * d2_od_dp - 2. * d_ewn_jwn_wwn_dx
-        od_v  = e_w[n] * e_wn[n] * w_wn[n] + od_dp[1] * d_e_w_d_x
+        od_v  = e_wn[n] * e_wn[n] * w_wn[n] + od_dp[1] * d_e_w_d_x  # (e_wn)^2 w_wn, dissertation Eqn 3.50
         od_k  = k_wn[n] - self.model.interface.gaussian_curvature(e_w[n], e_wn[n], j_wn[n])
 
         od =[od_dp[1], od_w, od_ia, od_j, od_v, od_k]
