@@ -36,7 +36,7 @@ DRIVERS = [
     ("Testcase4_infiltration_problem", "re_infiltration_horizontal.py", "RE_test_case_4.h5"),
     ("Testcase4_infiltration_problem", "2p_infiltration_horizontal.py", "2P_test_case_4.h5"),
     pytest.param("Testcase4_infiltration_problem", "tcat_cgp_infiltration_horizontal.py", "tcat_cgp_test_case_4.h5",
-                 marks=pytest.mark.xfail(strict=True, reason="TC4 TCAT CGP stalls at t = 0.52 s (README, Known issues)")),
+                 marks=pytest.mark.xfail(strict=True, reason="TC4 TCAT CGP stalls at t ~ 0.18 s (README, Known issues)")),
     # Chapter 5 validation, about 3 min of CPU (2p_szymkiewicz_imbibition.py takes about 9 min and is
     # covered by the Szymkiewicz benchmark in test_benchmarks.py)
     ("Chapter5_validation", "2p_kees_miller_drainage.py", "2P_kees_miller_drainage.h5"),

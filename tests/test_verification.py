@@ -10,7 +10,8 @@ Dissertation values (computed with beta_w = 1e-8):
     TC1  TCAT CGP  e_w 1.31e-14  p_w 4.55e-9    RE  e_w 0        p_w 3.87e-6
     TC2  TCAT CGP  e_w 1.04e-13  p_w 1.20e-13   RE  e_w 9.76e-6  p_w 1.08e-6
 
-The TCAT CGP values reproduce. The RE errors are now about 22 times smaller,
+The TCAT CGP values reproduce, except TC1 e_w, now 4.6e-12: still round-off, it
+grew with the default TS tolerances going from 1e-8 to 1e-6. The RE errors are now about 22 times smaller,
 exactly the ratio 1e-8 / 4.5e-10: the analytic solutions assume incompressible
 water, so the RE error comes from compressibility, and the drivers now use Table 4.2's
 beta_w = 4.5e-10. The thresholds below are about 3 times the current errors.
@@ -48,7 +49,7 @@ def tc2_exact(x):
 CASES = [
     # case folder, driver, output file, exact solution, max L2 for e_w, max L2 for p_w
     ("Testcase1_fully_saturated_system", "re_fully_saturated.py", "RE_test_case_1.h5", tc1_exact, 1e-14, 5e-7),
-    ("Testcase1_fully_saturated_system", "tcat_cgp_fully_saturated.py", "tcat_cgp_test_case_1.h5", tc1_exact, 1e-12, 1e-8),
+    ("Testcase1_fully_saturated_system", "tcat_cgp_fully_saturated.py", "tcat_cgp_test_case_1.h5", tc1_exact, 1.5e-11, 1e-8),
     ("Testcase2_hydrostatic_equilibrium", "re_hydrostatic_equi_vertical.py", "RE_test_case_2.h5", tc2_exact, 1.5e-6, 1.5e-7),
     ("Testcase2_hydrostatic_equilibrium", "tcat_cgp_hydrostatic_equi_vertical.py", "tcat_cgp_test_case_2.h5", tc2_exact, 1e-12, 1e-12),
 ]

@@ -113,7 +113,9 @@ time_interval = np.array([1e1, 1e2, 1e3, 1e4, 1e5, 1.5e5])  # same output times 
 model.set_simulation_time(time_interval)
 
 # Set petsc solver options
-solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
+# rtol 1e-8: with the default 1e-6 Newton keeps failing (DIVERGED_MAX_IT) and the
+# step stays below 1 s; with rtol 1e-8 the run is far faster (README, Known issues)
+solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor", rtol=1.e-8, atol=1.e-6)
 
 # Solve model and return model.solutions
 # which is a dictionary where solutions[time][u_name] = np.array
