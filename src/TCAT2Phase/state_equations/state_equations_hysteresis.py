@@ -32,6 +32,14 @@ class ParkerLenharddata:
     process_hysteresis     : np.ndarray = field(default_factory=lambda: np.array([]))
     time                   : np.ndarray = field(default_factory=lambda: np.array([]))
     counter_hysteresis     : int = 1
+    # What the switch condition compares the current state with:
+    #   'previous_step' (original code): the value at the previous accepted time step.
+    #       Depends on the step size: once steps are small, solver noise in p_c exceeds
+    #       hysteresis_tol and nodes reverse spuriously, which forces still smaller steps.
+    #   'extremum': the running extremum since the node's last reversal, so a reversal
+    #       needs p_c (or e_w) to move back by more than hysteresis_tol.
+    switch_relative_to     : str = 'previous_step'
+    switch_extremum        : np.ndarray = field(default_factory=lambda: np.array([]))
 
 class ParkerLenhard:
     """
@@ -56,6 +64,8 @@ class ParkerLenhard:
         
         # Initialize the ParkerLenharddata dataclass with values from kwargs
         self.data = ParkerLenharddata(**kwargs)
+        if self.data.switch_relative_to not in ('previous_step', 'extremum'):
+            raise ValueError("switch_relative_to must be 'previous_step' or 'extremum'")
 
         # Initialize other attributes
         self.data.drainage_process_old   = np.array(self.data.drainage_process_new)
@@ -402,11 +412,39 @@ class ParkerLenhard:
         else:
             self.data.process_hysteresis[n,self.data.counter_hysteresis] = 1
 
+    def _ensure_history_capacity(self):
+        """Grow the per-step history arrays when the run takes more steps than max_time_steps."""
+        d = self.data
+        if d.counter_hysteresis < d.time.shape[0]:
+            return
+        extra = max(d.time.shape[0], 1)
+        for name in ('ew_hysteresis', 'pc_hysteresis', 'process_hysteresis', 'switch_condition_value'):
+            a = getattr(d, name)
+            setattr(d, name, np.concatenate([a, np.zeros((a.shape[0], extra))], axis=1))
+        d.time = np.concatenate([d.time, np.zeros(extra)])
+
+    def _switch_condition_from_extremum(self):
+        """
+        Switch condition measured from the running extremum since the last reversal.
+        q increases during imbibition (q = -p_c or q = e_w); during drainage the extremum
+        is the minimum of q, during imbibition the maximum. Same sign convention as the
+        'previous_step' condition: positive means imbibition.
+        """
+        q = -self.p_c if self.data.switch_condition == 'p_c' else self.e_w
+        q = np.asarray(q, dtype=float)
+        if self.data.switch_extremum.shape != q.shape:
+            self.data.switch_extremum = q.copy()
+        drainage = np.asarray(self.data.drainage_process_new, dtype=bool)
+        ext = self.data.switch_extremum
+        ext[:] = np.where(drainage, np.minimum(ext, q), np.maximum(ext, q))
+        return q - ext
+
     def model_update_hysteresis(self,ts):
         """
         main function to update process, update scaling points and store results.
         """
         nodes = self.model.nodes
+        self._ensure_history_capacity()
         counter  = self.data.counter_hysteresis
         self.data.time[counter] = ts.getTime()
 
@@ -416,12 +454,14 @@ class ParkerLenhard:
         self.p_n = self.primary_variables['p_n']
         self.p_c = self.primary_variables['p_c']
 
-        if self.data.switch_condition == 'p_c':
+        if self.data.switch_condition not in ('p_c', 'e_w'):
+            print('switch_condition is a string and should be either e_w or p_c')
+        if self.data.switch_relative_to == 'extremum':
+            switch_condition = self._switch_condition_from_extremum()
+        elif self.data.switch_condition == 'p_c':
             switch_condition = self.data.pc_hysteresis[:,counter-1] - self.p_c
         elif self.data.switch_condition == 'e_w':
             switch_condition = self.e_w - self.data.ew_hysteresis[:,counter-1]
-        else:
-            print('switch_condition is a string and should be either e_w or p_c')
 
         for n in range(0,nodes):
             self.model.current_cell = n
@@ -429,6 +469,37 @@ class ParkerLenhard:
             self.s_a[n]    = self.apparent_saturation_function(self.p_c[n])
             self.s_nt_e[n] = self.linear_effective_entrapped_saturation_nw(self.s_a[n])
             self.determine_hysteresis_state(switch_condition[n])
+            if (self.data.switch_relative_to == 'extremum'
+                    and self.data.drainage_process_new[n] != self.data.drainage_process_old[n]):
+                # new process: its extremum starts at the reversal point
+                self.data.switch_extremum[n] = -self.p_c[n] if self.data.switch_condition == 'p_c' else self.e_w[n]
             self.store_hysteresis_results(self.e_w[n], self.p_n[n]-self.p_w[n])
 
         self.data.counter_hysteresis += 1
+
+
+def find_reversal_indices(pc_history, tol=1.0):
+    """
+    Indices of the turning points (reversals) in one node's capillary-pressure history,
+    for plotting scanning curves. A turning point is a running extremum that p_c then
+    moves away from by more than tol, the rule the 'extremum' switch uses. Unlike
+    hard-coded step numbers, the result does not depend on how many time steps the
+    run took.
+    """
+    pc = np.asarray(pc_history, dtype=float)
+    reversals = []
+    rising = None
+    ext, ext_i = pc[0], 0
+    for i, v in enumerate(pc):
+        if rising is None:
+            if abs(v - pc[0]) > tol:
+                rising = v > pc[0]
+                ext, ext_i = v, i
+            continue
+        if (rising and v > ext) or (not rising and v < ext):
+            ext, ext_i = v, i
+        elif abs(ext - v) > tol:
+            reversals.append(ext_i)
+            rising = not rising
+            ext, ext_i = v, i
+    return reversals

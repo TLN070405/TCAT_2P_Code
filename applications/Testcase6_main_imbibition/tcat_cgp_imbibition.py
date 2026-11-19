@@ -49,7 +49,7 @@ s_phase = TCAT2Phase.properties.phase.Solid('s',porosity = 0.369,
 # Set wetting-phase properties
 w_den_params = {'rho0':1.e3, 'beta':4.5e-10}
 w_phase=TCAT2Phase.properties.phase.Fluid('w',viscosity = None,
-                                            momentum_resistance = 3.75e5,
+                                            momentum_resistance = 5.10e4,  # Eqn 4.19: eps^2 mu_w / k_i, consistent with RE k_i = 2.67e-9 and the n phase (9.07e2)
                                             residual_volume_fraction = 0.0687*0.369,
                                             density_function = state_equations.density_exp_pressure,
                                             d_density_function = state_equations.d_density_exp_pressure,
@@ -70,7 +70,10 @@ wn_interface = TCAT2Phase.properties.interface.TCATInterface(tcat,
                                                             interfacial_dynamics = 6.398675e-05,
                                                             interfacial_tension = 7.20e-2,
                                                             interfacial_area_relaxation =  1.003597e-10 ,
-                                                            interfacial_area_equilibrium = interfacial_area_equilibrium)
+                                                            interfacial_area_equilibrium = interfacial_area_equilibrium,
+                                                            # LEGACY -2K: with the theory sign (+2K, the default) this closure is
+                                                            # unstable here and the run fails within seconds. See README, Known issues.
+                                                            gaussian_curvature_sign = -1)
 
 TCAT2Phase.numerics.model.Model.set_model_phases(
     model, s_phase, w_phase, None, wn_interface

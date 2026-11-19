@@ -8,9 +8,16 @@ TCAT2Phase solvers on published problems:
 - Szymkiewicz (2007) Example 1: countercurrent air-water imbibition with the
   2P-TM solver, compared with the McWhorter-Sunada solution and with the
   cumulative-infiltration errors Szymkiewicz reports for the same grids.
+- Kees & Miller (2002) Problem HD: the McWhorter-Sunada solution with R = 1
+  (fast check of the semi-analytic solution against Kees & Miller's Fig. 1;
+  the 2P-TM run is applications/Chapter5_validation/2p_kees_miller_drainage.py).
 - Tocci, Kelley & Miller (1997) Problem A: Richards' equation infiltration,
   compared with the front position in their Fig. 1 and with Celia et al. (1990)
   global mass balance.
+- Method of manufactured solutions (tests/benchmarks/mms.py): RE and 2P-TM (sp)
+  with source terms that make chosen smooth fields exact; the error must fall
+  at second order under grid refinement. The same for TCAT CGP
+  (tests/benchmarks/mms_tcat.py), in a regime where its closed equations are stable.
 
 See each module in tests/benchmarks/ for the full problem definitions.
 """
@@ -19,6 +26,8 @@ import pytest
 
 from benchmarks import countercurrent_2p as cc
 from benchmarks import mcwhorter_sunada as ms
+from benchmarks import mms
+from benchmarks import mms_tcat
 from benchmarks import tocci_problem_a as tp
 
 
@@ -113,9 +122,9 @@ def szymkiewicz_runs():
     """2P-TM solutions of Szymkiewicz (2007) Example 1 on 10 and 20 grid blocks."""
     runs = {}
     for blocks in (10, 20):
-        # Air gets its physical compressibility; with both fluids incompressible the
-        # pp system is a DAE whose far-end no-flow rows make the first step fail.
-        runs[blocks] = cc.run(blocks + 1, air_compressibility=1.189e-5)
+        # both fluids incompressible, as in the exact solution (index-1 DAE; the
+        # solver starts it with a consistent-initialization step)
+        runs[blocks] = cc.run(blocks + 1)
     return runs
 
 
@@ -146,21 +155,116 @@ def test_szymkiewicz_profile_converges_to_exact(exact, szymkiewicz_runs):
 
 @pytest.fixture(scope="module")
 def tocci_run():
-    times = np.linspace(0.0, 0.2 * 86400.0, 241)[1:]
+    # Tocci et al. (1997) Table 1 and Sec. 3.2 text: Problem A runs to t = 0.25 days,
+    # the time of Fig. 1 (the Fig. 1 caption's "0.20 days" disagrees with both; at
+    # 0.20 days the front here is at z = 0.072 m, at 0.25 days at z = 0.043 m).
+    # 251 equally spaced outputs give an even number of intervals for Simpson's rule.
+    times = np.linspace(0.0, 0.25 * 86400.0, 252)[1:]
     z, solutions, model = tp.run(61, times)
     return z, solutions, model, times[-1]
 
 
 @pytest.mark.slow
 def test_tocci_problem_a_front_position(tocci_run):
-    """Tocci et al. (1997) Fig. 1: at t = 0.20 days the front (psi = -5 m) is near z = 0.045 m."""
+    """Tocci et al. (1997) Fig. 1: at t = 0.25 days the front (psi = -5 m) is near z = 0.045 m."""
     z, solutions, _, t_end = tocci_run
     assert tp.front_position(z, solutions[t_end]["p_w"]) == pytest.approx(0.045, abs=0.01)
 
 
 @pytest.mark.slow
 def test_tocci_problem_a_mass_balance(tocci_run):
-    """Celia et al. (1990) mass balance measure: (mass gained)/(net inflow) = 1."""
+    """
+    Celia et al. (1990) mass balance measure: (mass gained)/(net inflow) = 1.
+
+    The net inflow is a time integral of the boundary fluxes sampled at the
+    output times. With the trapezoid rule that quadrature dominated the measure
+    (ratio 0.99898 over 250 outputs, 0.99948 over 960 at t = 0.20 days), which is
+    why this test first failed; with Simpson's rule the ratio is 0.99996.
+    """
     _, solutions, model, _ = tocci_run
     _, gained, inflow = tp.mass_balance(solutions, model)
     assert gained[-1] / inflow[-1] == pytest.approx(1.0, abs=1e-3)
+
+
+# --- McWhorter-Sunada with R = 1: Kees & Miller (2002) Problem HD (fast) ------
+
+@pytest.fixture(scope="module")
+def hd_exact():
+    from benchmarks import kees_miller_hd as hd
+    return hd, hd.exact_solution(n=1000)
+
+
+def test_hd_solution_reproduces_prescribed_injection(hd_exact):
+    """S0 is found so that A(S0) is the prescribed A = 0.1967 m/day^(1/2)."""
+    hd, (s, F, dF, A, S0) = hd_exact
+    assert A == pytest.approx(hd.A, rel=1e-6)
+    assert F[0] == pytest.approx(0.0, abs=1e-12) and F[-1] == pytest.approx(1.0)
+    assert np.all(np.diff(F) >= -1e-12)
+
+
+def test_hd_solution_matches_kees_miller_fig1(hd_exact):
+    """
+    Kees & Miller (2002) Fig. 1, t = 2.5 days: theta_w is about 0.18 at x = 0 and
+    the non-wetting front, where theta_w jumps to theta_s = 0.35, is near x = 4.8 m.
+    """
+    hd, exact = hd_exact
+    s, _, dF, A, _ = exact
+    assert hd.theta_w_profile(np.array([0.0]), hd.T_FINAL, exact)[0] == pytest.approx(0.18, abs=0.01)
+    assert ms.front_position(s, dF, A, hd.PHI, hd.T_FINAL)[0] == pytest.approx(4.8, abs=0.15)
+
+
+def test_hd_injected_volume_equals_2_A_sqrt_t(hd_exact):
+    hd, exact = hd_exact
+    x = np.linspace(0.0, hd.LENGTH, 40001)
+    theta = hd.theta_w_profile(x, hd.T_FINAL, exact)
+    assert np.trapz(hd.PHI - theta, x) == pytest.approx(2.0 * hd.A * np.sqrt(hd.T_FINAL), rel=2e-3)
+
+
+# --- Method of manufactured solutions ---------------------------------------------
+
+MMS_NODES = (11, 21, 41)
+
+
+def observed_orders(errors):
+    e = np.asarray(errors)
+    return np.log2(e[:-1] / e[1:])
+
+
+def test_mms_sources_vanish_for_a_steady_state_solution(monkeypatch):
+    # With the exact solution frozen in time and hydrostatic, both terms of S vanish up to
+    # the finite-difference round-off (~1e-9; the manufactured sources are ~0.1 kg/m^3/s).
+    monkeypatch.setattr(mms, "exact_p_w_richards", lambda x, t: -2000.0 - mms.RHO_W0 * mms.GRAVITY * x)
+    source = mms.richards_source(mms.closures())
+    assert abs(source(0.3, 50.0)) < 1e-7
+
+
+@pytest.mark.slow
+def test_mms_richards_second_order_in_space():
+    errors = [mms.richards_errors(n, tol=1e-8)["p_w"] for n in MMS_NODES]
+    assert errors[-1] < 0.2   # Pa, on 41 nodes
+    assert np.all(observed_orders(errors) > 1.85)
+
+
+@pytest.mark.slow
+def test_mms_two_phase_sp_second_order_in_space():
+    runs = [mms.two_phase_errors(n, tol=1e-8) for n in MMS_NODES]
+    for key, limit in (("e_w", 3e-5), ("p_w", 4.0)):
+        errors = [r[key] for r in runs]
+        assert errors[-1] < limit
+        assert np.all(observed_orders(errors) > 1.85), (key, errors)
+
+
+def test_mms_tcat_fields_are_in_the_stable_regime():
+    # J^2 - 2 s K < 0 with the legacy sign; with the theory sign (+2K) it is positive
+    state = mms_tcat.tcat_state()
+    assert mms_tcat.stability_margin(state, sign=-1.0) < -1e7
+    assert mms_tcat.stability_margin(state, sign=+1.0) > 0.0
+
+
+@pytest.mark.slow
+def test_mms_tcat_cgp_second_order_in_space():
+    runs = [mms_tcat.errors(n) for n in MMS_NODES]
+    for key in mms_tcat.NAMES:
+        errors = [r[key] for r in runs]
+        assert errors[-1] < 1e-3, (key, errors)  # relative to the field's max, on 41 nodes
+        assert np.all(observed_orders(errors) > 1.85), (key, errors)

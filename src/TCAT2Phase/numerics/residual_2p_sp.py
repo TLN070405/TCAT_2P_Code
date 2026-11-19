@@ -47,3 +47,22 @@ class Residual2pSP(BaseResidual):
         self.time_mat[0, 1] = primary_variables['e_w'][n] * d_rho_w_p_w
         self.time_mat[1, 0] = primary_variables['e_n'][n] * d_rho_n_p_n * d_p_c_e_w -fluxes['rho_n'][n]
         self.time_mat[1, 1] = primary_variables['e_n'][n] * d_rho_n_p_n
+
+    def compute_residual_boundary(self, t, f, u):
+        """
+        Boundary residuals, as in BaseResidual, except where one boundary has no-
+        flow-type conditions for both phases: e_w with a w-phase flux (type 1) and
+        p_w with an n-phase flux (type 2). The w-phase flux depends on e_w only
+        through k_rw times the pressure gradient, so in the e_w row its derivative
+        with respect to e_w is zero whenever the gradient is (e.g. a uniform
+        initial state), a zero pivot that stops LU and SOR. The n-phase flux
+        depends on e_w through p_n = p_w + p_c(e_w), so the two rows are swapped:
+        the solution is unchanged and the Jacobian diagonal is nonzero.
+        """
+        super().compute_residual_boundary(t, f, u)
+        names = self.model.model.u_names
+        for side, node in enumerate([0, self.model.nodes - 1]):
+            types = (self.model.boundary_type[names[0]][0][side], self.model.boundary_type[names[1]][0][side])
+            if types == (1, 2):
+                row = np.array(f[node], dtype=float)
+                f[node] = row[::-1]

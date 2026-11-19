@@ -66,3 +66,28 @@ def interpolate(x,mesh):
             value[face] = x[cell.ID] + _scalar(mesh.faces[face].distance) / _scalar(dist) * (x[neigh] - x[cell.ID])
 
     return value
+
+def upwind(x, potential_gradient, mesh):
+    """
+    Upstream (upwind) value of cell-centered x at each interior face.
+
+    potential_gradient is the face value of dp/dx + rho*g (the factor in the
+    code's flux q = rho k k_r/mu (dp/dx + rho g)); the phase moves toward lower
+    potential, so a positive gradient means flow from the neighbor (higher x) to
+    the owner, and the neighbor is upstream. At zero gradient the average is used,
+    which keeps the residual continuous there.
+    """
+    value = np.zeros(mesh.num_faces)
+    for cell in mesh.cells:
+        for face, neigh in zip(cell.faces, cell.neighbors):
+            if mesh.faces[face].boundary or mesh.faces[face].owner != cell.ID:
+                continue
+            # neighbors come from the cell (Face.neighbor is not used: it is off by one)
+            g = potential_gradient[face]
+            if g > 0.0:
+                value[face] = x[neigh]
+            elif g < 0.0:
+                value[face] = x[cell.ID]
+            else:
+                value[face] = 0.5 * (x[cell.ID] + x[neigh])
+    return value

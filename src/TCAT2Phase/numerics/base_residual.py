@@ -12,6 +12,7 @@ class BaseResidual:
         self.nodes = model.nodes
         self.mesh = model.mesh
         self.time_mat = np.zeros([model.model.num_u, model.model.num_u])
+        self._time = 0.0
 
     def compute_residual(self,ts, t, U, Udot, F):
         """
@@ -26,6 +27,7 @@ class BaseResidual:
         f = da.getVecArray(F)
 
         # calculate the residual at interior nodes
+        self._time = t
         self.compute_internal_residual(f, u, udot)
 
         # calculate the residual at boundaries
@@ -48,8 +50,64 @@ class BaseResidual:
             self.model.current_cell = n
 
             od   = self.compute_spatial_operator(primary_variables,fluxes,cell)
+            source = getattr(self.model, "source", None)
+            if source is not None:
+                # model.source(x, t): one value per equation, added to the spatial
+                # operator, so that time_mat . udot = od + source
+                od = od + np.asarray(source(self.mesh.points[n][0], self._time), dtype=float)
             self.compute_time_matrix(primary_variables,fluxes)
             f[n] = utils.petsc_value(self.compute_residual_equations(udot, od))
+
+        # boundary nodes with mass-conservative flux conditions (types 4 and 5)
+        for side in (0, 1):
+            if self.conservative_flux_boundary(side):
+                self.compute_conservative_boundary_residual(f, udot, primary_variables, fluxes, side)
+
+    def conservative_flux_boundary(self, side):
+        """
+        True when the boundary on this side (0 left, 1 right) uses the mass-
+        conservative flux condition: boundary type 4 (w-phase mass flux) on one
+        unknown and type 5 (n-phase mass flux) on the other.
+        """
+        u_names = self.model.model.u_names
+        types = sorted(self.model.boundary_type[u][0][side] for u in u_names)
+        if 4 not in types and 5 not in types:
+            return False
+        if types != [4, 5]:
+            raise ValueError("Boundary types 4 and 5 (mass-conservative fluxes) must be used together, "
+                             "one per unknown, at the same boundary; got " + str(types))
+        return True
+
+    def compute_conservative_boundary_residual(self, f, udot, primary_variables, fluxes, side):
+        """
+        Boundary types 4 and 5: the boundary node gets the same two mass balances
+        as an interior node, over its half cell (length dx/2), with the
+        prescribed mass fluxes on the outer face. So the boundary node stores
+        mass, as in the cell-centered schemes of Kees & Miller (2002) and
+        Szymkiewicz (2007), instead of the algebraic rows of types 1 and 2
+        (zero storage, flux set on the face next to the boundary).
+
+        Prescribed values use the code's flux convention,
+        q = rho k k_r / mu (dp/dx + rho g) = -(rho * Darcy velocity in +x), so 0
+        is no flow; at x = 0 the value equals the outward normal mass flux, and
+        at x = L it is minus the outward normal mass flux.
+        """
+        u_names = self.model.model.u_names
+        n = 0 if side == 0 else self.nodes - 1
+        self.model.current_cell = n
+        cell = self.mesh.cells[n]
+        half = 0.5 * float(np.ravel(cell.length)[0])
+        q_bc = {}
+        for k, u in enumerate(u_names):
+            btype = self.model.boundary_type[u][0][side]
+            key = 'q_w' if btype == 4 else 'q_n'
+            q_bc[key] = self.check_callable_boundary_conditions(self.model.boundary_conditions[k][0][side], self._time)
+        if side == 0:
+            od = [(fluxes['q_w'][1] - q_bc['q_w']) / half, (fluxes['q_n'][1] - q_bc['q_n']) / half]
+        else:
+            od = [(q_bc['q_w'] - fluxes['q_w'][n]) / half, (q_bc['q_n'] - fluxes['q_n'][n]) / half]
+        self.compute_time_matrix(primary_variables, fluxes)
+        f[n] = utils.petsc_value(self.compute_residual_equations(udot, od))
 
     def compute_primary_variables(self,u):
         """
@@ -80,8 +138,16 @@ class BaseResidual:
         rho_w_face = utils.interpolate(rho_w, mesh)
         rho_n_face = utils.interpolate(rho_n, mesh)
 
-        q_w = state_equations.darcy_velocity(mesh, k, utils.interpolate(k_rw * rho_w, mesh), mu_w, del_pw, rho_w_face, gravity)
-        q_n = state_equations.darcy_velocity(mesh, k, utils.interpolate(k_rn * rho_n, mesh), mu_n, del_pn, rho_n_face, gravity)
+        if getattr(self.model, "mobility_weighting", "arithmetic") == "upwind":
+            # phase-wise upstream weighting on the sign of the potential gradient
+            mob_w = utils.upwind(k_rw * rho_w, del_pw + rho_w_face * gravity, mesh)
+            mob_n = utils.upwind(k_rn * rho_n, del_pn + rho_n_face * gravity, mesh)
+        else:
+            mob_w = utils.interpolate(k_rw * rho_w, mesh)
+            mob_n = utils.interpolate(k_rn * rho_n, mesh)
+
+        q_w = state_equations.darcy_velocity(mesh, k, mob_w, mu_w, del_pw, rho_w_face, gravity)
+        q_n = state_equations.darcy_velocity(mesh, k, mob_n, mu_n, del_pn, rho_n_face, gravity)
 
         return {'q_w':q_w,'q_n':q_n,'rho_w':rho_w,'rho_n':rho_n}
 
@@ -122,6 +188,8 @@ class BaseResidual:
 
         for i, j in enumerate([0, self.model.nodes-1]):
             # Residual at Boundaries left and right
+            if self.conservative_flux_boundary(i):
+                continue   # mass balance set in compute_internal_residual
             for n in range(self.model.model.num_u):
                 # check if bc are time dependent or just constant bc and store all bc values for node "j"
                 bc_values[n] = self.check_callable_boundary_conditions(boundary_conditions[n][0][i],t)

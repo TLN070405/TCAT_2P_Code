@@ -42,6 +42,13 @@ def test_cell_connectivity(mesh11):
     assert mesh.cells[-1].neighbors == [9, -1]
 
 
+def test_interior_face_lies_between_its_owner_and_neighbor(mesh11):
+    _, mesh = mesh11
+    for face in mesh.faces[1:-1]:
+        assert (face.owner, face.neighbor) == (face.ID - 1, face.ID)
+        assert mesh.points[face.owner, 0] < np.ravel(face.x)[0] < mesh.points[face.neighbor, 0]
+
+
 def test_cell_lengths_and_distances_equal_spacing(mesh11):
     _, mesh = mesh11
     dx = 0.1

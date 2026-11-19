@@ -22,7 +22,7 @@ def apparent_saturation(e_w):
     return (e_w - E_WR) / (POROSITY - E_WR)
 
 
-def make_parker_lenhard(e_nr=E_NR):
+def make_parker_lenhard(e_nr=E_NR, **overrides):
     model = fake_model(POROSITY, E_WR, e_nr)
     drainage = TraditionalInterface(state_equations_interface.VanGenuchten(
         m=1 - 1 / 6.0, n=6.0, alpha=1 / 1500.0, porosity=POROSITY, e_wr=E_WR, e_nr=0.0))
@@ -47,6 +47,7 @@ def make_parker_lenhard(e_nr=E_NR):
         max_reversals=MAX_REVERSALS,
         max_time_steps=10,
     )
+    params.update(overrides)
     return state_equations_hysteresis.ParkerLenhard(model, imbibition, drainage, **params), drainage
 
 
@@ -203,3 +204,93 @@ def test_store_hysteresis_results_records_process(pl):
     assert pl.data.ew_hysteresis[0, k] == 0.3
     assert pl.data.pc_hysteresis[0, k] == 1000.0
     assert pl.data.process_hysteresis[0, k] == -1  # drainage
+
+
+# --- Post-step update: previous-step vs extremum switch ------------------------
+
+class FakeTS:
+    def __init__(self):
+        self.t = 0.0
+
+    def getTime(self):
+        self.t += 1.0
+        return self.t
+
+
+def step(pl, ts, p_c):
+    e_w = pl.volume_fraction_function(p_c)
+    pl.primary_variables = {"e_w": np.array([e_w]), "p_w": np.array([-p_c]),
+                            "p_n": np.array([0.0]), "p_c": np.array([p_c])}
+    pl.model_update_hysteresis(ts)
+
+
+# Drainage to 1500 Pa, then p_c creeps down in steps of 0.004 Pa (below a tolerance
+# of 0.01 Pa per step, but 0.02 Pa in total), then noise of +-0.004 Pa.
+CREEP = [1000.0, 1500.0, 1499.996, 1499.992, 1499.988, 1499.984, 1499.980]
+NOISE = [1500.0, 1500.004, 1499.996, 1500.004, 1499.996, 1500.004]
+
+
+def test_previous_step_switch_misses_slow_reversal():
+    pl = make_parker_lenhard(hysteresis_tol=1e-2)[0]
+    ts = FakeTS()
+    for p_c in CREEP:
+        step(pl, ts, p_c)
+    assert pl.data.drainage_process_new[0]  # never sees a 0.01 Pa drop in one step
+    assert pl.data.reversals_number[0] == 0
+
+
+def test_extremum_switch_catches_slow_reversal():
+    pl = make_parker_lenhard(hysteresis_tol=1e-2, switch_relative_to="extremum")[0]
+    ts = FakeTS()
+    for p_c in CREEP:
+        step(pl, ts, p_c)
+    assert not pl.data.drainage_process_new[0]  # 0.02 Pa below the 1500 Pa maximum
+    assert pl.data.reversals_number[0] == 1
+
+
+def test_previous_step_switch_reverses_on_noise_above_tolerance():
+    pl = make_parker_lenhard(hysteresis_tol=1e-3)[0]
+    ts = FakeTS()
+    for p_c in NOISE:
+        step(pl, ts, p_c)
+    assert pl.data.reversals_number[0] >= 4
+
+
+def test_extremum_switch_ignores_noise_below_tolerance():
+    pl = make_parker_lenhard(hysteresis_tol=1e-2, switch_relative_to="extremum")[0]
+    ts = FakeTS()
+    for p_c in NOISE:
+        step(pl, ts, p_c)
+    assert pl.data.drainage_process_new[0]
+    assert pl.data.reversals_number[0] == 0
+
+
+def test_extremum_switch_reverses_back_to_drainage():
+    pl = make_parker_lenhard(hysteresis_tol=1e-2, switch_relative_to="extremum")[0]
+    ts = FakeTS()
+    for p_c in [1000.0, 1500.0, 1200.0, 1100.0, 1100.5]:
+        step(pl, ts, p_c)
+    assert pl.data.drainage_process_new[0]
+    assert pl.data.reversals_number[0] == 2
+    assert pl.data.pc_reversal[0][0] == 1100.5
+
+
+def test_invalid_switch_relative_to_raises():
+    with pytest.raises(ValueError, match="switch_relative_to"):
+        make_parker_lenhard(switch_relative_to="last")
+
+
+def test_history_arrays_grow_past_max_time_steps():
+    pl = make_parker_lenhard()[0]  # max_time_steps = 10
+    ts = FakeTS()
+    for k in range(25):
+        step(pl, ts, 1000.0 + k)
+    assert pl.data.counter_hysteresis == 26
+    assert pl.data.pc_hysteresis.shape[1] >= 26
+    assert pl.data.pc_hysteresis[0, 25] == pytest.approx(1024.0)
+
+
+def test_find_reversal_indices():
+    pc = [0, 500, 1000, 1500, 1499.5, 1500.2, 1000, 200, 0, 300, 900, 900.4, 600]
+    assert state_equations_hysteresis.find_reversal_indices(pc, tol=1.0) == [5, 8, 11]
+    assert state_equations_hysteresis.find_reversal_indices([5.0, 5.0, 5.2]) == []

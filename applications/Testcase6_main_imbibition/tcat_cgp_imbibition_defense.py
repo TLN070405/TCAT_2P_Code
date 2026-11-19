@@ -54,7 +54,10 @@ wn_interface = TCAT2Phase.properties.interface.TCATInterface(
     interfacial_dynamics=6.398675e-05,
     interfacial_tension=7.20e-2,
     interfacial_area_relaxation=1.003597e-10,
-    interfacial_area_equilibrium=lambda x: EWN_BOUNDARY)
+    interfacial_area_equilibrium=lambda x: EWN_BOUNDARY,
+    # Legacy -2K sign of the Gaussian-curvature term, as in the code behind the
+    # defense results; the library default is the theory value +1 (README, section 8).
+    gaussian_curvature_sign=-1)
 
 model.set_model_phases(s_phase, w_phase, None, wn_interface)
 
@@ -92,7 +95,7 @@ model.set_boundary_conditions({
 
 model.set_simulation_time(np.array([1e-5, 1e-2, 1e-1, 1, 10, 50, 100, 150, 200, 250]))
 
-solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
+solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor", rtol=1.e-8, atol=1.e-8)  # as for the slides
 u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 
 names = model.model.u_names

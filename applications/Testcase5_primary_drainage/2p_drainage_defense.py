@@ -68,7 +68,7 @@ model.set_boundary_conditions({"e_w": [[EW_BOUNDARY, EW_BOUNDARY]],
 
 model.set_simulation_time(np.array([1e-5, 1, 10, 100, 500, 1000, 3000, 5000, 8000]))
 
-solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor")
+solver_options.solver_options(max_time_steps=100000, bdf_order=5, pc_type="sor", rtol=1.e-8, atol=1.e-8)  # as for the slides
 u, ts = TCAT2Phase.numerics.solver.setup_solver(model)
 
 history = {"time": [], "e_w": [], "p_w": []}

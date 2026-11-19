@@ -15,6 +15,15 @@ With R = 0 the paper's Eqs. (23), (19), (17) and (10) become
 
 where D(S) = -(k k_rn f / mu_n) dPc/dS and f = (1 + k_rn mu_w / (k_rw mu_n))^-1.
 F is found by fixed-point iteration starting from F = 1, as in the paper.
+
+For a displacement with total flux q_t = R q_0 (R = 1: the displaced phase does
+not flow in at x = 0, as in Kees & Miller (2002) Problem HD) the same steps give
+
+    F(S)  = 1 - int_S^S0 (b - S) D/(F - R f) db / I,
+    F'(S) = int_S^S0 D/(F - R f) db / I,  I = int_Si^S0 (b - Si) D/(F - R f) db,
+
+with S and f the saturation and fractional flow function of the INJECTED phase;
+solve(..., R=R, fractional_flow=f) handles that case (R = 0 is the default).
 """
 import numpy as np
 
@@ -27,19 +36,22 @@ def _cumtrapz_from_right(y, s):
     return out
 
 
-def solve(diffusivity, s_i, s_0, porosity, n=4000, tol=1e-12, max_iter=500):
+def solve(diffusivity, s_i, s_0, porosity, n=4000, tol=1e-12, max_iter=500, R=0.0, fractional_flow=None):
     """
     diffusivity: callable D(S) [m^2/s], > 0 on (s_i, s_0]
+    R, fractional_flow: total-flux ratio q_t/q_0 and the injected phase's f(S)
+        (needed only when R != 0)
     Returns (s, F, dF, A): saturation grid from s_i to s_0, F(S), F'(S), and A.
     The grid is clustered near s_i, where D/F varies fastest.
     """
     u = np.linspace(0.0, 1.0, n)
     s = s_i + (s_0 - s_i) * u**2
     D = np.array([diffusivity(v) for v in s])
+    Rf = R * np.array([fractional_flow(v) for v in s]) if R else np.zeros_like(s)
     F = np.ones_like(s)
     for _ in range(max_iter):
         q = np.zeros_like(s)
-        q[1:] = D[1:] / F[1:]
+        q[1:] = D[1:] / np.maximum(F[1:] - Rf[1:], 1e-300)
         # D/F ~ D(Si)/(F'(Si)(S - Si)) near Si: drop the (integrable) endpoint value
         q[0] = q[1]
         G = _cumtrapz_from_right(q, s)                    # int_S^S0 D/F db

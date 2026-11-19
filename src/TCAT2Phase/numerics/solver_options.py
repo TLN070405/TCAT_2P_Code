@@ -2,7 +2,7 @@
 from petsc4py import PETSc
 
 
-def solver_options(max_time_steps, bdf_order, pc_type, monitor=True):
+def solver_options(max_time_steps, bdf_order, pc_type, monitor=True, rtol=1.e-6, atol=1.e-6):
     """
     Set the PETSc options used by the drivers.
 
@@ -10,6 +10,11 @@ def solver_options(max_time_steps, bdf_order, pc_type, monitor=True):
     bdf_order:      order of the BDF time integrator (ts_bdf_order)
     pc_type:        preconditioner, e.g. 'sor' or 'ilu' (pc_type)
     monitor:        print 'TS dt ... time ...' after every step (ts_monitor)
+    rtol, atol:     local truncation error tolerances for the adaptive time step
+                    (ts_rtol, ts_atol). 1e-6 by default. The published runs used
+                    1e-8, which takes about 13 times as many steps for a change of
+                    about 3e-5 relative in pressure (Test Case 8 RE, first 5 s);
+                    the *_defense.py drivers pass 1e-8 to reproduce the slides.
 
     Any other PETSc option can be set the same way with
     PETSc.Options().setValue(name, value) before calling setup_solver.
@@ -31,8 +36,8 @@ def solver_options(max_time_steps, bdf_order, pc_type, monitor=True):
     opts.setValue('ts_max_snes_failures', 10000)
 
     # Time-step error control
-    opts.setValue('ts_rtol', 1.e-8)
-    opts.setValue('ts_atol', 1.e-8)
+    opts.setValue('ts_rtol', rtol)
+    opts.setValue('ts_atol', atol)
 
     # Preconditioner
     opts.setValue('pc_type', pc_type)
