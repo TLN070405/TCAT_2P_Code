@@ -14,6 +14,9 @@ TCAT2Phase solvers on published problems:
 - Tocci, Kelley & Miller (1997) Problem A: Richards' equation infiltration,
   compared with the front position in their Fig. 1 and with Celia et al. (1990)
   global mass balance.
+- Method of manufactured solutions (tests/benchmarks/mms.py): RE and 2P-TM (sp)
+  with source terms that make chosen smooth fields exact; the error must fall
+  at second order under grid refinement.
 
 See each module in tests/benchmarks/ for the full problem definitions.
 """
@@ -22,6 +25,7 @@ import pytest
 
 from benchmarks import countercurrent_2p as cc
 from benchmarks import mcwhorter_sunada as ms
+from benchmarks import mms
 from benchmarks import tocci_problem_a as tp
 
 
@@ -212,3 +216,37 @@ def test_hd_injected_volume_equals_2_A_sqrt_t(hd_exact):
     x = np.linspace(0.0, hd.LENGTH, 40001)
     theta = hd.theta_w_profile(x, hd.T_FINAL, exact)
     assert np.trapz(hd.PHI - theta, x) == pytest.approx(2.0 * hd.A * np.sqrt(hd.T_FINAL), rel=2e-3)
+
+
+# --- Method of manufactured solutions ---------------------------------------------
+
+MMS_NODES = (11, 21, 41)
+
+
+def observed_orders(errors):
+    e = np.asarray(errors)
+    return np.log2(e[:-1] / e[1:])
+
+
+def test_mms_sources_vanish_for_a_steady_state_solution(monkeypatch):
+    # With the exact solution frozen in time and hydrostatic, both terms of S vanish up to
+    # the finite-difference round-off (~1e-9; the manufactured sources are ~0.1 kg/m^3/s).
+    monkeypatch.setattr(mms, "exact_p_w_richards", lambda x, t: -2000.0 - mms.RHO_W0 * mms.GRAVITY * x)
+    source = mms.richards_source(mms.closures())
+    assert abs(source(0.3, 50.0)) < 1e-7
+
+
+@pytest.mark.slow
+def test_mms_richards_second_order_in_space():
+    errors = [mms.richards_errors(n, tol=1e-8)["p_w"] for n in MMS_NODES]
+    assert errors[-1] < 0.2   # Pa, on 41 nodes
+    assert np.all(observed_orders(errors) > 1.85)
+
+
+@pytest.mark.slow
+def test_mms_two_phase_sp_second_order_in_space():
+    runs = [mms.two_phase_errors(n, tol=1e-8) for n in MMS_NODES]
+    for key, limit in (("e_w", 3e-5), ("p_w", 4.0)):
+        errors = [r[key] for r in runs]
+        assert errors[-1] < limit
+        assert np.all(observed_orders(errors) > 1.85), (key, errors)

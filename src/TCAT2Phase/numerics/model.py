@@ -72,6 +72,11 @@ class Model:
         # incompressible two-fluid system) start on the constraint manifold.
         # None = automatic (two_phase with both fluids incompressible), or True/False.
         self.consistent_initialization = None
+        # Optional source term source(x, t) -> one value per equation (per unit volume
+        # and time, in the units of each equation), added to the right-hand side at
+        # interior nodes: time_mat . udot = spatial operator + source. Used for
+        # verification by the method of manufactured solutions (tests/benchmarks/mms_richards.py).
+        self.source = None
 
     def select_model(self, model_type, form):
         """

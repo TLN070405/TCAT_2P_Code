@@ -50,6 +50,11 @@ class BaseResidual:
             self.model.current_cell = n
 
             od   = self.compute_spatial_operator(primary_variables,fluxes,cell)
+            source = getattr(self.model, "source", None)
+            if source is not None:
+                # model.source(x, t): one value per equation, added to the spatial
+                # operator, so that time_mat . udot = od + source
+                od = od + np.asarray(source(self.mesh.points[n][0], self._time), dtype=float)
             self.compute_time_matrix(primary_variables,fluxes)
             f[n] = utils.petsc_value(self.compute_residual_equations(udot, od))
 

@@ -78,3 +78,13 @@ def test_set_model_phases():
 def test_invalid_model_or_form_raises(model_type, form):
     with pytest.raises(ValueError, match="Unknown"):
         make_model(model_type, form)
+
+
+def test_source_is_off_by_default():
+    import numpy as np
+    import TCAT2Phase
+    domain = TCAT2Phase.properties.domain.initialize_domain(dims=1, domain_size=np.array([[0.0, 1.0]]))
+    mesh = TCAT2Phase.mesh.grid.Mesh()
+    mesh.uniform_mesh_1d(domain, 5)
+    model = TCAT2Phase.numerics.model.Model(model_type="Richards", form="pr", domain=domain, nodes=5, mesh=mesh)
+    assert model.source is None
