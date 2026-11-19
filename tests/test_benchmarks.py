@@ -16,7 +16,8 @@ TCAT2Phase solvers on published problems:
   global mass balance.
 - Method of manufactured solutions (tests/benchmarks/mms.py): RE and 2P-TM (sp)
   with source terms that make chosen smooth fields exact; the error must fall
-  at second order under grid refinement.
+  at second order under grid refinement. The same for TCAT CGP
+  (tests/benchmarks/mms_tcat.py), in a regime where its closed equations are stable.
 
 See each module in tests/benchmarks/ for the full problem definitions.
 """
@@ -26,6 +27,7 @@ import pytest
 from benchmarks import countercurrent_2p as cc
 from benchmarks import mcwhorter_sunada as ms
 from benchmarks import mms
+from benchmarks import mms_tcat
 from benchmarks import tocci_problem_a as tp
 
 
@@ -249,4 +251,20 @@ def test_mms_two_phase_sp_second_order_in_space():
     for key, limit in (("e_w", 3e-5), ("p_w", 4.0)):
         errors = [r[key] for r in runs]
         assert errors[-1] < limit
+        assert np.all(observed_orders(errors) > 1.85), (key, errors)
+
+
+def test_mms_tcat_fields_are_in_the_stable_regime():
+    # J^2 - 2 s K < 0 with the legacy sign; with the theory sign (+2K) it is positive
+    state = mms_tcat.tcat_state()
+    assert mms_tcat.stability_margin(state, sign=-1.0) < -1e7
+    assert mms_tcat.stability_margin(state, sign=+1.0) > 0.0
+
+
+@pytest.mark.slow
+def test_mms_tcat_cgp_second_order_in_space():
+    runs = [mms_tcat.errors(n) for n in MMS_NODES]
+    for key in mms_tcat.NAMES:
+        errors = [r[key] for r in runs]
+        assert errors[-1] < 1e-3, (key, errors)  # relative to the field's max, on 41 nodes
         assert np.all(observed_orders(errors) > 1.85), (key, errors)
