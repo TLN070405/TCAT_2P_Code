@@ -109,7 +109,13 @@ s_nte_reversal       = np.full((nodes,max_reversals), 0.0)
 s_nte_endpoint       = np.full((nodes,max_reversals), 0.0)
 path_is_pdc          = np.full((nodes),True )
 
-hysteresis_tol = 1e-6
+# Reversal when p_c moves back by more than hysteresis_tol from its extremum since the
+# last reversal. The original code compared with the previous time step (tolerance
+# 1e-6 Pa): solver noise in p_c then reversed nodes spuriously (over 10,000 reversals
+# in the 2P run) and the 2P run stalled at dt ~ 1e-3 s. 1e-2 Pa is about 1 micrometre
+# of water head, above the noise. See README, Known issues.
+hysteresis_tol = 1e-2
+switch_relative_to = 'extremum'
 switch_condition ='p_c'
 
 ParkerLenhard_parameters = {'drainage_process_new':drainage_process_new,
@@ -125,7 +131,8 @@ ParkerLenhard_parameters = {'drainage_process_new':drainage_process_new,
                             'switch_condition':switch_condition,
                             'hysteresis_tol':hysteresis_tol,
                             'max_reversals':max_reversals,
-                            'max_time_steps':max_time_steps }
+                            'max_time_steps':max_time_steps,
+                            'switch_relative_to':switch_relative_to }
 
 
 wn_interface = state_equations_hysteresis.ParkerLenhard(model, wn_interface_imb, wn_interface_dr, **ParkerLenhard_parameters )

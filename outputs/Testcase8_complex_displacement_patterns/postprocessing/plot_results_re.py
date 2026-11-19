@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from TCAT2Phase.io.hdf5_io import load_solutions_from_hdf5
+from TCAT2Phase.state_equations.state_equations_hysteresis import find_reversal_indices
 
 
 # Get the directory where the current script (re_test_case_1.py) is located
@@ -31,8 +32,10 @@ counter_hysteresis = metadata["counter"]
 
 plt.figure(figsize=(10, 6))
 
-# Define reversal indices
-reversal_indices = [1, 419, 1990, 2300, 3000, 5850, counter_hysteresis-1]
+# Reversal indices found from the p_c history (they depend on the number of time steps,
+# so they cannot be hard-coded; the originals were [1, 419, 1990, 2300, 3000, 5850, counter_hysteresis-1])
+_pc = next(iter(solutions.values()))['p_c_hysteresis'][nodal_position, 1:counter_hysteresis]
+reversal_indices = [1] + [i + 1 for i in find_reversal_indices(_pc, tol=1.0)] + [counter_hysteresis-1]
 for time, variables in solutions.items():
     # Primary drainage and main imbibition curves
     plt.plot(variables['e_w_mpc_dr'][0:2000], variables['pc_range'][0:2000], label="Primary drainage curve", color='r', linewidth=curves_thickness)
@@ -53,7 +56,7 @@ for time, variables in solutions.items():
     # Annotate reversal points (numbered 1, 2, 3, ...)
     for i, rev in enumerate(reversal_indices,1):
         offsets = [(0, 30), (0, 30), (0.006, -20), (0.004, 5), (-0.002, 0), (0, 30), (0.006, 0)]
-        dx, dy = offsets[i-1]
+        dx, dy = offsets[i-1] if i <= len(offsets) else (0, 30)
         x = variables['e_w_hysteresis'][nodal_position, rev]
         y = variables['p_c_hysteresis'][nodal_position, rev]
         plt.text(x +dx , y + dy, f"{i}", fontsize=numbered_points_fs, color='black', ha='right', va='bottom')
@@ -64,7 +67,7 @@ by_label = dict(zip(labels, handles))
 plt.legend(by_label.values(), by_label.keys(), fontsize=legend_fs)
 
 # Axis labels and tick settings
-plt.xlabel(r"$x\,[m]$", fontsize=axis_titles_fs)
+plt.xlabel(r"$\epsilon^w\,[-]$", fontsize=axis_titles_fs)
 plt.ylabel(r"$p^c\,[Pa]$", fontsize=axis_titles_fs)
 plt.tick_params(axis='both', labelsize=axis_numbers_fs)
 plt.show()
