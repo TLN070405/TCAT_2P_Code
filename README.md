@@ -63,17 +63,17 @@ From VS Code: open the repo folder, choose the `tcat2p` interpreter (Command Pal
 
 Every row ran to completion on the tested setup except the Test Case 4 TCAT CGP driver (see [Known issues](#9-known-issues)). The Gaussian-curvature term now defaults to the theory sign, +2K. With it, the closed TCAT model is unstable at the Test Case 5 and 6 states, so those drivers set the legacy −2K explicitly (`gaussian_curvature_sign=-1`); see Known issues. Times are wall-clock on a quad-core Intel Core i5 Mac.
 
-| Test case (folder in `applications/`) | Drivers | Approx. run time |
+| Test case (folder in `applications/`) | Drivers | Approx. run time (tested Mac, up to three runs at once) |
 |---|---|---|
 | 1 Fully saturated system | `re_fully_saturated.py`, `2p_fully_saturated.py`, `tcat_cgp_fully_saturated.py` | < 10 s each |
 | 2 Hydrostatic equilibrium | `re_…`, `2p_…`, `tcat_cgp_hydrostatic_equi_vertical.py` | 3–25 s |
 | 3 Hydrostatic equilibrium with perturbation | `re_equilibrium_perturbation.py`, `2p_…`, `tcat_cgp_…_perturbation.py` | 20–75 s |
 | 4 Infiltration | `re_infiltration_horizontal.py`, `2p_…`, `tcat_cgp_…` | 10 s–2 min; TCAT CGP stalls at t ≈ 0.18 s |
-| 5 Primary drainage | `re_drainage_pdc.py`, `2p_drainage_pdc.py`, `tcat_cgp_drainage.py`, `tcat_full_drainage.py` | 30 s – 1.5 min; full TCAT ≈ 7 min |
-| 6 Main imbibition | `re_imbibition_mic.py`, `2p_imbibition_mic.py`, `tcat_cgp_imbibition.py`, `tcat_full_imbibition.py` | 2–5 min; full TCAT ≈ 8 min |
-| 7 Non-equilibrium capillary pressure | `ere_malgorzata.py`, `e2p_malgorzata.py` (each runs three values of τ) | 7–14 min |
-| 8 Hysteresis and entrapment | `re_malgorzata_hysteresis_entrapment_pdc.py`, `2p_malgorzata_hysteresis_entrapment_pdc.py` | RE about 1.5 min, 2P-TM about 10 min (see below) |
-| Chapter 5 validation (`Chapter5_validation/`) | `2p_kees_miller_drainage.py` (Kees & Miller 2002 Problem HD, Tables 5.2–5.3), `2p_szymkiewicz_imbibition.py` (Szymkiewicz 2007 Example 1, Tables 5.4–5.5) | drainage ≈ 3 min, imbibition ≈ 9 min (CPU time; measured on a busy machine, where wall-clock was 9 and 30 min) |
+| 5 Primary drainage | `re_drainage_pdc.py`, `2p_drainage_pdc.py`, `tcat_cgp_drainage.py`, `tcat_full_drainage.py` | 30 s – 1.2 min; full TCAT ≈ 9 min |
+| 6 Main imbibition | `re_imbibition_mic.py`, `2p_imbibition_mic.py`, `tcat_cgp_imbibition.py`, `tcat_full_imbibition.py` | 1.5 min; full TCAT ≈ 6 min |
+| 7 Non-equilibrium capillary pressure | `ere_malgorzata.py`, `e2p_malgorzata.py` (each runs three values of τ) | 2.5–4.5 min |
+| 8 Hysteresis and entrapment | `re_malgorzata_hysteresis_entrapment_pdc.py`, `2p_malgorzata_hysteresis_entrapment_pdc.py` | RE about 1.5 min, 2P-TM 10–16 min (see below) |
+| Chapter 5 validation (`Chapter5_validation/`) | `2p_kees_miller_drainage.py` (Kees & Miller 2002 Problem HD, Tables 5.2–5.3), `2p_szymkiewicz_imbibition.py` (Szymkiewicz 2007 Example 1, Tables 5.4–5.5) | drainage ≈ 1 min, imbibition ≈ 4 min |
 
 Start with Test Cases 1–4 to confirm everything works before trying the longer runs.
 
@@ -106,7 +106,7 @@ The defense results were produced with earlier standalone Cython codes. The new 
 - `REPRODUCE_DEFENSE_KRW = True` in the RE drivers: the original code evaluated the RE relative permeability at the volume fraction instead of the capillary pressure, which made k_rw = 1. Set it to `False` for the correct Van Genuchten k_rw.
 - `MONITOR_NODE` in the 2P/full-TCAT drivers: because of an indexing slip, the original code recorded its normalized time history at x = 0.25 m (2P-TM) and x = 0.375 m (full TCAT), not the midpoint.
 
-Run times on the tested Mac: RE under 1 min, TCAT CGP 2–3 min, 2P-TM 1–35 min, full TCAT 8–15 min. Each needs under 100 MB of memory.
+Run times on the tested Mac: RE under 30 s, TCAT CGP 1–2 min, 2P-TM about 1–1.5 min, full TCAT 10–14 min. Each needs under 100 MB of memory.
 
 **Test Case 8** simulates repeated drainage and imbibition, with Parker–Lenhard hysteresis, van Genuchten closure relations, and Land's model for entrapment. RE runs to 3000 s in about 1.5 min, 2P-TM to 2500 s in about 10 min. The two drivers use **different boundary schedules** (RE: p_w(0) = −1500, 0, −1300, −900, −1800, 0 Pa at t = 500, 1000, …, 3000 s; 2P-TM: −1500, −100, −4000, 0, −1500 Pa at t = 500, …, 2500 s), and neither schedule is in the dissertation, whose Tables 4.30 and 5.9 give constant boundary values. Each schedule produced its own figure, so they are kept as they are. A reversal is detected when p_c moves back by more than `hysteresis_tol` = 10⁻² Pa from its extremum since the node's last reversal (`switch_relative_to='extremum'`). The original rule compared with the previous time step and a tolerance of 10⁻⁶ Pa: solver noise in p_c then reversed nodes spuriously, which forced small steps and more noise-driven reversals (over 10,000 reversals in the first second). The 2P-TM run stalled at dt ≈ 5×10⁻⁴ s, and the RE run needed over an hour with tolerances of 10⁻⁸. With the new rule the 2P-TM result matches the dissertation output within 10⁻³ Pa (p_w) and 6×10⁻³ Pa (p_n) in 5,915 steps instead of 13,521, and RE matches the old rule within 5×10⁻³ Pa. The 2P output file is still large (about 160 MB) because the hysteresis history is stored for every step. The plot scripts find the reversal points from the p_c history (`find_reversal_indices`), so they work for any number of steps.
 
